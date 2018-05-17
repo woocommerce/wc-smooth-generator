@@ -93,4 +93,3 @@ class Settings {
 		<?php
 	}
 }
-Settings::init();

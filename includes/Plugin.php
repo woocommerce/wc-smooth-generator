@@ -14,8 +14,13 @@ class Plugin {
 	public function __construct( $file ) {
 		register_activation_hook( $file, array( $this, 'init_events' ) );
 
-		$admin = new Admin\Settings();
-		$cli   = new CLI();
+		if ( is_admin() ) {
+			Admin\Settings::init();
+		}
+
+		if ( class_exists( 'WP_CLI' ) ) {
+			$cli = new CLI();
+		}
 
 		$this->init_hooks();
 	}

@@ -2,7 +2,7 @@
 namespace WC\SmoothGenerator;
 
 use Customer as CustomerGenerator;
-use Generator\Product as ProductGenerator;
+use Product as ProductGenerator;
 
 /**
  * Generate and save a product.
