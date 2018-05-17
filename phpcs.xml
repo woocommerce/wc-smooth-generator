@@ -31,6 +31,7 @@
 		<exclude name="WordPress.VIP.PostsPerPage.posts_per_page_posts_per_page" />
 		<exclude name="WordPress.VIP.RestrictedVariables.cache_constraints___COOKIE" />
 		<exclude name="WordPress.Files.FileName" />
+		<exclude name="WordPress.NamingConventions.ValidVariableName" />
 	</rule>
 	<rule ref="WordPress.VIP.ValidatedSanitizedInput">
 		<properties>

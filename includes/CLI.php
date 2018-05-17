@@ -1,7 +1,10 @@
 <?php
 /**
- * CLI class
+ * WP-CLI functionality.
+ *
+ * @package SmoothGenerator\Classes
  */
+
 namespace WC\SmoothGenerator;
 
 use WP_CLI, WP_CLI_Command;
@@ -11,7 +14,6 @@ use WP_CLI, WP_CLI_Command;
  * WP-CLI Integration class
  */
 class CLI extends WP_CLI_Command {
-
 	/**
 	 * Generate products.
 	 *
@@ -20,14 +22,22 @@ class CLI extends WP_CLI_Command {
 	 * <amount>
 	 * : The amount of products to generate
 	 * ---
-	 * default: 50
+	 * default: 100
 	 * ---
 	 *
 	 * ## EXAMPLES
-	 * wc generate products 50
+	 * wc generate products 100
 	 */
 	public function products( $args, $assoc_args ) {
 		list( $amount ) = $args;
+
+		$progress = \WP_CLI\Utils\make_progress_bar( 'Generating products', $amount );
+		for ( $i = 1; $i <= $amount; $i++ ) {
+			// @todo: call production creation function.
+			$progress->tick();
+		}
+		$progress->finish();
+		WP_CLI::success( $amount . ' products generated.' );
 	}
 
 	/**
@@ -38,14 +48,48 @@ class CLI extends WP_CLI_Command {
 	 * <amount>
 	 * : The amount of orders to generate
 	 * ---
-	 * default: 10
+	 * default: 100
 	 * ---
 	 *
 	 * ## EXAMPLES
-	 * wc generate orders 10
+	 * wc generate orders 100
 	 */
 	public function orders( $args, $assoc_args ) {
 		list( $amount ) = $args;
+
+		$progress = \WP_CLI\Utils\make_progress_bar( 'Generating orders', $amount );
+		for ( $i = 1; $i <= $amount; $i++ ) {
+			// @todo: call order creation function.
+			$progress->tick();
+		}
+		$progress->finish();
+		WP_CLI::success( $amount . ' orders generated.' );
+	}
+
+	/**
+	 * Generate customers.
+	 *
+	 * ## OPTIONS
+	 *
+	 * <amount>
+	 * : The amount of customers to generate
+	 * ---
+	 * default: 100
+	 * ---
+	 *
+	 * ## EXAMPLES
+	 * wc generate customers 100
+	 */
+	public function customers( $args, $assoc_args ) {
+		list( $amount ) = $args;
+
+		$progress = \WP_CLI\Utils\make_progress_bar( 'Generating customers', $amount );
+		for ( $i = 1; $i <= $amount; $i++ ) {
+			// @todo: call customer creation function.
+			$progress->tick();
+		}
+		$progress->finish();
+		WP_CLI::success( $amount . ' customers generated.' );
 	}
 }
 WP_CLI::add_command( 'wc generate', 'WC\SmoothGenerator\CLI' );

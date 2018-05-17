@@ -33,10 +33,11 @@ function wc_smooth_generator() {
 /**
  * Init plugin when WordPress loads.
  */
-function __load_wc_smooth_generator() {
+function load_wc_smooth_generator() {
 	wc_smooth_generator();
+	require 'functions.php';
 }
 
 if ( version_compare( PHP_VERSION, '5.3', '>' ) ) {
-	add_action( 'plugins_loaded', '__load_wc_smooth_generator', 20 );
+	add_action( 'plugins_loaded', 'load_wc_smooth_generator', 20 );
 }

@@ -10,11 +10,39 @@ abstract class Generator {
 	const IMAGE_HEIGHT = 400;
 
 	/**
-	 * Return a new array of data for this object type.
+	 * Return a new object of this object type.
 	 *
 	 * @return array
 	 */
 	abstract public function generate();
+
+	/**
+	 * Get random term ids.
+	 *
+	 * @param int $limit Number of term IDs to get.
+	 * @param string $taxonomy Taxonomy name.
+	 * @return array
+	 */
+	protected function generate_term_ids( $limit, $taxonomy ) {
+		$terms    = $faker->words( $limit );
+		$term_ids = array();
+
+		foreach ( $terms as $term ) {
+			$existing = get_term_by( 'name', $term, $taxonomy );
+
+			if ( $existing ) {
+				$term_ids[] = $existing->term_id;
+			} else {
+				$term = wp_insert_term( $term, $taxonomy );
+
+				if ( $term && ! is_wp_error( $term ) ) {
+					$term_ids[] = $term['term_id'];
+				}
+			}
+		}
+
+		return $term_ids;
+	}
 
 	/**
 	 * Generate and upload a random image.
