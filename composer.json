@@ -9,6 +9,9 @@
   "require": {
     "composer/installers": "~1.2"
   },
+  "autoload": {
+    "psr-4": {"WC\\SmoothGenerator\\": "includes/"}
+  },
   "require-dev": {
     "fzaninotto/faker": "^1.7",
     "squizlabs/php_codesniffer": "*",
