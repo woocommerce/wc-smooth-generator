@@ -1,4 +1,10 @@
 <?php
+/**
+ * Abstract product generator class
+ *
+ * @package SmoothGenerator\Abstracts
+ */
+
 namespace WC\SmoothGenerator\Generator;
 
 /**
@@ -20,7 +26,7 @@ class Product extends Generator {
 		$gallery           = self::get_gallery_image_ids();
 		$price             = $faker->randomFloat( 2, 1, 1000 );
 		$is_on_sale        = (bool) rand( 0, 1 );
-		$sale_price        = $is_on_sale ? $faker->randomFloat( 2, 0, $price ): '';
+		$sale_price        = $is_on_sale ? $faker->randomFloat( 2, 0, $price ) : '';
 		$product           = new \WC_Product();
 
 		$product->set_props( array(
