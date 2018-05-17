@@ -32,7 +32,7 @@ class CLI extends WP_CLI_Command {
 
 		$progress = \WP_CLI\Utils\make_progress_bar( 'Generating products', $amount );
 		for ( $i = 1; $i <= $amount; $i++ ) {
-			create_product();
+			Generator\Product::generate();
 			$progress->tick();
 		}
 		$progress->finish();
@@ -58,7 +58,7 @@ class CLI extends WP_CLI_Command {
 
 		$progress = \WP_CLI\Utils\make_progress_bar( 'Generating orders', $amount );
 		for ( $i = 1; $i <= $amount; $i++ ) {
-			create_order();
+			Generator\Order::generate();
 			$progress->tick();
 		}
 		$progress->finish();
@@ -84,7 +84,7 @@ class CLI extends WP_CLI_Command {
 
 		$progress = \WP_CLI\Utils\make_progress_bar( 'Generating customers', $amount );
 		for ( $i = 1; $i <= $amount; $i++ ) {
-			create_customer();
+			Generator\Customer::generate();
 			$progress->tick();
 		}
 		$progress->finish();

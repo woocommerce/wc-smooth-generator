@@ -77,7 +77,9 @@ class Settings {
 		?>
 		<div class="notice notice-success is-dismissible">
 			<p>Generating products in the background . . . </p>
-            <iframe frameborder="0" scrolling="no" marginheight="0" marginwidth="0"width="427.2" height="240" type="text/html" src="https://www.youtube.com/embed/4TYv2PhG89A?autoplay=1&fs=0&iv_load_policy=3&showinfo=0&rel=0&cc_load_policy=0&start=0&end=0"></iframe>
+			<p>
+				<iframe frameborder="0" scrolling="no" marginheight="0" marginwidth="0"width="427.2" height="240" type="text/html" src="https://www.youtube.com/embed/4TYv2PhG89A?autoplay=1&fs=0&iv_load_policy=3&showinfo=0&rel=0&cc_load_policy=0&start=0&end=0"></iframe>
+			</p>
 		</div>
 		<?php
 	}
@@ -89,6 +91,9 @@ class Settings {
 		?>
 		<div class="notice notice-success is-dismissible">
 			<p>Generating orders in the background . . . </p>
+			<p>
+				<iframe frameborder="0" scrolling="no" marginheight="0" marginwidth="0"width="427.2" height="240" type="text/html" src="https://www.youtube.com/embed/4TYv2PhG89A?autoplay=1&fs=0&iv_load_policy=3&showinfo=0&rel=0&cc_load_policy=0&start=0&end=0"></iframe>
+			</p>
 		</div>
 		<?php
 	}

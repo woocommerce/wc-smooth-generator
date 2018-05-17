@@ -35,7 +35,6 @@ function wc_smooth_generator() {
  */
 function load_wc_smooth_generator() {
 	wc_smooth_generator();
-	require dirname( __FILE__ ) . '/includes/functions.php';
 }
 
 if ( version_compare( PHP_VERSION, '5.3', '>' ) ) {

@@ -17,7 +17,7 @@ class Customer extends Generator {
 	 *
 	 * @var array
 	 */
-	public $locales = array(
+	public static $locales = array(
 		'en_AU',
 		'en_CA',
 		'en_GB',
@@ -35,58 +35,59 @@ class Customer extends Generator {
 	/**
 	 * Return a new customer.
 	 *
-	 * @return WC_Customer Unsaved customer object with data populated.
+	 * @param bool $save Save the object before returning or not.
+	 * @return WC_Customer Customer object with data populated.
 	 */
-	public function generate() {
-		$faker       = Faker\Factory::create( array_rand( $this->locales ) );
+	public static function generate( $save = true ) {
+		$faker       = \Faker\Factory::create( array_rand( self::$locales ) );
 		$email       = $faker->safeEmail();
 		$firstname   = $faker->firstName( array_rand( array( 'male', 'female' ) ) );
 		$lastname    = $faker->lastName();
 		$company     = $faker->company();
-		$address1    = $faker->buildingNumber() . ' ' . $faker->streetAddress();
+		$address1    = $faker->buildingNumber() . ' ' . $faker->streetName();
 		$address2    = $faker->streetAddress();
 		$city        = $faker->city();
 		$state       = $faker->stateAbbr();
 		$postcode    = $faker->postcode();
-		$countryCode = $faker->countryCode();
+		$countrycode = $faker->countryCode();
 		$phone       = $faker->e164PhoneNumber();
-		$customer    = new WC_Customer();
+		$customer    = new \WC_Customer();
 
 		$customer->set_props( array(
-			'date_created'       => null,
-			'date_modified'      => null,
-			'email'              => $email,
-			'first_name'         => $firstname,
-			'last_name'          => $lastname,
-			'display_name'       => $firstname,
-			'role'               => 'customer',
-			'username'           => '',
-			'billing'            => array(
-				'first_name' => $firstname,
-				'last_name'  => $lastname,
-				'company'    => $company,
-				'address_1'  => $address1,
-				'address_2'  => $address2,
-				'city'       => $city,
-				'state'      => $state,
-				'postcode'   => $postcode,
-				'country'    => $countrycode,
-				'email'      => $email,
-				'phone'      => $phone,
-			),
-			'shipping'           => array(
-				'first_name' => $firstname,
-				'last_name'  => $lastname,
-				'company'    => $company,
-				'address_1'  => $address1,
-				'address_2'  => $address2,
-				'city'       => $city,
-				'state'      => $state,
-				'postcode'   => $postcode,
-				'country'    => $countrycode,
-			),
-			'is_paying_customer' => false,
+			'date_created'        => null,
+			'date_modified'       => null,
+			'email'               => $email,
+			'first_name'          => $firstname,
+			'last_name'           => $lastname,
+			'display_name'        => $firstname,
+			'role'                => 'customer',
+			'username'            => $faker->userName(),
+			'password'            => $faker->password(),
+			'billing_first_name'  => $firstname,
+			'billing_last_name'   => $lastname,
+			'billing_company'     => $company,
+			'billing_address_1'   => $address1,
+			'billing_address_2'   => $address2,
+			'billing_city'        => $city,
+			'billing_state'       => $state,
+			'billing_postcode'    => $postcode,
+			'billing_country'     => $countrycode,
+			'billing_email'       => $email,
+			'billing_phone'       => $phone,
+			'shipping_first_name' => $firstname,
+			'shipping_last_name'  => $lastname,
+			'shipping_company'    => $company,
+			'shipping_address_1'  => $address1,
+			'shipping_address_2'  => $address2,
+			'shipping_city'       => $city,
+			'shipping_state'      => $state,
+			'shipping_postcode'   => $postcode,
+			'shipping_country'    => $countrycode,
+			'is_paying_customer'  => false,
 		) );
+		if ( $save ) {
+			return $customer->save();
+		}
 		return $customer;
 	}
 

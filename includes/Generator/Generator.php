@@ -12,9 +12,10 @@ abstract class Generator {
 	/**
 	 * Return a new object of this object type.
 	 *
+	 * @param bool $save Save the object before returning or not.
 	 * @return array
 	 */
-	abstract public function generate();
+	abstract public static function generate( $save = true );
 
 	/**
 	 * Get random term ids.

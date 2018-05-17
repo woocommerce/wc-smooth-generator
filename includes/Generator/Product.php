@@ -9,10 +9,11 @@ class Product extends Generator {
 	/**
 	 * Return a new product.
 	 *
-	 * @return WC_Product The unsaved product object consisting of random data.
+	 * @param bool $save Save the object before returning or not.
+	 * @return WC_Product The product object consisting of random data.
 	 */
-	public function generate() {
-		$faker             = Faker\Factory::create();
+	public static function generate( $save = true ) {
+		$faker             = \Faker\Factory::create();
 		$name              = $faker->words( $faker->numberBetween( 1, 5 ), true );
 		$will_manage_stock = (bool) rand( 0, 1 );
 		$is_virtual        = (bool) rand( 0, 1 );
@@ -20,7 +21,7 @@ class Product extends Generator {
 		$price             = $this->randomFloat( 2, 1, 1000 );
 		$is_on_sale        = (bool) rand( 0, 1 );
 		$sale_price        = $is_on_sale ? $this->randomFloat( 2, 0, $price ): '';
-		$product           = new WC_Product();
+		$product           = new \WC_Product();
 
 		$product->set_props( array(
 			'name'               => $name,
@@ -60,7 +61,11 @@ class Product extends Generator {
 			'gallery_image_ids'  => $gallery,
 		) );
 
-		return $product->save();
+		if ( $product ) {
+			$product->save();
+		}
+
+		return $product;
 	}
 
 	/**
