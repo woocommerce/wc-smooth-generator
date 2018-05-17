@@ -98,7 +98,7 @@ class Order extends Generator {
 		$existing = (bool) rand( 0, 1 );
 
 		if ( $existing ) {
-			$user_id = (int) $wpdb->get_var( "SELECT ID FROM {$wpdb->users} LIMIT 1 ORDER BY rand()" );
+			$user_id = (int) $wpdb->get_var( "SELECT ID FROM {$wpdb->users} ORDER BY rand() LIMIT 1" );
 			return new \WC_Customer( $user_id );
 		}
 
@@ -119,14 +119,14 @@ class Order extends Generator {
 		$products = array();
 
 		$num_existing_products = (int) $wpdb->get_var(
-			"SELECT COUNT( DISTINCT posts.ID )
+			"SELECT COUNT( DISTINCT ID )
 			FROM {$wpdb->posts}
 			WHERE 1=1
 			AND post_type='product'
 			AND post_status='publish'"
 		);
 		$num_products_to_get = rand( $min_amount, $max_amount );
-		for ( $i = 0; $i < num_products_to_get; ++$i ) {
+		for ( $i = 0; $i < $num_products_to_get; ++$i ) {
 			$offset = rand( 0, $num_existing_products );
 			$query_args = array(
 				'posts_per_page' => 1,

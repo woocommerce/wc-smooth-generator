@@ -17,10 +17,10 @@ class Product extends Generator {
 		$name              = $faker->words( $faker->numberBetween( 1, 5 ), true );
 		$will_manage_stock = (bool) rand( 0, 1 );
 		$is_virtual        = (bool) rand( 0, 1 );
-		$gallery           = $this->get_gallery_image_ids();
-		$price             = $this->randomFloat( 2, 1, 1000 );
+		$gallery           = self::get_gallery_image_ids();
+		$price             = $faker->randomFloat( 2, 1, 1000 );
 		$is_on_sale        = (bool) rand( 0, 1 );
-		$sale_price        = $is_on_sale ? $this->randomFloat( 2, 0, $price ): '';
+		$sale_price        = $is_on_sale ? $faker->randomFloat( 2, 0, $price ): '';
 		$product           = new \WC_Product();
 
 		$product->set_props( array(
@@ -33,7 +33,7 @@ class Product extends Generator {
 			'regular_price'      => $price,
 			'sale_price'         => $sale_price,
 			'date_on_sale_from'  => '',
-			'date_on_sale_to'    => $faker->dateTime( date( 'c', strtotime( '+1 month' ) ) ),
+			'date_on_sale_to'    => $faker->iso8601( date( 'c', strtotime( '+1 month' ) ) ),
 			'total_sales'        => $faker->numberBetween( 0, 10000 ),
 			'tax_status'         => 'taxable',
 			'tax_class'          => '',
@@ -46,16 +46,16 @@ class Product extends Generator {
 			'length'             => $is_virtual ? '' : $faker->numberBetween( 1, 200 ),
 			'width'              => $is_virtual ? '' : $faker->numberBetween( 1, 200 ),
 			'height'             => $is_virtual ? '' : $faker->numberBetween( 1, 200 ),
-			'upsell_ids'         => $this->get_existing_product_ids(),
-			'cross_sell_ids'     => $this->get_existing_product_ids(),
+			'upsell_ids'         => self::get_existing_product_ids(),
+			'cross_sell_ids'     => self::get_existing_product_ids(),
 			'parent_id'          => 0,
 			'reviews_allowed'    => (bool) rand( 0, 1 ),
 			'purchase_note'      => (bool) rand( 0, 1 ) ? $faker->text() : '',
 			'menu_order'         => $faker->numberBetween( 0, 10000 ),
 			'virtual'            => $is_virtual,
 			'downloadable'       => false,
-			'category_ids'       => $this->generate_term_ids( rand( 1, 10 ), 'product_cat' ),
-			'tag_ids'            => $this->generate_term_ids( rand( 1, 10 ), 'product_tag' ),
+			'category_ids'       => self::generate_term_ids( rand( 1, 10 ), 'product_cat' ),
+			'tag_ids'            => self::generate_term_ids( rand( 1, 10 ), 'product_tag' ),
 			'shipping_class_id'  => 0,
 			'image_id'           => array_shift( $gallery ),
 			'gallery_image_ids'  => $gallery,
@@ -73,11 +73,11 @@ class Product extends Generator {
 	 *
 	 * @return array
 	 */
-	protected function get_gallery_image_ids() {
+	protected static function get_gallery_image_ids() {
 		$gallery = array();
 
 		for ( $i = 0; $i < rand( 1, 6 ); $i ++ ) {
-			$gallery[] = $this->generate_image();
+			$gallery[] = self::generate_image();
 		}
 
 		return $gallery;
@@ -89,7 +89,7 @@ class Product extends Generator {
 	 * @param int $limit Number of term IDs to get.
 	 * @return array
 	 */
-	protected function get_existing_product_ids( $limit = 5 ) {
+	protected static function get_existing_product_ids( $limit = 5 ) {
 		$post_ids = get_posts( array(
 			'numberposts' => $limit * 2,
 			'orderby'     => 'date',

@@ -24,7 +24,8 @@ abstract class Generator {
 	 * @param string $taxonomy Taxonomy name.
 	 * @return array
 	 */
-	protected function generate_term_ids( $limit, $taxonomy ) {
+	protected static function generate_term_ids( $limit, $taxonomy ) {
+		$faker = \Faker\Factory::create();
 		$terms    = $faker->words( $limit );
 		$term_ids = array();
 
@@ -50,30 +51,31 @@ abstract class Generator {
 	 *
 	 * @return int The attachment id of the image (0 on failure).
 	 */
-	protected function generate_image( int $parent = 0 ) {
+	protected static function generate_image( int $parent = 0 ) {
 
 		// Build the image.
-		$faker = Faker\Factory::create();
+		$faker = \Faker\Factory::create();
 		$image = @imagecreatetruecolor( self::IMAGE_WIDTH, self::IMAGE_HEIGHT );
 		$background_rgb = $faker->rgbColorAsArray;
-		$background_color = imagecolorallocate( $image, $rgb[0], $rgb[1], $rgb[2] );
+		$background_color = imagecolorallocate( $image, $background_rgb[0], $background_rgb[1], $background_rgb[2] );
+		imagefill( $image, 0, 0, $background_color );
 		$text_color = imagecolorallocate( $image, 0, 0, 0 );
 		imagestring( $image, 5, 0, 0, $faker->emoji, $text_color );
 		ob_start();
 		imagepng( $image );
 		$file = ob_get_clean();
-		imagedestroy( $file );
+		imagedestroy( $image );
 
 		$name = 'img-' . rand() . '.png';
 		$attachment_id = 0;
 
 		// Upload the image.
-		$upload = wp_upload_bits( $name, null, $image );
+		$upload = wp_upload_bits( $name, null, $file );
 		if ( empty ( $upload['error'] ) ) {
 			$attachment_id = (int) wp_insert_attachment(
 				array(
 					'post_title' => $name,
-					'post_mime_type' => $filetype['type'],
+					'post_mime_type' => $upload['type'],
 					'post_status' => 'publish',
 					'post_content' => '',
 				),
