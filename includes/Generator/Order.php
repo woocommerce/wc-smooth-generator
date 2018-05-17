@@ -40,8 +40,8 @@ class Order extends Generator {
 	public static function generate( $save = true ) {
 		$faker    = \Faker\Factory::create( 'en_US' );
 		$order    = new \WC_Order();
-		$customer = $this->get_customer();
-		$products = $this->get_random_products( 1, 10 );
+		$customer = self::get_customer();
+		$products = self::get_random_products( 1, 10 );
 
 		foreach ( $products as $product ) {
 			$item     = new \WC_Order_Item_Product();
@@ -90,7 +90,7 @@ class Order extends Generator {
 	 *
 	 * @return WC_Customer Customer object with data populated.
 	 */
-	public function get_customer() {
+	public static function get_customer() {
 		global $wpdb;
 
 		$faker    = \Faker\Factory::create( 'en_US' );
@@ -113,7 +113,7 @@ class Order extends Generator {
 	 * @param int $min_amount Minimum amount of products to get.
 	 * @param int $max_amount Maximum amount of products to get.
 	 */
-	protected get_random_products( int $min_amount = 1, int $max_amount = 4 ) {
+	protected static function get_random_products( int $min_amount = 1, int $max_amount = 4 ) {
 		global $wpdb;
 
 		$products = array();
