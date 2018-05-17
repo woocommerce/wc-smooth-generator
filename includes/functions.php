@@ -1,7 +1,7 @@
 <?php
 namespace WC\SmoothGenerator;
 
-use Generator\Customer as CustomerGenerator;
+use Customer as CustomerGenerator;
 use Generator\Product as ProductGenerator;
 
 /**
