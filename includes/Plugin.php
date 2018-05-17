@@ -1,4 +1,10 @@
 <?php
+/**
+ * Main plugin class.
+ *
+ * @package SmoothGenerator\Classes
+ */
+
 namespace WC\SmoothGenerator;
 
 /**
