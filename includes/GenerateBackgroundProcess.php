@@ -39,16 +39,13 @@ class GenerateBackgroundProcess extends WP_Background_Process {
 		// Check what generation task to perform.
 		switch ( $item['task'] ) {
 			case 'order':
-				// @todo
-				//$generator = new WC\SmoothGenerator\Generator\Product;
-				//$generator->generate();
+				Generator\Order::generate();
 				break;
 			case 'product':
-				$generator = new WC\SmoothGenerator\Generator\Product;
-				$generator->generate();
+				Generator\Product::generate();
 				break;
 			case 'customer':
-				// @todo: call customer creation function
+				Generator\Customer::generate();
 				break;
 			default:
 				return false;
