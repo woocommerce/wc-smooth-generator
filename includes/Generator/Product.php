@@ -60,7 +60,7 @@ class Product extends Generator {
 			'gallery_image_ids'  => $gallery,
 		) );
 
-		return $product;
+		return $product->save();
 	}
 
 	/**

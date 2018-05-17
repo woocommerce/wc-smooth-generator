@@ -13,7 +13,7 @@ class Settings {
 	/**
 	 *  Set up hooks.
 	 */
-	public function __construct() {
+	public function init() {
 		add_action( 'admin_menu', array( $this, 'register_admin_menu' ) );
 	}
 
@@ -88,4 +88,3 @@ class Settings {
 		<?php
 	}
 }
-new Settings();

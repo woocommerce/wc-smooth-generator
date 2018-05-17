@@ -9,7 +9,6 @@ namespace WC\SmoothGenerator;
 
 use WP_CLI, WP_CLI_Command;
 
-
 /**
  * WP-CLI Integration class
  */
@@ -33,7 +32,7 @@ class CLI extends WP_CLI_Command {
 
 		$progress = \WP_CLI\Utils\make_progress_bar( 'Generating products', $amount );
 		for ( $i = 1; $i <= $amount; $i++ ) {
-			// @todo: call production creation function.
+			create_product();
 			$progress->tick();
 		}
 		$progress->finish();
@@ -59,7 +58,7 @@ class CLI extends WP_CLI_Command {
 
 		$progress = \WP_CLI\Utils\make_progress_bar( 'Generating orders', $amount );
 		for ( $i = 1; $i <= $amount; $i++ ) {
-			// @todo: call order creation function.
+			create_order();
 			$progress->tick();
 		}
 		$progress->finish();
@@ -85,7 +84,7 @@ class CLI extends WP_CLI_Command {
 
 		$progress = \WP_CLI\Utils\make_progress_bar( 'Generating customers', $amount );
 		for ( $i = 1; $i <= $amount; $i++ ) {
-			// @todo: call customer creation function.
+			create_customer();
 			$progress->tick();
 		}
 		$progress->finish();
