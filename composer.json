@@ -1,0 +1,47 @@
+{
+  "name": "woocommerce/wc-smooth-generator",
+  "description": "A smooth customer, order and product generator for WooCommerce.",
+  "homepage": "https://woocommerce.com/",
+  "type": "wordpress-plugin",
+  "license": "GPL-3.0-or-later",
+  "prefer-stable": true,
+  "minimum-stability": "dev",
+  "require": {
+    "composer/installers": "~1.2"
+  },
+  "require-dev": {
+    "fzaninotto/faker": "^1.7",
+    "squizlabs/php_codesniffer": "*",
+    "wp-coding-standards/wpcs": "^0.14",
+    "woocommerce/woocommerce-git-hooks": "*",
+    "woocommerce/woocommerce-sniffs": "*",
+    "wimg/php-compatibility": "^8.0",
+    "dealerdirect/phpcodesniffer-composer-installer": "^0.4.3"
+  },
+  "scripts": {
+    "pre-update-cmd": [
+      "WooCommerce\\GitHooks\\Hooks::preHooks"
+    ],
+    "pre-install-cmd": [
+      "WooCommerce\\GitHooks\\Hooks::preHooks"
+    ],
+    "post-install-cmd": [
+      "WooCommerce\\GitHooks\\Hooks::postHooks"
+    ],
+    "post-update-cmd": [
+      "WooCommerce\\GitHooks\\Hooks::postHooks"
+    ],
+    "phpcs": [
+      "phpcs -s -p"
+    ],
+    "phpcbf": [
+      "phpcbf -p"
+    ]
+  },
+  "extra": {
+    "scripts-description": {
+      "phpcs": "Analyze code against the WordPress coding standards with PHP_CodeSniffer",
+      "phpcbf": "Fix coding standards warnings/errors automatically with PHP Code Beautifier"
+    }
+  }
+}
