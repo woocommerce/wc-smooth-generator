@@ -1,4 +1,10 @@
 <?php
+/**
+ * Abstract Generator class
+ *
+ * @package SmoothGenerator\Abstracts
+ */
+
 namespace WC\SmoothGenerator\Generator;
 
 /**
@@ -6,7 +12,7 @@ namespace WC\SmoothGenerator\Generator;
  */
 abstract class Generator {
 
-	const IMAGE_WIDTH = 700;
+	const IMAGE_WIDTH  = 700;
 	const IMAGE_HEIGHT = 400;
 
 	/**
@@ -20,12 +26,12 @@ abstract class Generator {
 	/**
 	 * Get random term ids.
 	 *
-	 * @param int $limit Number of term IDs to get.
+	 * @param int    $limit Number of term IDs to get.
 	 * @param string $taxonomy Taxonomy name.
 	 * @return array
 	 */
 	protected static function generate_term_ids( $limit, $taxonomy ) {
-		$faker = \Faker\Factory::create();
+		$faker    = \Faker\Factory::create();
 		$terms    = $faker->words( $limit );
 		$term_ids = array();
 
@@ -49,14 +55,16 @@ abstract class Generator {
 	/**
 	 * Generate and upload a random image.
 	 *
+	 * @param int $parent Parent ID.
+	 *
 	 * @return int The attachment id of the image (0 on failure).
 	 */
 	protected static function generate_image( int $parent = 0 ) {
 
 		// Build the image.
-		$faker = \Faker\Factory::create();
-		$image = @imagecreatetruecolor( self::IMAGE_WIDTH, self::IMAGE_HEIGHT );
-		$background_rgb = $faker->rgbColorAsArray;
+		$faker            = \Faker\Factory::create();
+		$image            = @imagecreatetruecolor( self::IMAGE_WIDTH, self::IMAGE_HEIGHT );
+		$background_rgb   = $faker->rgbColorAsArray;
 		$background_color = imagecolorallocate( $image, $background_rgb[0], $background_rgb[1], $background_rgb[2] );
 		imagefill( $image, 0, 0, $background_color );
 		$text_color = imagecolorallocate( $image, 0, 0, 0 );
@@ -70,8 +78,8 @@ abstract class Generator {
 		$attachment_id = 0;
 
 		// Upload the image.
-		$upload = wp_upload_bits( $name, null, $file );
-		if ( empty ( $upload['error'] ) ) {
+		$upload = wp_upload_bits( $name, '', $file );
+		if ( empty( $upload['error'] ) ) {
 			$attachment_id = (int) wp_insert_attachment(
 				array(
 					'post_title' => $name,
