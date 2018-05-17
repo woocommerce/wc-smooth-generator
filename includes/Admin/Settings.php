@@ -1,4 +1,10 @@
 <?php
+/**
+ * Plugin admin settings
+ *
+ * @package SmoothGenerator\Admin\Classes
+ */
+
 namespace WC\SmoothGenerator\Admin;
 
 /**
@@ -6,8 +12,8 @@ namespace WC\SmoothGenerator\Admin;
  */
 class Settings {
 
-	const DEFAULT_NUM_PRODUCTS = 100;
-	const DEFAULT_NUM_ORDERS = 100;
+	const DEFAULT_NUM_PRODUCTS           = 100;
+	const DEFAULT_NUM_ORDERS             = 100;
 	const DEFAULT_ORDER_INTERVAL_MINUTES = 3;
 
 	/**
@@ -35,16 +41,16 @@ class Settings {
 			<?php wp_nonce_field( 'generate', 'smoothgenerator_nonce' ); ?>
 			<h2>Generate Products</h2>
 			<p>
-				<input type="number" name="num_products_to_generate" value="<?php echo self::DEFAULT_NUM_PRODUCTS ?>" min="1" />
+				<input type="number" name="num_products_to_generate" value="<?php echo esc_attr( self::DEFAULT_NUM_PRODUCTS ); ?>" min="1" />
 				Number of products to generate.
 			</p>
 			<?php submit_button( 'Generate', 'primary', 'generate_products' ); ?>
 
 			<h2>Generate Orders</h2>
 			<p>
-				<input type="number" name="num_orders_to_generate" value="<?php echo self::DEFAULT_NUM_ORDERS ?>" min="1" />
+				<input type="number" name="num_orders_to_generate" value="<?php echo esc_attr( self::DEFAULT_NUM_ORDERS ); ?>" min="1" />
 				Number of orders to generate over
-				<input type="number" name="order_generation_interval" value="<?php echo self::DEFAULT_ORDER_INTERVAL_MINUTES ?>" min="0" />
+				<input type="number" name="order_generation_interval" value="<?php echo esc_attr( self::DEFAULT_ORDER_INTERVAL_MINUTES ); ?>" min="0" />
 				minutes.
 			</p>
 			<?php submit_button( 'Generate', 'primary', 'generate_orders' ); ?>
