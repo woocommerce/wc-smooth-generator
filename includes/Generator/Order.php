@@ -35,12 +35,15 @@ class Order extends Generator {
 	 * Return a new customer.
 	 *
 	 * @param bool $save Save the object before returning or not.
-	 * @return WC_Order Order object with data populated.
+	 * @return WC_Order|bool Order object with data populated or false when failed.
 	 */
 	public static function generate( $save = true ) {
 		$faker    = \Faker\Factory::create( 'en_US' );
 		$order    = new \WC_Order();
 		$customer = self::get_customer();
+		if ( ! $customer instanceof \WC_Customer ) {
+			return false;
+		}
 		$products = self::get_random_products( 1, 10 );
 
 		foreach ( $products as $product ) {
@@ -79,9 +82,9 @@ class Order extends Generator {
 		$order->set_shipping_country( $customer->get_shipping_country() );
 		$order->set_status( self::random_weighted_element( array(
 			'completed'  => 70,
-			'processing' => 10,
+			'processing' => 15,
 			'on-hold'    => 5,
-			'failed'     => 5,
+			'failed'     => 10,
 		) ) );
 		$order->calculate_totals( true );
 
