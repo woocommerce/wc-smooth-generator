@@ -77,7 +77,12 @@ class Order extends Generator {
 		$order->set_shipping_postcode( $customer->get_shipping_postcode() );
 		$order->set_shipping_state( $customer->get_shipping_state() );
 		$order->set_shipping_country( $customer->get_shipping_country() );
-		$order->set_status( $faker->randomElement( array( 'completed', 'processing', 'on-hold', 'failed' ) ) );
+		$order->set_status( self::random_weighted_element( array(
+			'completed'  => 70,
+			'processing' => 10,
+			'on-hold'    => 5,
+			'failed'     => 5,
+		) ) );
 		$order->calculate_totals( true );
 
 		if ( $save ) {
