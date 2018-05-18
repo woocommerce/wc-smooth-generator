@@ -78,6 +78,7 @@ class Order extends Generator {
 		$order->set_shipping_state( $customer->get_shipping_state() );
 		$order->set_shipping_country( $customer->get_shipping_country() );
 		$order->set_status( $faker->randomElement( array( 'completed', 'processing', 'on-hold', 'failed' ) ) );
+		$order->calculate_totals( true );
 
 		if ( $save ) {
 			$order->save();
@@ -102,7 +103,7 @@ class Order extends Generator {
 			return new \WC_Customer( $user_id );
 		}
 
-		$customer = Generator\Customer( ! $guest );
+		$customer = Customer::generate( ! $guest );
 
 		return $customer;
 	}
@@ -128,15 +129,14 @@ class Order extends Generator {
 		$num_products_to_get = rand( $min_amount, $max_amount );
 		for ( $i = 0; $i < $num_products_to_get; ++$i ) {
 			$offset = rand( 0, $num_existing_products );
-			$query_args = array(
-				'posts_per_page' => 1,
-				'post_status' => 'publish',
-				'fields' => 'ids',
-				'offset' => $offset,
-			);
-			$id = current( get_posts( $query_args ) );
+			$query = new \WC_Product_Query( array(
+				'limit'   => $offset,
+				'return'  => 'ids',
+				'orderby' => 'rand',
+			) );
+			$id = current( $query->get_products() );
 			if ( $id ) {
-				$products[] = new WC_Product( $id );
+				$products[] = new \WC_Product( $id );
 			}
 		}
 
