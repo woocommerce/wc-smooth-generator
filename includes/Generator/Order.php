@@ -107,7 +107,7 @@ class Order extends Generator {
 		$existing = (bool) rand( 0, 1 );
 
 		if ( $existing ) {
-			$user_id = (int) $wpdb->get_var( "SELECT ID FROM {$wpdb->users} ORDER BY rand() LIMIT 1" ); //@phpcs:ignore
+			$user_id = (int) $wpdb->get_var( "SELECT ID FROM {$wpdb->users} ORDER BY rand() LIMIT 1" ); // phpcs:ignore
 			return new \WC_Customer( $user_id );
 		}
 
