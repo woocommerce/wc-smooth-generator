@@ -102,7 +102,6 @@ class Order extends Generator {
 	public static function get_customer() {
 		global $wpdb;
 
-		$faker    = \Faker\Factory::create( 'en_US' );
 		$guest    = (bool) rand( 0, 1 );
 		$existing = (bool) rand( 0, 1 );
 
