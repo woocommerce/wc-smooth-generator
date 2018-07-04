@@ -35,7 +35,7 @@ class Order extends Generator {
 	 * Return a new customer.
 	 *
 	 * @param bool $save Save the object before returning or not.
-	 * @return WC_Order|bool Order object with data populated or false when failed.
+	 * @return \WC_Order|false Order object with data populated or false when failed.
 	 */
 	public static function generate( $save = true ) {
 		$faker    = \Faker\Factory::create( 'en_US' );
@@ -97,7 +97,7 @@ class Order extends Generator {
 	/**
 	 * Return a new customer.
 	 *
-	 * @return WC_Customer Customer object with data populated.
+	 * @return \WC_Customer Customer object with data populated.
 	 */
 	public static function get_customer() {
 		global $wpdb;
@@ -120,6 +120,7 @@ class Order extends Generator {
 	 *
 	 * @param int $min_amount Minimum amount of products to get.
 	 * @param int $max_amount Maximum amount of products to get.
+	 * @return array Random list of products.
 	 */
 	protected static function get_random_products( int $min_amount = 1, int $max_amount = 4 ) {
 		global $wpdb;

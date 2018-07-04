@@ -36,7 +36,7 @@ class Customer extends Generator {
 	 * Return a new customer.
 	 *
 	 * @param bool $save Save the object before returning or not.
-	 * @return WC_Customer Customer object with data populated.
+	 * @return \WC_Customer Customer object with data populated.
 	 */
 	public static function generate( $save = true ) {
 		$faker       = \Faker\Factory::create( array_rand( self::$locales ) );
