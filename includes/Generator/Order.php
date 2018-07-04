@@ -134,18 +134,21 @@ class Order extends Generator {
 			AND post_type='product'
 			AND post_status='publish'"
 		);
+
 		$num_products_to_get = rand( $min_amount, $max_amount );
-		for ( $i = 0; $i < $num_products_to_get; ++$i ) {
-			$offset = rand( 0, $num_existing_products );
-			$query = new \WC_Product_Query( array(
-				'limit'   => $offset,
-				'return'  => 'ids',
-				'orderby' => 'rand',
-			) );
-			$id = current( $query->get_products() );
-			if ( $id ) {
-				$products[] = new \WC_Product( $id );
-			}
+
+		if ( $num_products_to_get > $num_existing_products ) {
+			$num_products_to_get = $num_existing_products;
+		}
+
+		$query = new \WC_Product_Query( array(
+			'limit'   => $num_products_to_get,
+			'return'  => 'ids',
+			'orderby' => 'rand',
+		) );
+
+		foreach ( $query->get_products() as $product_id ) {
+			$products[] = new \WC_Product( $product_id );
 		}
 
 		return $products;
