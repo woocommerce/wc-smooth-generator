@@ -38,6 +38,10 @@ class Order extends Generator {
 	 * @return WC_Order|bool Order object with data populated or false when failed.
 	 */
 	public static function generate( $save = true ) {
+		// Set this to avoid notices as when you run via WP-CLI SERVER vars are not set, order emails uses this variable.
+		if ( ! isset( $_SERVER['SERVER_NAME'] ) ) {
+			$_SERVER['SERVER_NAME'] = 'localhost';
+		}
 		$faker    = \Faker\Factory::create( 'en_US' );
 		$order    = new \WC_Order();
 		$customer = self::get_customer();
