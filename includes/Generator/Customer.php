@@ -39,9 +39,9 @@ class Customer extends Generator {
 	 * @return WC_Customer Customer object with data populated.
 	 */
 	public static function generate( $save = true ) {
-		$faker       = \Faker\Factory::create( array_rand( self::$locales ) );
+		$faker       = \Faker\Factory::create();
 		$email       = $faker->safeEmail();
-		$firstname   = $faker->firstName( array_rand( array( 'male', 'female' ) ) );
+		$firstname   = $faker->firstName( $faker->randomElement( array( 'male', 'female' ) ) );
 		$lastname    = $faker->lastName();
 		$company     = $faker->company();
 		$address1    = $faker->buildingNumber() . ' ' . $faker->streetName();
