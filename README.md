@@ -7,7 +7,8 @@ WooCommerce Smooth Generator requires Composer and WP-CLI to function.
 1. Clone this repository into your site's plugins folder
 2. From command line CD into the cloned repository
 3. From command run `composer install` and wait for the installation to complete
-4. You now have access to a couple of new WP-CLI commands under the main `wp wc generate` command.
+4. Run `wp plugin activate wc-smooth-generator` to activate the plugin
+5. You now have access to a couple of new WP-CLI commands under the main `wp wc generate` command.
 
 ## Commands
 - `wp wc generate products <nr of products>` Generate products based on the number of products paramater.
