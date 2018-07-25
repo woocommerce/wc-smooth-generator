@@ -35,9 +35,13 @@ class Order extends Generator {
 	 * Return a new customer.
 	 *
 	 * @param bool $save Save the object before returning or not.
-	 * @return WC_Order|bool Order object with data populated or false when failed.
+	 * @return \WC_Order|false Order object with data populated or false when failed.
 	 */
 	public static function generate( $save = true ) {
+		// Set this to avoid notices as when you run via WP-CLI SERVER vars are not set, order emails uses this variable.
+		if ( ! isset( $_SERVER['SERVER_NAME'] ) ) {
+			$_SERVER['SERVER_NAME'] = 'localhost';
+		}
 		$faker    = \Faker\Factory::create( 'en_US' );
 		$order    = new \WC_Order();
 		$customer = self::get_customer();
@@ -97,17 +101,16 @@ class Order extends Generator {
 	/**
 	 * Return a new customer.
 	 *
-	 * @return WC_Customer Customer object with data populated.
+	 * @return \WC_Customer Customer object with data populated.
 	 */
 	public static function get_customer() {
 		global $wpdb;
 
-		$faker    = \Faker\Factory::create( 'en_US' );
 		$guest    = (bool) rand( 0, 1 );
 		$existing = (bool) rand( 0, 1 );
 
 		if ( $existing ) {
-			$user_id = (int) $wpdb->get_var( "SELECT ID FROM {$wpdb->users} ORDER BY rand() LIMIT 1" ); //@phpcs:ignore
+			$user_id = (int) $wpdb->get_var( "SELECT ID FROM {$wpdb->users} ORDER BY rand() LIMIT 1" ); // phpcs:ignore
 			return new \WC_Customer( $user_id );
 		}
 
@@ -121,6 +124,7 @@ class Order extends Generator {
 	 *
 	 * @param int $min_amount Minimum amount of products to get.
 	 * @param int $max_amount Maximum amount of products to get.
+	 * @return array Random list of products.
 	 */
 	protected static function get_random_products( int $min_amount = 1, int $max_amount = 4 ) {
 		global $wpdb;
@@ -134,18 +138,21 @@ class Order extends Generator {
 			AND post_type='product'
 			AND post_status='publish'"
 		);
+
 		$num_products_to_get = rand( $min_amount, $max_amount );
-		for ( $i = 0; $i < $num_products_to_get; ++$i ) {
-			$offset = rand( 0, $num_existing_products );
-			$query = new \WC_Product_Query( array(
-				'limit'   => $offset,
-				'return'  => 'ids',
-				'orderby' => 'rand',
-			) );
-			$id = current( $query->get_products() );
-			if ( $id ) {
-				$products[] = new \WC_Product( $id );
-			}
+
+		if ( $num_products_to_get > $num_existing_products ) {
+			$num_products_to_get = $num_existing_products;
+		}
+
+		$query = new \WC_Product_Query( array(
+			'limit'   => $num_products_to_get,
+			'return'  => 'ids',
+			'orderby' => 'rand',
+		) );
+
+		foreach ( $query->get_products() as $product_id ) {
+			$products[] = new \WC_Product( $product_id );
 		}
 
 		return $products;

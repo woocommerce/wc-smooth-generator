@@ -111,7 +111,7 @@ abstract class Generator {
 	 * Taken from https://stackoverflow.com/questions/445235/generating-random-results-by-weight-in-php
 	 *
 	 * @param array $weighted_values Array of value => weight options.
-	 * @return array
+	 * @return mixed
 	 */
 	protected static function random_weighted_element( array $weighted_values ) {
 		$rand = mt_rand( 1, (int) array_sum( $weighted_values ) );

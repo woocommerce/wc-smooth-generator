@@ -13,35 +13,15 @@ namespace WC\SmoothGenerator\Generator;
 class Customer extends Generator {
 
 	/**
-	 * Available Locales.
-	 *
-	 * @var array
-	 */
-	public static $locales = array(
-		'en_AU',
-		'en_CA',
-		'en_GB',
-		'en_HK',
-		'en_IN',
-		'en_NG',
-		'en_NZ',
-		'en_PH',
-		'en_SG',
-		'en_UG',
-		'en_US',
-		'en_ZA',
-	);
-
-	/**
 	 * Return a new customer.
 	 *
 	 * @param bool $save Save the object before returning or not.
-	 * @return WC_Customer Customer object with data populated.
+	 * @return \WC_Customer Customer object with data populated.
 	 */
 	public static function generate( $save = true ) {
-		$faker       = \Faker\Factory::create( array_rand( self::$locales ) );
+		$faker       = \Faker\Factory::create();
 		$email       = $faker->safeEmail();
-		$firstname   = $faker->firstName( array_rand( array( 'male', 'female' ) ) );
+		$firstname   = $faker->firstName( $faker->randomElement( array( 'male', 'female' ) ) );
 		$lastname    = $faker->lastName();
 		$company     = $faker->company();
 		$address1    = $faker->buildingNumber() . ' ' . $faker->streetName();
