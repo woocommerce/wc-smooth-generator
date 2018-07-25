@@ -51,22 +51,8 @@ class Order extends Generator {
 		$products = self::get_random_products( 1, 10 );
 
 		foreach ( $products as $product ) {
-			$item     = new \WC_Order_Item_Product();
 			$quantity = $faker->numberBetween( 1, 10 );
-			$item->set_props(
-				array(
-					'quantity'     => $quantity,
-					'variation'    => array(),
-					'subtotal'     => wc_get_price_excluding_tax( $product, array( 'qty' => $quantity ) ),
-					'total'        => wc_get_price_excluding_tax( $product, array( 'qty' => $quantity ) ),
-					'name'         => $product->get_name(),
-					'tax_class'    => $product->get_tax_class(),
-					'product_id'   => $product->is_type( 'variation' ) ? $product->get_parent_id() : $product->get_id(),
-					'variation_id' => $product->is_type( 'variation' ) ? $product->get_id() : 0,
-				)
-			);
-
-			$order->add_item( $item );
+			$order->add_product( $product, $quantity );
 		}
 
 		$order->set_customer_id( $customer->get_id() );
