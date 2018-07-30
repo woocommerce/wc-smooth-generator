@@ -20,6 +20,12 @@ class Customer extends Generator {
 	 */
 	public static function generate( $save = true ) {
 		$faker       = \Faker\Factory::create();
+
+		// Make sure a unique username is used.
+		do {
+			$username = $faker->userName();
+		} while ( username_exists( $username ) );
+
 		$email       = $faker->safeEmail();
 		$firstname   = $faker->firstName( $faker->randomElement( array( 'male', 'female' ) ) );
 		$lastname    = $faker->lastName();
@@ -41,7 +47,7 @@ class Customer extends Generator {
 			'last_name'           => $lastname,
 			'display_name'        => $firstname,
 			'role'                => 'customer',
-			'username'            => $faker->userName(),
+			'username'            => $username,
 			'password'            => $faker->password(),
 			'billing_first_name'  => $firstname,
 			'billing_last_name'   => $lastname,
