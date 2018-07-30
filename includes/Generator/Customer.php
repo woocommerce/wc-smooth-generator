@@ -74,9 +74,11 @@ class Customer extends Generator {
 			'shipping_country'    => $countrycode,
 			'is_paying_customer'  => false,
 		) );
+
 		if ( $save ) {
-			return $customer->save();
+			$customer->save();
 		}
+
 		return $customer;
 	}
 
