@@ -16,7 +16,7 @@ class Product extends Generator {
 	 * Return a new product.
 	 *
 	 * @param bool $save Save the object before returning or not.
-	 * @return WC_Product The product object consisting of random data.
+	 * @return \WC_Product The product object consisting of random data.
 	 */
 	public static function generate( $save = true ) {
 		$faker = \Faker\Factory::create();
