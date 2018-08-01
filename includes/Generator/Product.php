@@ -32,7 +32,7 @@ class Product extends Generator {
 			$product                = new \WC_Product_Variable();
 			$nr_attributes          = $faker->numberBetween( 1, 3 );
 			$attributes             = array();
-			$total_attribute_values = 0;
+
 			for ( $i = 0; $i < $nr_attributes; $i++ ) {
 				$attribute = new \WC_Product_Attribute();
 				$attribute->set_id( 0 );
@@ -43,6 +43,7 @@ class Product extends Generator {
 				$attribute->set_variation( true );
 				$attributes[] = $attribute;
 			}
+
 			$product->set_props( array(
 				'name'              => $name,
 				'featured'          => $faker->boolean( 10 ),
