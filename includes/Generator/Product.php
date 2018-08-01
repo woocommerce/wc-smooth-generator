@@ -46,10 +46,12 @@ class Product extends Generator {
 		$faker             = \Faker\Factory::create();
 		$name              = $faker->words( $faker->numberBetween( 1, 5 ), true );
 		$will_manage_stock = $faker->boolean();
-		$gallery           = self::get_gallery_image_ids();
 		$product           = new \WC_Product_Variable();
 		$nr_attributes     = $faker->numberBetween( 1, 3 );
 		$attributes        = array();
+
+		$image_id = self::generate_image();
+		$gallery  = self::maybe_get_gallery_image_ids();
 
 		for ( $i = 0; $i < $nr_attributes; $i++ ) {
 			$attribute = new \WC_Product_Attribute();
@@ -75,7 +77,7 @@ class Product extends Generator {
 			'sold_individually' => $faker->boolean( 20 ),
 			'upsell_ids'        => self::get_existing_product_ids(),
 			'cross_sell_ids'    => self::get_existing_product_ids(),
-			'image_id'          => array_shift( $gallery ),
+			'image_id'          => $image_id,
 			'category_ids'      => self::generate_term_ids( $faker->numberBetween( 1, 10 ), 'product_cat' ),
 			'tag_ids'           => self::generate_term_ids( $faker->numberBetween( 1, 10 ), 'product_tag' ),
 			'gallery_image_ids' => $gallery,
@@ -132,12 +134,14 @@ class Product extends Generator {
 		$faker             = \Faker\Factory::create();
 		$name              = $faker->words( $faker->numberBetween( 1, 5 ), true );
 		$will_manage_stock = $faker->boolean();
-		$gallery           = self::get_gallery_image_ids();
 		$is_virtual        = $faker->boolean();
 		$price             = $faker->randomFloat( 2, 1, 1000 );
 		$is_on_sale        = $faker->boolean( 30 );
 		$sale_price        = $is_on_sale ? $faker->randomFloat( 2, 0, $price ) : '';
 		$product           = new \WC_Product();
+
+		$image_id = self::generate_image();
+		$gallery  = self::maybe_get_gallery_image_ids();
 
 		$product->set_props( array(
 			'name'               => $name,
@@ -173,7 +177,7 @@ class Product extends Generator {
 			'category_ids'       => self::generate_term_ids( $faker->numberBetween( 1, 10 ), 'product_cat' ),
 			'tag_ids'            => self::generate_term_ids( $faker->numberBetween( 1, 10 ), 'product_tag' ),
 			'shipping_class_id'  => 0,
-			'image_id'           => array_shift( $gallery ),
+			'image_id'           => $image_id,
 			'gallery_image_ids'  => $gallery,
 		) );
 
@@ -185,10 +189,17 @@ class Product extends Generator {
 	 *
 	 * @return array
 	 */
-	protected static function get_gallery_image_ids() {
+	protected static function maybe_get_gallery_image_ids() {
+		$faker   = \Faker\Factory::create();
 		$gallery = array();
 
-		for ( $i = 0; $i < rand( 1, 6 ); $i ++ ) {
+		$create_gallery = $faker->boolean( 10 );
+
+		if ( ! $create_gallery ) {
+			return;
+		}
+
+		for ( $i = 0; $i < rand( 1, 3 ); $i ++ ) {
 			$gallery[] = self::generate_image();
 		}
 
