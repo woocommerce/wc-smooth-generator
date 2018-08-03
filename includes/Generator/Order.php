@@ -12,26 +12,6 @@ namespace WC\SmoothGenerator\Generator;
  */
 class Order extends Generator {
 	/**
-	 * Available Locales.
-	 *
-	 * @var array
-	 */
-	public $locales = array(
-		'en_AU',
-		'en_CA',
-		'en_GB',
-		'en_HK',
-		'en_IN',
-		'en_NG',
-		'en_NZ',
-		'en_PH',
-		'en_SG',
-		'en_UG',
-		'en_US',
-		'en_ZA',
-	);
-
-	/**
 	 * Return a new customer.
 	 *
 	 * @param bool $save Save the object before returning or not.
