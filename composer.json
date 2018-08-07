@@ -13,7 +13,7 @@
     "psr-4": {"WC\\SmoothGenerator\\": "includes/"}
   },
   "require-dev": {
-    "fzaninotto/faker": "^1.7",
+    "fzaninotto/faker": "^1.8",
     "squizlabs/php_codesniffer": "*",
     "wp-coding-standards/wpcs": "^0.14",
     "woocommerce/woocommerce-git-hooks": "*",
