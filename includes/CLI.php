@@ -64,7 +64,7 @@ class CLI extends WP_CLI_Command {
 
 		$progress = \WP_CLI\Utils\make_progress_bar( 'Generating orders', $amount );
 		for ( $i = 1; $i <= $amount; $i++ ) {
-			Generator\Order::generate();
+			Generator\Order::generate( true, $assoc_args );
 			$progress->tick();
 		}
 		$progress->finish();
@@ -100,4 +100,25 @@ class CLI extends WP_CLI_Command {
 		WP_CLI::success( $amount . ' customers generated.' );
 	}
 }
-WP_CLI::add_command( 'wc generate', 'WC\SmoothGenerator\CLI' );
+WP_CLI::add_command( 'wc generate products', array( 'WC\SmoothGenerator\CLI', 'products' ) );
+WP_CLI::add_command( 'wc generate orders', array( 'WC\SmoothGenerator\CLI', 'orders' ), array(
+	'synopsis' => array(
+		array(
+			'name'     => 'id',
+			'type'     => 'positional',
+			'optional' => false,
+		),
+		array(
+			'name'     => 'date-start',
+			'type'     => 'assoc',
+			'optional' => true,
+		),
+		array(
+			'name'     => 'date-end',
+			'type'     => 'assoc',
+			'optional' => true,
+		),
+	),
+) );
+WP_CLI::add_command( 'wc generate customers', array( 'WC\SmoothGenerator\CLI', 'customers' ) );
+

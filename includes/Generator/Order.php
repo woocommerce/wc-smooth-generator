@@ -12,12 +12,13 @@ namespace WC\SmoothGenerator\Generator;
  */
 class Order extends Generator {
 	/**
-	 * Return a new customer.
+	 * Return a new order.
 	 *
-	 * @param bool $save Save the object before returning or not.
+	 * @param bool  $save Save the object before returning or not.
+	 * @param array $assoc_args Arguments passed via the CLI for additional customization.
 	 * @return \WC_Order|false Order object with data populated or false when failed.
 	 */
-	public static function generate( $save = true ) {
+	public static function generate( $save = true, $assoc_args = array() ) {
 		// Set this to avoid notices as when you run via WP-CLI SERVER vars are not set, order emails uses this variable.
 		if ( ! isset( $_SERVER['SERVER_NAME'] ) ) {
 			$_SERVER['SERVER_NAME'] = 'localhost';
@@ -58,6 +59,8 @@ class Order extends Generator {
 		) ) );
 		$order->calculate_totals( true );
 
+		$order->set_date_created( self::get_date_created( $assoc_args ) );
+
 		if ( $save ) {
 			$order->save();
 		}
@@ -83,6 +86,37 @@ class Order extends Generator {
 		$customer = Customer::generate( ! $guest );
 
 		return $customer;
+	}
+
+	/**
+	 * Returns a date to use as the order date. If no date arguments have been passed, this will
+	 * return the current date. If a `date-start` argument is provided, a random date will be chosen
+	 * between `date-start` and the current date. You can pass an `end-date` and a random date between start
+	 * and end will be chosen.
+	 *
+	 * @param array $assoc_args CLI arguments.
+	 * @return string Date string (Y-m-d)
+	 */
+	protected static function get_date_created( $assoc_args ) {
+		$current = date( 'Y-m-d', time() );
+		if ( ! empty( $assoc_args['date-start'] ) && empty( $assoc_args['date-end'] ) ) {
+			$start = $assoc_args['date-start'];
+			$end   = $current;
+		} elseif ( ! empty( $assoc_args['date-start'] ) && ! empty( $assoc_args['date-end'] ) ) {
+			$start = $assoc_args['date-start'];
+			$end   = $assoc_args['date-end'];
+		} else {
+			return $current;
+		}
+
+		$dates = array();
+		$date  = strtotime( $start );
+		while ( $date <= strtotime( $end ) ) {
+			$dates[] = date( 'Y-m-d', $date );
+			$date    = strtotime( '+1 day', $date );
+		}
+
+		return $dates[ array_rand( $dates ) ];
 	}
 
 	/**
