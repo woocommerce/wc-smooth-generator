@@ -59,7 +59,10 @@ class Order extends Generator {
 		) ) );
 		$order->calculate_totals( true );
 
-		$order->set_date_created( self::get_date_created( $assoc_args ) );
+		$date = self::get_date_created( $assoc_args );
+		$date .= ' ' . rand( 0, 23 ) . ':00:00';
+
+		$order->set_date_created( $date );
 
 		if ( $save ) {
 			$order->save();
