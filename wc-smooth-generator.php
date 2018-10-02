@@ -13,7 +13,7 @@
 defined( 'ABSPATH' ) || exit;
 
 // autoloader.
-require 'vendor/autoload.php';
+require __DIR__ . '/vendor/autoload.php';
 
 /**
  * Fetch instance of plugin.
