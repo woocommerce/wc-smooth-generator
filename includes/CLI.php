@@ -57,7 +57,7 @@ class CLI extends WP_CLI_Command {
 	 * wc generate orders 100
 	 *
 	 * @param array $args Argumens specified.
-	 * @param arrat $assoc_args Associative arguments specified.
+	 * @param array $assoc_args Associative arguments specified.
 	 */
 	public function orders( $args, $assoc_args ) {
 		list( $amount ) = $args;
