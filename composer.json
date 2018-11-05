@@ -7,13 +7,13 @@
   "prefer-stable": true,
   "minimum-stability": "dev",
   "require": {
-    "composer/installers": "~1.2"
+    "composer/installers": "~1.2",
+    "fzaninotto/faker": "^1.8"
   },
   "autoload": {
     "psr-4": {"WC\\SmoothGenerator\\": "includes/"}
   },
   "require-dev": {
-    "fzaninotto/faker": "^1.8",
     "squizlabs/php_codesniffer": "*",
     "wp-coding-standards/wpcs": "^0.14",
     "woocommerce/woocommerce-git-hooks": "*",
