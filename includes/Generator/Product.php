@@ -13,16 +13,25 @@ namespace WC\SmoothGenerator\Generator;
 class Product extends Generator {
 
 	/**
+	 * Holds the faker factory object.
+	 *
+	 * @var \Faker\Factory Factory object.
+	 */
+	protected static $faker;
+
+	/**
 	 * Return a new product.
 	 *
 	 * @param bool $save Save the object before returning or not.
 	 * @return \WC_Product The product object consisting of random data.
 	 */
 	public static function generate( $save = true ) {
-		$faker = \Faker\Factory::create();
+		if ( ! self::$faker ) {
+			self::$faker = \Faker\Factory::create();
+		}
 
 		// 30% chance of a variable product.
-		$is_variable = $faker->boolean( 30 );
+		$is_variable = self::$faker->boolean( 30 );
 
 		if ( $is_variable ) {
 			$product = self::generate_variable_product();
@@ -43,11 +52,10 @@ class Product extends Generator {
 	 * @return \WC_Product_Variable
 	 */
 	protected static function generate_variable_product() {
-		$faker             = \Faker\Factory::create();
-		$name              = $faker->words( $faker->numberBetween( 1, 5 ), true );
-		$will_manage_stock = $faker->boolean();
+		$name              = self::$faker->words( self::$faker->numberBetween( 1, 5 ), true );
+		$will_manage_stock = self::$faker->boolean();
 		$product           = new \WC_Product_Variable();
-		$nr_attributes     = $faker->numberBetween( 1, 3 );
+		$nr_attributes     = self::$faker->numberBetween( 1, 3 );
 		$attributes        = array();
 
 		$image_id = self::generate_image();
@@ -56,8 +64,8 @@ class Product extends Generator {
 		for ( $i = 0; $i < $nr_attributes; $i++ ) {
 			$attribute = new \WC_Product_Attribute();
 			$attribute->set_id( 0 );
-			$attribute->set_name( ucfirst( $faker->words( $faker->numberBetween( 1, 3 ), true ) ) );
-			$attribute->set_options( array_filter( $faker->words( $faker->numberBetween( 2, 4 ), false ) ), 'ucfirst' );
+			$attribute->set_name( ucfirst( self::$faker->words( self::$faker->numberBetween( 1, 3 ), true ) ) );
+			$attribute->set_options( array_filter( self::$faker->words( self::$faker->numberBetween( 2, 4 ), false ) ), 'ucfirst' );
 			$attribute->set_position( 0 );
 			$attribute->set_visible( true );
 			$attribute->set_variation( true );
@@ -66,24 +74,24 @@ class Product extends Generator {
 
 		$product->set_props( array(
 			'name'              => $name,
-			'featured'          => $faker->boolean( 10 ),
+			'featured'          => self::$faker->boolean( 10 ),
 			'attributes'        => $attributes,
 			'tax_status'        => 'taxable',
 			'tax_class'         => '',
 			'manage_stock'      => $will_manage_stock,
-			'stock_quantity'    => $will_manage_stock ? $faker->numberBetween( -100, 100 ) : null,
+			'stock_quantity'    => $will_manage_stock ? self::$faker->numberBetween( -100, 100 ) : null,
 			'stock_status'      => 'instock',
-			'backorders'        => $faker->randomElement( array( 'yes', 'no', 'notify' ) ),
-			'sold_individually' => $faker->boolean( 20 ),
+			'backorders'        => self::$faker->randomElement( array( 'yes', 'no', 'notify' ) ),
+			'sold_individually' => self::$faker->boolean( 20 ),
 			'upsell_ids'        => self::get_existing_product_ids(),
 			'cross_sell_ids'    => self::get_existing_product_ids(),
 			'image_id'          => $image_id,
-			'category_ids'      => self::generate_term_ids( $faker->numberBetween( 1, 10 ), 'product_cat' ),
-			'tag_ids'           => self::generate_term_ids( $faker->numberBetween( 1, 10 ), 'product_tag' ),
+			'category_ids'      => self::generate_term_ids( self::$faker->numberBetween( 1, 10 ), 'product_cat' ),
+			'tag_ids'           => self::generate_term_ids( self::$faker->numberBetween( 1, 10 ), 'product_tag' ),
 			'gallery_image_ids' => $gallery,
-			'reviews_allowed'   => $faker->boolean(),
-			'purchase_note'     => $faker->boolean() ? $faker->text() : '',
-			'menu_order'        => $faker->numberBetween( 0, 10000 ),
+			'reviews_allowed'   => self::$faker->boolean(),
+			'purchase_note'     => self::$faker->boolean() ? self::$faker->text() : '',
+			'menu_order'        => self::$faker->numberBetween( 0, 10000 ),
 		) );
 		// Need to save to get an ID for variations.
 		$product->save();
@@ -92,10 +100,10 @@ class Product extends Generator {
 		$variation_attributes = wc_list_pluck( array_filter( $product->get_attributes(), 'wc_attributes_array_filter_variation' ), 'get_slugs' );
 		$possible_attributes  = array_reverse( wc_array_cartesian( $variation_attributes ) );
 		foreach ( $possible_attributes as $possible_attribute ) {
-			$price      = $faker->randomFloat( 2, 1, 1000 );
-			$is_on_sale = $faker->boolean( 30 );
-			$sale_price = $is_on_sale ? $faker->randomFloat( 2, 0, $price ) : '';
-			$is_virtual = $faker->boolean( 20 );
+			$price      = self::$faker->randomFloat( 2, 1, 1000 );
+			$is_on_sale = self::$faker->boolean( 30 );
+			$sale_price = $is_on_sale ? self::$faker->randomFloat( 2, 0, $price ) : '';
+			$is_virtual = self::$faker->boolean( 20 );
 			$variation  = new \WC_Product_Variation();
 			$variation->set_props( array(
 				'parent_id'         => $product->get_id(),
@@ -103,16 +111,16 @@ class Product extends Generator {
 				'regular_price'     => $price,
 				'sale_price'        => $sale_price,
 				'date_on_sale_from' => '',
-				'date_on_sale_to'   => $faker->iso8601( date( 'c', strtotime( '+1 month' ) ) ),
+				'date_on_sale_to'   => self::$faker->iso8601( date( 'c', strtotime( '+1 month' ) ) ),
 				'tax_status'        => 'taxable',
 				'tax_class'         => '',
 				'manage_stock'      => $will_manage_stock,
-				'stock_quantity'    => $will_manage_stock ? $faker->numberBetween( -100, 100 ) : null,
+				'stock_quantity'    => $will_manage_stock ? self::$faker->numberBetween( -100, 100 ) : null,
 				'stock_status'      => 'instock',
-				'weight'            => $is_virtual ? '' : $faker->numberBetween( 1, 200 ),
-				'length'            => $is_virtual ? '' : $faker->numberBetween( 1, 200 ),
-				'width'             => $is_virtual ? '' : $faker->numberBetween( 1, 200 ),
-				'height'            => $is_virtual ? '' : $faker->numberBetween( 1, 200 ),
+				'weight'            => $is_virtual ? '' : self::$faker->numberBetween( 1, 200 ),
+				'length'            => $is_virtual ? '' : self::$faker->numberBetween( 1, 200 ),
+				'width'             => $is_virtual ? '' : self::$faker->numberBetween( 1, 200 ),
+				'height'            => $is_virtual ? '' : self::$faker->numberBetween( 1, 200 ),
 				'virtual'           => $is_virtual,
 				'downloadable'      => false,
 				'image_id'          => self::generate_image(),
@@ -131,13 +139,12 @@ class Product extends Generator {
 	 * @return \WC_Product
 	 */
 	protected static function generate_simple_product() {
-		$faker             = \Faker\Factory::create();
-		$name              = $faker->words( $faker->numberBetween( 1, 5 ), true );
-		$will_manage_stock = $faker->boolean();
-		$is_virtual        = $faker->boolean();
-		$price             = $faker->randomFloat( 2, 1, 1000 );
-		$is_on_sale        = $faker->boolean( 30 );
-		$sale_price        = $is_on_sale ? $faker->randomFloat( 2, 0, $price ) : '';
+		$name              = self::$faker->words( self::$faker->numberBetween( 1, 5 ), true );
+		$will_manage_stock = self::$faker->boolean();
+		$is_virtual        = self::$faker->boolean();
+		$price             = self::$faker->randomFloat( 2, 1, 1000 );
+		$is_on_sale        = self::$faker->boolean( 30 );
+		$sale_price        = $is_on_sale ? self::$faker->randomFloat( 2, 0, $price ) : '';
 		$product           = new \WC_Product();
 
 		$image_id = self::generate_image();
@@ -145,37 +152,37 @@ class Product extends Generator {
 
 		$product->set_props( array(
 			'name'               => $name,
-			'featured'           => $faker->boolean(),
+			'featured'           => self::$faker->boolean(),
 			'catalog_visibility' => 'visible',
-			'description'        => $faker->paragraphs( $faker->numberBetween( 1, 5 ), true ),
-			'short_description'  => $faker->text(),
-			'sku'                => sanitize_title( $name ) . '-' . $faker->ean8,
+			'description'        => self::$faker->paragraphs( self::$faker->numberBetween( 1, 5 ), true ),
+			'short_description'  => self::$faker->text(),
+			'sku'                => sanitize_title( $name ) . '-' . self::$faker->ean8,
 			'regular_price'      => $price,
 			'sale_price'         => $sale_price,
 			'date_on_sale_from'  => '',
-			'date_on_sale_to'    => $faker->iso8601( date( 'c', strtotime( '+1 month' ) ) ),
-			'total_sales'        => $faker->numberBetween( 0, 10000 ),
+			'date_on_sale_to'    => self::$faker->iso8601( date( 'c', strtotime( '+1 month' ) ) ),
+			'total_sales'        => self::$faker->numberBetween( 0, 10000 ),
 			'tax_status'         => 'taxable',
 			'tax_class'          => '',
 			'manage_stock'       => $will_manage_stock,
-			'stock_quantity'     => $will_manage_stock ? $faker->numberBetween( -100, 100 ) : null,
+			'stock_quantity'     => $will_manage_stock ? self::$faker->numberBetween( -100, 100 ) : null,
 			'stock_status'       => 'instock',
-			'backorders'         => $faker->randomElement( array( 'yes', 'no', 'notify' ) ),
-			'sold_individually'  => $faker->boolean( 20 ),
-			'weight'             => $is_virtual ? '' : $faker->numberBetween( 1, 200 ),
-			'length'             => $is_virtual ? '' : $faker->numberBetween( 1, 200 ),
-			'width'              => $is_virtual ? '' : $faker->numberBetween( 1, 200 ),
-			'height'             => $is_virtual ? '' : $faker->numberBetween( 1, 200 ),
+			'backorders'         => self::$faker->randomElement( array( 'yes', 'no', 'notify' ) ),
+			'sold_individually'  => self::$faker->boolean( 20 ),
+			'weight'             => $is_virtual ? '' : self::$faker->numberBetween( 1, 200 ),
+			'length'             => $is_virtual ? '' : self::$faker->numberBetween( 1, 200 ),
+			'width'              => $is_virtual ? '' : self::$faker->numberBetween( 1, 200 ),
+			'height'             => $is_virtual ? '' : self::$faker->numberBetween( 1, 200 ),
 			'upsell_ids'         => self::get_existing_product_ids(),
 			'cross_sell_ids'     => self::get_existing_product_ids(),
 			'parent_id'          => 0,
-			'reviews_allowed'    => $faker->boolean(),
-			'purchase_note'      => $faker->boolean() ? $faker->text() : '',
-			'menu_order'         => $faker->numberBetween( 0, 10000 ),
+			'reviews_allowed'    => self::$faker->boolean(),
+			'purchase_note'      => self::$faker->boolean() ? self::$faker->text() : '',
+			'menu_order'         => self::$faker->numberBetween( 0, 10000 ),
 			'virtual'            => $is_virtual,
 			'downloadable'       => false,
-			'category_ids'       => self::generate_term_ids( $faker->numberBetween( 1, 10 ), 'product_cat' ),
-			'tag_ids'            => self::generate_term_ids( $faker->numberBetween( 1, 10 ), 'product_tag' ),
+			'category_ids'       => self::generate_term_ids( self::$faker->numberBetween( 1, 10 ), 'product_cat' ),
+			'tag_ids'            => self::generate_term_ids( self::$faker->numberBetween( 1, 10 ), 'product_tag' ),
 			'shipping_class_id'  => 0,
 			'image_id'           => $image_id,
 			'gallery_image_ids'  => $gallery,
@@ -190,10 +197,9 @@ class Product extends Generator {
 	 * @return array
 	 */
 	protected static function maybe_get_gallery_image_ids() {
-		$faker   = \Faker\Factory::create();
 		$gallery = array();
 
-		$create_gallery = $faker->boolean( 10 );
+		$create_gallery = self::$faker->boolean( 10 );
 
 		if ( ! $create_gallery ) {
 			return;
