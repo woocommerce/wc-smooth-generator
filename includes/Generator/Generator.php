@@ -16,6 +16,13 @@ abstract class Generator {
 	const IMAGE_HEIGHT = 400;
 
 	/**
+	 * Holds the faker factory object.
+	 *
+	 * @var \Faker\Factory Factory object.
+	 */
+	protected static $faker;
+
+	/**
 	 * Return a new object of this object type.
 	 *
 	 * @param bool $save Save the object before returning or not.
@@ -31,8 +38,11 @@ abstract class Generator {
 	 * @return array
 	 */
 	protected static function generate_term_ids( $limit, $taxonomy ) {
-		$faker    = \Faker\Factory::create();
-		$terms    = $faker->words( $limit );
+		if ( ! self::$faker ) {
+			self::$faker = \Faker\Factory::create();
+		}
+
+		$terms    = self::$faker->words( $limit );
 		$term_ids = array();
 
 		foreach ( $terms as $term ) {
@@ -60,15 +70,16 @@ abstract class Generator {
 	 * @return int The attachment id of the image (0 on failure).
 	 */
 	protected static function generate_image( int $parent = 0 ) {
+		if ( ! self::$faker ) {
+			self::$faker = \Faker\Factory::create();
+		}
 
-		// Build the image.
-		$faker            = \Faker\Factory::create();
 		$image            = @imagecreatetruecolor( self::IMAGE_WIDTH, self::IMAGE_HEIGHT );
-		$background_rgb   = $faker->rgbColorAsArray;
+		$background_rgb   = self::$faker->rgbColorAsArray;
 		$background_color = imagecolorallocate( $image, $background_rgb[0], $background_rgb[1], $background_rgb[2] );
 		imagefill( $image, 0, 0, $background_color );
 		$text_color = imagecolorallocate( $image, 0, 0, 0 );
-		imagestring( $image, 5, 0, 0, $faker->emoji, $text_color );
+		imagestring( $image, 5, 0, 0, self::$faker->emoji, $text_color );
 		ob_start();
 		imagepng( $image );
 		$file = ob_get_clean();

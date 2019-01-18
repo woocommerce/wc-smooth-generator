@@ -13,13 +13,6 @@ namespace WC\SmoothGenerator\Generator;
 class Customer extends Generator {
 
 	/**
-	 * Holds the faker factory object.
-	 *
-	 * @var \Faker\Factory Factory object.
-	 */
-	protected static $faker;
-
-	/**
 	 * Return a new customer.
 	 *
 	 * @param bool $save Save the object before returning or not.
