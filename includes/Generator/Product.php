@@ -13,6 +13,13 @@ namespace WC\SmoothGenerator\Generator;
 class Product extends Generator {
 
 	/**
+	 * Holds array of product IDs for generating relationships.
+	 *
+	 * @var array Array of IDs.
+	 */
+	protected static $product_ids = array();
+
+	/**
 	 * Return a new product.
 	 *
 	 * @param bool $save Save the object before returning or not.
@@ -21,6 +28,14 @@ class Product extends Generator {
 	public static function generate( $save = true ) {
 		if ( ! self::$faker ) {
 			self::$faker = \Faker\Factory::create();
+		}
+
+		if ( empty( self::$product_ids ) ) {
+			self::$product_ids = get_posts( array(
+				'posts_per_page' => -1,
+				'post_type'      => 'product',
+				'fields'         => 'ids',
+			) );
 		}
 
 		// 30% chance of a variable product.
@@ -35,6 +50,8 @@ class Product extends Generator {
 		if ( $product ) {
 			$product->save();
 		}
+
+		self::$product_ids[] = $product->get_id();
 
 		return $product;
 	}
@@ -214,19 +231,12 @@ class Product extends Generator {
 	 * @return array
 	 */
 	protected static function get_existing_product_ids( $limit = 5 ) {
-		$post_ids = get_posts( array(
-			'numberposts' => $limit * 2,
-			'orderby'     => 'date',
-			'post_type'   => 'product',
-			'fields'      => 'ids',
-		) );
-
-		if ( ! $post_ids ) {
+		if ( ! self::$product_ids ) {
 			return array();
 		}
 
-		shuffle( $post_ids );
+		shuffle( self::$product_ids );
 
-		return array_slice( $post_ids, 0, max( count( $post_ids ), $limit ) );
+		return array_slice( self::$product_ids, 0, max( count( self::$product_ids ), $limit ) );
 	}
 }
