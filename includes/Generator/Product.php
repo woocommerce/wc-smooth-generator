@@ -45,7 +45,7 @@ class Product extends Generator {
 	 * @return \WC_Product_Variable
 	 */
 	protected static function generate_variable_product() {
-		$name              = self::$faker->words( self::$faker->numberBetween( 1, 5 ), true );
+		$name              = ucwords( self::$faker->words( self::$faker->numberBetween( 1, 5 ), true ) );
 		$will_manage_stock = self::$faker->boolean();
 		$product           = new \WC_Product_Variable();
 		$nr_attributes     = self::$faker->numberBetween( 1, 3 );
@@ -132,7 +132,7 @@ class Product extends Generator {
 	 * @return \WC_Product
 	 */
 	protected static function generate_simple_product() {
-		$name              = self::$faker->words( self::$faker->numberBetween( 1, 5 ), true );
+		$name              = ucwords( self::$faker->words( self::$faker->numberBetween( 1, 5 ), true ) );
 		$will_manage_stock = self::$faker->boolean();
 		$is_virtual        = self::$faker->boolean();
 		$price             = self::$faker->randomFloat( 2, 1, 1000 );
@@ -198,7 +198,9 @@ class Product extends Generator {
 			return;
 		}
 
-		for ( $i = 0; $i < rand( 1, 3 ); $i ++ ) {
+		$image_count = rand( 1, 3 );
+
+		for ( $i = 0; $i < $image_count; $i ++ ) {
 			$gallery[] = self::generate_image();
 		}
 
