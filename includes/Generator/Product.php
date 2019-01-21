@@ -31,11 +31,13 @@ class Product extends Generator {
 		}
 
 		if ( empty( self::$product_ids ) ) {
-			self::$product_ids = get_posts( array(
-				'posts_per_page' => -1,
-				'post_type'      => 'product',
-				'fields'         => 'ids',
-			) );
+			self::$product_ids = wc_get_products(
+				array(
+					'limit'  => 200,
+					'return' => 'ids',
+					'status' => 'publish',
+				)
+			);
 		}
 
 		// 30% chance of a variable product.
