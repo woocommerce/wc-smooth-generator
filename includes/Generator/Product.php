@@ -239,6 +239,6 @@ class Product extends Generator {
 
 		shuffle( self::$product_ids );
 
-		return array_slice( self::$product_ids, 0, max( count( self::$product_ids ), $limit ) );
+		return array_slice( self::$product_ids, 0, min( count( self::$product_ids ), $limit ) );
 	}
 }
