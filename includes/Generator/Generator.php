@@ -78,8 +78,6 @@ abstract class Generator {
 		$background_rgb   = self::$faker->rgbColorAsArray;
 		$background_color = imagecolorallocate( $image, $background_rgb[0], $background_rgb[1], $background_rgb[2] );
 		imagefill( $image, 0, 0, $background_color );
-		$text_color = imagecolorallocate( $image, 0, 0, 0 );
-		imagestring( $image, 5, 0, 0, self::$faker->emoji, $text_color );
 		ob_start();
 		imagepng( $image );
 		$file = ob_get_clean();
