@@ -11,6 +11,7 @@ namespace WC\SmoothGenerator\Generator;
  * Order data generator.
  */
 class Order extends Generator {
+
 	/**
 	 * Return a new order.
 	 *
@@ -23,7 +24,11 @@ class Order extends Generator {
 		if ( ! isset( $_SERVER['SERVER_NAME'] ) ) {
 			$_SERVER['SERVER_NAME'] = 'localhost';
 		}
-		$faker    = \Faker\Factory::create( 'en_US' );
+
+		if ( ! self::$faker ) {
+			self::$faker = \Faker\Factory::create( 'en_US' );
+		}
+
 		$order    = new \WC_Order();
 		$customer = self::get_customer();
 		if ( ! $customer instanceof \WC_Customer ) {
@@ -32,7 +37,7 @@ class Order extends Generator {
 		$products = self::get_random_products( 1, 10 );
 
 		foreach ( $products as $product ) {
-			$quantity = $faker->numberBetween( 1, 10 );
+			$quantity = self::$faker->numberBetween( 1, 10 );
 			$order->add_product( $product, $quantity );
 		}
 

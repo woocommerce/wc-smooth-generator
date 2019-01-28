@@ -19,27 +19,29 @@ class Customer extends Generator {
 	 * @return \WC_Customer Customer object with data populated.
 	 */
 	public static function generate( $save = true ) {
-		$faker       = \Faker\Factory::create();
+		if ( ! self::$faker ) {
+			self::$faker = \Faker\Factory::create();
+		}
 
 		// Make sure a unique username and e-mail are used.
 		do {
-			$username = $faker->userName();
+			$username = self::$faker->userName();
 		} while ( username_exists( $username ) );
 
 		do {
-			$email = $faker->safeEmail();
+			$email = self::$faker->safeEmail();
 		} while ( email_exists( $email ) );
 
-		$firstname   = $faker->firstName( $faker->randomElement( array( 'male', 'female' ) ) );
-		$lastname    = $faker->lastName();
-		$company     = $faker->company();
-		$address1    = $faker->buildingNumber() . ' ' . $faker->streetName();
-		$address2    = $faker->streetAddress();
-		$city        = $faker->city();
-		$state       = $faker->stateAbbr();
-		$postcode    = $faker->postcode();
-		$countrycode = $faker->countryCode();
-		$phone       = $faker->e164PhoneNumber();
+		$firstname   = self::$faker->firstName( self::$faker->randomElement( array( 'male', 'female' ) ) );
+		$lastname    = self::$faker->lastName();
+		$company     = self::$faker->company();
+		$address1    = self::$faker->buildingNumber() . ' ' . self::$faker->streetName();
+		$address2    = self::$faker->streetAddress();
+		$city        = self::$faker->city();
+		$state       = self::$faker->stateAbbr();
+		$postcode    = self::$faker->postcode();
+		$countrycode = self::$faker->countryCode();
+		$phone       = self::$faker->e164PhoneNumber();
 		$customer    = new \WC_Customer();
 
 		$customer->set_props( array(
@@ -51,7 +53,7 @@ class Customer extends Generator {
 			'display_name'        => $firstname,
 			'role'                => 'customer',
 			'username'            => $username,
-			'password'            => $faker->password(),
+			'password'            => self::$faker->password(),
 			'billing_first_name'  => $firstname,
 			'billing_last_name'   => $lastname,
 			'billing_company'     => $company,
