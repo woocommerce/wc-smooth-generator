@@ -166,7 +166,7 @@ class Product extends Generator {
 				$raw_name = array_rand( self::$global_attributes );
 
 				if ( in_array( $raw_name, $used_names, true ) ) {
-					$raw_name = ucfirst( self::$faker->words( 1, true ) );
+					$raw_name = ucfirst( substr( self::$faker->word(), 0, 28 ) );
 				}
 
 				$attribute_labels = wp_list_pluck( wc_get_attribute_taxonomies(), 'attribute_label', 'attribute_name' );
@@ -190,15 +190,16 @@ class Product extends Generator {
 
 				$used_names[] = $raw_name;
 
-				$num_values = self::$faker->numberBetween( 1, 10 );
-				$values     = array();
+				$num_values      = self::$faker->numberBetween( 1, 10 );
+				$values          = array();
+				$existing_values = self::$global_attributes[ $raw_name ];
 
 				for ( $i = 0; $i < $num_values; $i++ ) {
 					$value = '';
 
-					if ( self::$faker->boolean() ) {
-						$value_key = array_rand( self::$global_attributes[ $raw_name ] );
-						$value     = self::$global_attributes[ $raw_name ][ $value_key ];
+					if ( self::$faker->boolean( 80 ) && ! empty( $existing_values ) ) {
+						shuffle( $existing_values );
+						$value = array_pop( $existing_values );
 					}
 
 					if ( empty( $value ) || in_array( $value, $values, true ) ) {
@@ -206,6 +207,7 @@ class Product extends Generator {
 					}
 
 					self::$global_attributes[ $raw_name ][] = $value;
+
 					$values[] = $value;
 				}
 				$attribute->set_options( $values );
