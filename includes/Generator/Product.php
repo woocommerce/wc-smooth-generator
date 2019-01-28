@@ -136,7 +136,7 @@ class Product extends Generator {
 			) )
 		);
 
-		self::$global_attributes[ $raw_name ] = array();
+		self::$global_attributes[ $raw_name ] = isset( self::$global_attributes[ $raw_name ] ) ? self::$global_attributes[ $raw_name ] : array();
 
 		delete_transient( 'wc_attribute_taxonomies' );
 
