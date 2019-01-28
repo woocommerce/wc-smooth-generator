@@ -86,8 +86,8 @@ class Product extends Generator {
 			);
 		}
 
-		// 30% chance of a variable product.
-		$is_variable = self::$faker->boolean( 30 );
+		// 20% chance of a variable product.
+		$is_variable = self::$faker->boolean( 20 );
 
 		if ( $is_variable ) {
 			$product = self::generate_variable_product();
