@@ -20,6 +20,52 @@ class Product extends Generator {
 	protected static $product_ids = array();
 
 	/**
+	 * Holds array of global attributes new products may reuse.
+	 *
+	 * @var array Array of attributes.
+	 */
+	protected static $global_attributes = array(
+		'Color'        => array(
+			'Green',
+			'Blue',
+			'Red',
+			'Yellow',
+			'Indigo',
+			'Violet',
+			'Black',
+			'White',
+			'Orange',
+			'Pink',
+			'Purple',
+		),
+		'Size'         => array(
+			'Small',
+			'Medium',
+			'Large',
+			'XL',
+			'XXL',
+			'XXXL',
+		),
+		'Numeric Size' => array(
+			'6',
+			'7',
+			'8',
+			'9',
+			'10',
+			'11',
+			'12',
+			'13',
+			'14',
+			'15',
+			'16',
+			'17',
+			'18',
+			'19',
+			'20',
+		),
+	);
+
+	/**
 	 * Return a new product.
 	 *
 	 * @param bool $save Save the object before returning or not.
@@ -59,6 +105,121 @@ class Product extends Generator {
 	}
 
 	/**
+	 * Create a new global attribute.
+	 *
+	 * @param string $raw_name Attribute name (label).
+	 * @return int Attribute ID.
+	 */
+	protected static function create_global_attribute( $raw_name ) {
+		$slug = wc_sanitize_taxonomy_name( $raw_name );
+
+		$attribute_id = wc_create_attribute( array(
+			'name'         => $raw_name,
+			'slug'         => $slug,
+			'type'         => 'select',
+			'order_by'     => 'menu_order',
+			'has_archives' => false,
+		) );
+
+		$taxonomy_name = wc_attribute_taxonomy_name( $slug );
+		register_taxonomy(
+			$taxonomy_name,
+			apply_filters( 'woocommerce_taxonomy_objects_' . $taxonomy_name, array( 'product' ) ),
+			apply_filters( 'woocommerce_taxonomy_args_' . $taxonomy_name, array(
+				'labels'       => array(
+					'name' => $raw_name,
+				),
+				'hierarchical' => true,
+				'show_ui'      => false,
+				'query_var'    => true,
+				'rewrite'      => false,
+			) )
+		);
+
+		self::$global_attributes[] = array(
+			$raw_name => array(),
+		);
+
+		delete_transient( 'wc_attribute_taxonomies' );
+
+		return $attribute_id;
+	}
+
+	/**
+	 * Generate attributes for a product.
+	 *
+	 * @param integer $qty Number of attributes to generate.
+	 * @return array Array of attributes.
+	 */
+	protected static function generate_attributes( $qty = 1 ) {
+		$used_names = array();
+		$attributes = array();
+
+		for ( $i = 0; $i < $qty; $i++ ) {
+			$attribute = new \WC_Product_Attribute();
+			$attribute->set_id( 0 );
+			$attribute->set_position( $i );
+			$attribute->set_visible( true );
+			$attribute->set_variation( true );
+
+			if ( self::$faker->boolean() ) {
+				$raw_name = array_rand( self::$global_attributes );
+
+				if ( in_array( $raw_name, $used_names, true ) ) {
+					$raw_name = ucfirst( self::$faker->words( 1, true ) );
+				}
+
+				$attribute_labels = wp_list_pluck( wc_get_attribute_taxonomies(), 'attribute_label', 'attribute_name' );
+				$attribute_name   = array_search( $raw_name, $attribute_labels, true );
+
+				if ( ! $attribute_name ) {
+					$attribute_name = wc_sanitize_taxonomy_name( $raw_name );
+				}
+
+				$attribute_id = wc_attribute_taxonomy_id_by_name( $attribute_name );
+
+				if ( ! $attribute_id ) {
+					$attribute_id = self::create_global_attribute( $raw_name );
+				}
+
+				$slug          = wc_sanitize_taxonomy_name( $raw_name );
+				$taxonomy_name = wc_attribute_taxonomy_name( $slug );
+
+				$attribute->set_name( $taxonomy_name );
+				$attribute->set_id( $attribute_id );
+
+				$used_names[] = $raw_name;
+
+				$num_values = self::$faker->numberBetween( 1, 10 );
+				$values     = array();
+
+				for ( $i = 0; $i < $num_values; $i++ ) {
+					$value = '';
+
+					if ( self::$faker->boolean() ) {
+						$value_key = array_rand( self::$global_attributes[ $raw_name ] );
+						$value     = self::$global_attributes[ $raw_name ][ $value_key ];
+					}
+
+					if ( empty( $value ) || in_array( $value, $values, true ) ) {
+						$value = ucfirst( self::$faker->words( self::$faker->numberBetween( 1, 2 ), true ) );
+					}
+
+					self::$global_attributes[ $raw_name ][] = $value;
+					$values[] = $value;
+				}
+				$attribute->set_options( $values );
+			} else {
+				$attribute->set_name( ucfirst( self::$faker->words( self::$faker->numberBetween( 1, 3 ), true ) ) );
+				$attribute->set_options( array_filter( self::$faker->words( self::$faker->numberBetween( 2, 4 ), false ) ), 'ucfirst' );
+			}
+			$attributes[] = $attribute;
+		}
+
+		return $attributes;
+	}
+
+	/**
 	 * Generate a variable product and return it.
 	 *
 	 * @return \WC_Product_Variable
@@ -67,22 +228,10 @@ class Product extends Generator {
 		$name              = ucwords( self::$faker->words( self::$faker->numberBetween( 1, 5 ), true ) );
 		$will_manage_stock = self::$faker->boolean();
 		$product           = new \WC_Product_Variable();
-		$nr_attributes     = self::$faker->numberBetween( 1, 3 );
-		$attributes        = array();
 
-		$image_id = self::generate_image();
-		$gallery  = self::maybe_get_gallery_image_ids();
-
-		for ( $i = 0; $i < $nr_attributes; $i++ ) {
-			$attribute = new \WC_Product_Attribute();
-			$attribute->set_id( 0 );
-			$attribute->set_name( ucfirst( self::$faker->words( self::$faker->numberBetween( 1, 3 ), true ) ) );
-			$attribute->set_options( array_filter( self::$faker->words( self::$faker->numberBetween( 2, 4 ), false ) ), 'ucfirst' );
-			$attribute->set_position( 0 );
-			$attribute->set_visible( true );
-			$attribute->set_variation( true );
-			$attributes[] = $attribute;
-		}
+		$image_id   = self::generate_image();
+		$gallery    = self::maybe_get_gallery_image_ids();
+		$attributes = self::generate_attributes( self::$faker->numberBetween( 1, 3 ) );
 
 		$product->set_props( array(
 			'name'              => $name,
