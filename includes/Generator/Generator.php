@@ -23,6 +23,20 @@ abstract class Generator {
 	protected static $faker;
 
 	/**
+	 * Holds array of attachment IDs for reuse.
+	 *
+	 * @var array Array of IDs.
+	 */
+	protected static $attachment_ids;
+
+	/**
+	 * Holds array of term IDs for reuse.
+	 *
+	 * @var array Array of IDs.
+	 */
+	protected static $term_ids;
+
+	/**
 	 * Return a new object of this object type.
 	 *
 	 * @param bool $save Save the object before returning or not.
@@ -42,20 +56,36 @@ abstract class Generator {
 			self::$faker = \Faker\Factory::create();
 		}
 
-		$terms    = self::$faker->words( $limit );
 		$term_ids = array();
 
+		if ( ! $limit ) {
+			return $term_ids;
+		}
+
+		$terms = self::$faker->words( $limit );
+
 		foreach ( $terms as $term ) {
+			if ( isset( self::$term_ids[ $taxonomy ], self::$term_ids[ $taxonomy ][ $term ] ) ) {
+				$term_ids[] = self::$term_ids[ $taxonomy ][ $term ];
+				continue;
+			}
+
+			$term_id  = 0;
 			$existing = get_term_by( 'name', $term, $taxonomy );
 
 			if ( $existing ) {
-				$term_ids[] = $existing->term_id;
+				$term_id = $existing->term_id;
 			} else {
-				$term = wp_insert_term( $term, $taxonomy );
+				$term_ob = wp_insert_term( $term, $taxonomy );
 
-				if ( $term && ! is_wp_error( $term ) ) {
-					$term_ids[] = $term['term_id'];
+				if ( $term_ob && ! is_wp_error( $term_ob ) ) {
+					$term_id = $term_ob['term_id'];
 				}
+			}
+
+			if ( $term_id ) {
+				$term_ids[] = $term_id;
+				self::$term_ids[ $taxonomy ][ $term ] = $term_id;
 			}
 		}
 
@@ -63,7 +93,7 @@ abstract class Generator {
 	}
 
 	/**
-	 * Generate and upload a random image.
+	 * Generate and upload a random image, or choose an existing attachment.
 	 *
 	 * @param int $parent Parent ID.
 	 *
@@ -74,42 +104,62 @@ abstract class Generator {
 			self::$faker = \Faker\Factory::create();
 		}
 
-		$image            = @imagecreatetruecolor( self::IMAGE_WIDTH, self::IMAGE_HEIGHT );
-		$background_rgb   = self::$faker->rgbColorAsArray;
-		$background_color = imagecolorallocate( $image, $background_rgb[0], $background_rgb[1], $background_rgb[2] );
-		imagefill( $image, 0, 0, $background_color );
-		ob_start();
-		imagepng( $image );
-		$file = ob_get_clean();
-		imagedestroy( $image );
-
-		$name = 'img-' . rand() . '.png';
-		$attachment_id = 0;
-
-		// Upload the image.
-		$upload = wp_upload_bits( $name, '', $file );
-		if ( empty( $upload['error'] ) ) {
-			$attachment_id = (int) wp_insert_attachment(
+		// Get existing attachments.
+		if ( empty( self::$attachment_ids ) ) {
+			self::$attachment_ids = get_posts(
 				array(
-					'post_title' => $name,
-					'post_mime_type' => $upload['type'],
-					'post_status' => 'publish',
-					'post_content' => '',
-				),
-				$upload['file']
+					'post_type'      => 'attachment',
+					'posts_per_page' => 200,
+					'post_status'    => 'any',
+					'fields'         => 'ids',
+				)
 			);
 		}
 
-		if ( $attachment_id ) {
-			if ( ! function_exists( 'wp_generate_attachment_metadata' ) ) {
-				include_once ABSPATH . 'wp-admin/includes/image.php';
+		// 25% chance to create a new image rather than reuse existing unless there are limited number available.
+		$create_new_image = 10 < count( self::$attachment_ids ) ? true : self::$faker->boolean( 25 );
+
+		if ( ! $create_new_image ) {
+			$attachment_id = array_rand( self::$attachment_ids );
+		} else {
+			$image            = @imagecreatetruecolor( self::IMAGE_WIDTH, self::IMAGE_HEIGHT );
+			$background_rgb   = self::$faker->rgbColorAsArray;
+			$background_color = imagecolorallocate( $image, $background_rgb[0], $background_rgb[1], $background_rgb[2] );
+			imagefill( $image, 0, 0, $background_color );
+			ob_start();
+			imagepng( $image );
+			$file = ob_get_clean();
+			imagedestroy( $image );
+
+			$name = 'img-' . rand() . '.png';
+			$attachment_id = 0;
+
+			// Upload the image.
+			$upload = wp_upload_bits( $name, '', $file );
+
+			if ( empty( $upload['error'] ) ) {
+				$attachment_id = (int) wp_insert_attachment(
+					array(
+						'post_title' => $name,
+						'post_mime_type' => $upload['type'],
+						'post_status' => 'publish',
+						'post_content' => '',
+					),
+					$upload['file']
+				);
 			}
 
-			$metadata = wp_generate_attachment_metadata( $attachment_id, $upload['file'] );
-			wp_update_attachment_metadata( $attachment_id, $metadata );
-			if ( $parent ) {
-				update_post_meta( $parent, '_thumbnail_id', $attachment_id );
+			if ( $attachment_id ) {
+				if ( ! function_exists( 'wp_generate_attachment_metadata' ) ) {
+					include_once ABSPATH . 'wp-admin/includes/image.php';
+				}
+				wp_update_attachment_metadata( $attachment_id, wp_generate_attachment_metadata( $attachment_id, $upload['file'] ) );
+				self::$attachment_ids[] = $attachment_id;
 			}
+		}
+
+		if ( $parent ) {
+			update_post_meta( $parent, '_thumbnail_id', $attachment_id );
 		}
 
 		return $attachment_id;
