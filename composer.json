@@ -9,7 +9,8 @@
   "require": {
     "composer/installers": "~1.2",
     "fzaninotto/faker": "^1.8",
-    "jdenticon/jdenticon": "^0.10.0"
+    "jdenticon/jdenticon": "^0.10.0",
+    "mbezhanov/faker-provider-collection": "^1.2.1"
   },
   "autoload": {
     "psr-4": {"WC\\SmoothGenerator\\": "includes/"}

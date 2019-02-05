@@ -66,6 +66,14 @@ class Product extends Generator {
 	);
 
 	/**
+	 * Init faker library.
+	 */
+	protected static function init_faker() {
+		parent::init_faker();
+		self::$faker->addProvider( new \Bezhanov\Faker\Provider\Commerce( self::$faker ) );
+	}
+
+	/**
 	 * Return a new product.
 	 *
 	 * @param bool $save Save the object before returning or not.
@@ -213,7 +221,7 @@ class Product extends Generator {
 	 * @return \WC_Product_Variable
 	 */
 	protected static function generate_variable_product() {
-		$name              = ucwords( self::$faker->words( self::$faker->numberBetween( 1, 3 ), true ) );
+		$name              = ucwords( self::$faker->productName );
 		$will_manage_stock = self::$faker->boolean();
 		$product           = new \WC_Product_Variable();
 
@@ -287,7 +295,7 @@ class Product extends Generator {
 	 * @return \WC_Product
 	 */
 	protected static function generate_simple_product() {
-		$name              = ucwords( self::$faker->words( self::$faker->numberBetween( 1, 3 ), true ) );
+		$name              = ucwords( self::$faker->productName );
 		$will_manage_stock = self::$faker->boolean();
 		$is_virtual        = self::$faker->boolean();
 		$price             = self::$faker->randomFloat( 2, 1, 1000 );
