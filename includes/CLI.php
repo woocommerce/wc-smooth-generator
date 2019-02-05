@@ -33,8 +33,14 @@ class CLI extends WP_CLI_Command {
 	public function products( $args, $assoc_args ) {
 		list( $amount ) = $args;
 
-		$progress   = \WP_CLI\Utils\make_progress_bar( 'Generating products', $amount );
 		$time_start = microtime( true );
+
+		WP_CLI::line( 'Initializing...' );
+
+		// Pre-generate images. Min 20, max 100.
+		Generator\Product::seed_images( min( $amount + 19, 100 ) );
+
+		$progress = \WP_CLI\Utils\make_progress_bar( 'Generating products', $amount );
 
 		for ( $i = 1; $i <= $amount; $i++ ) {
 			Generator\Product::generate();

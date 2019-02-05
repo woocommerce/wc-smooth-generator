@@ -12,8 +12,7 @@ namespace WC\SmoothGenerator\Generator;
  */
 abstract class Generator {
 
-	const IMAGE_WIDTH  = 700;
-	const IMAGE_HEIGHT = 400;
+	const IMAGE_SIZE  = 700;
 
 	/**
 	 * Holds the faker factory object.
@@ -23,18 +22,18 @@ abstract class Generator {
 	protected static $faker;
 
 	/**
-	 * Holds array of attachment IDs for reuse.
-	 *
-	 * @var array Array of IDs.
-	 */
-	protected static $attachment_ids;
-
-	/**
-	 * Holds array of term IDs for reuse.
+	 * Caches term IDs.
 	 *
 	 * @var array Array of IDs.
 	 */
 	protected static $term_ids;
+
+	/**
+	 * Holds array of generated images to assign to products.
+	 *
+	 * @var array Array of image attachment IDs.
+	 */
+	protected static $images = array();
 
 	/**
 	 * Return a new object of this object type.
@@ -100,71 +99,84 @@ abstract class Generator {
 	}
 
 	/**
+	 * Create/retrieve a set of random images to assign to products.
+	 *
+	 * @param integer $amount Number of images required.
+	 */
+	public static function seed_images( $amount = 10 ) {
+		self::$images = get_posts(
+			array(
+				'post_type'      => 'attachment',
+				'fields'         => 'ids',
+				'parent'         => 0,
+				'posts_per_page' => $amount,
+				'exclude'        => get_option( 'woocommerce_placeholder_image', 0 ),
+			)
+		);
+
+		$found_count = count( self::$images );
+
+		for ( $i = 1; $i <= ( $amount - $found_count ); $i++ ) {
+			self::$images[] = self::generate_image();
+		}
+	}
+
+	/**
+	 * Get an image at random from our seeded data.
+	 *
+	 * @return int
+	 */
+	protected static function get_image() {
+		if ( ! self::$images ) {
+			self::seed_images();
+		}
+		return self::$images[ array_rand( self::$images ) ];
+	}
+
+	/**
 	 * Generate and upload a random image, or choose an existing attachment.
 	 *
-	 * @param int $parent Parent ID.
-	 *
+	 * @param string $seed Seed for image generation.
 	 * @return int The attachment id of the image (0 on failure).
 	 */
-	protected static function generate_image( int $parent = 0 ) {
+	protected static function generate_image( $seed = '' ) {
 		self::init_faker();
 
-		// Get existing attachments.
-		if ( empty( self::$attachment_ids ) ) {
-			self::$attachment_ids = get_posts(
+		$attachment_id = 0;
+
+		if ( ! $seed ) {
+			$seed = self::$faker->word();
+		}
+
+		$seed = sanitize_key( $seed );
+		$icon = new \Jdenticon\Identicon();
+		$icon->setValue( $seed );
+		$icon->setSize( self::IMAGE_SIZE );
+
+		$image = imagecreatefromstring( @$icon->getImageData() ); // phpcs:ignore
+		ob_start();
+		imagepng( $image );
+		$file = ob_get_clean();
+		imagedestroy( $image );
+		$upload = wp_upload_bits( 'img-' . $seed . '.png', '', $file );
+
+		if ( empty( $upload['error'] ) ) {
+			$attachment_id = (int) wp_insert_attachment(
 				array(
-					'post_type'      => 'attachment',
-					'posts_per_page' => 200,
-					'post_status'    => 'any',
-					'fields'         => 'ids',
-				)
+					'post_title'     => 'img-' . $seed . '.png',
+					'post_mime_type' => $upload['type'],
+					'post_status'    => 'publish',
+					'post_content'   => '',
+				),
+				$upload['file']
 			);
 		}
 
-		// 25% chance to create a new image rather than reuse existing unless there are limited number available.
-		$create_new_image = 10 < count( self::$attachment_ids ) ? true : self::$faker->boolean( 25 );
-
-		if ( ! $create_new_image ) {
-			$attachment_id = array_rand( self::$attachment_ids );
-		} else {
-			$image            = @imagecreatetruecolor( self::IMAGE_WIDTH, self::IMAGE_HEIGHT );
-			$background_rgb   = self::$faker->rgbColorAsArray;
-			$background_color = imagecolorallocate( $image, $background_rgb[0], $background_rgb[1], $background_rgb[2] );
-			imagefill( $image, 0, 0, $background_color );
-			ob_start();
-			imagepng( $image );
-			$file = ob_get_clean();
-			imagedestroy( $image );
-
-			$name = 'img-' . rand() . '.png';
-			$attachment_id = 0;
-
-			// Upload the image.
-			$upload = wp_upload_bits( $name, '', $file );
-
-			if ( empty( $upload['error'] ) ) {
-				$attachment_id = (int) wp_insert_attachment(
-					array(
-						'post_title' => $name,
-						'post_mime_type' => $upload['type'],
-						'post_status' => 'publish',
-						'post_content' => '',
-					),
-					$upload['file']
-				);
+		if ( $attachment_id ) {
+			if ( ! function_exists( 'wp_generate_attachment_metadata' ) ) {
+				include_once ABSPATH . 'wp-admin/includes/image.php';
 			}
-
-			if ( $attachment_id ) {
-				if ( ! function_exists( 'wp_generate_attachment_metadata' ) ) {
-					include_once ABSPATH . 'wp-admin/includes/image.php';
-				}
-				wp_update_attachment_metadata( $attachment_id, wp_generate_attachment_metadata( $attachment_id, $upload['file'] ) );
-				self::$attachment_ids[] = $attachment_id;
-			}
-		}
-
-		if ( $parent ) {
-			update_post_meta( $parent, '_thumbnail_id', $attachment_id );
+			wp_update_attachment_metadata( $attachment_id, wp_generate_attachment_metadata( $attachment_id, $upload['file'] ) );
 		}
 
 		return $attachment_id;

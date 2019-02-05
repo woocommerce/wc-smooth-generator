@@ -74,16 +74,6 @@ class Product extends Generator {
 	public static function generate( $save = true ) {
 		self::init_faker();
 
-		if ( empty( self::$product_ids ) ) {
-			self::$product_ids = wc_get_products(
-				array(
-					'limit'  => 200,
-					'return' => 'ids',
-					'status' => 'publish',
-				)
-			);
-		}
-
 		// 20% chance of a variable product.
 		$is_variable = self::$faker->boolean( 20 );
 
@@ -223,11 +213,10 @@ class Product extends Generator {
 	 * @return \WC_Product_Variable
 	 */
 	protected static function generate_variable_product() {
-		$name              = ucwords( self::$faker->words( self::$faker->numberBetween( 1, 5 ), true ) );
+		$name              = ucwords( self::$faker->words( self::$faker->numberBetween( 1, 3 ), true ) );
 		$will_manage_stock = self::$faker->boolean();
 		$product           = new \WC_Product_Variable();
 
-		$image_id   = self::generate_image();
 		$gallery    = self::maybe_get_gallery_image_ids();
 		$attributes = self::generate_attributes( self::$faker->numberBetween( 1, 3 ) );
 
@@ -244,7 +233,7 @@ class Product extends Generator {
 			'sold_individually' => self::$faker->boolean( 20 ),
 			'upsell_ids'        => self::get_existing_product_ids(),
 			'cross_sell_ids'    => self::get_existing_product_ids(),
-			'image_id'          => $image_id,
+			'image_id'          => self::get_image(),
 			'category_ids'      => self::generate_term_ids( self::$faker->numberBetween( 0, 5 ), 'product_cat' ),
 			'tag_ids'           => self::generate_term_ids( self::$faker->numberBetween( 0, 5 ), 'product_tag' ),
 			'gallery_image_ids' => $gallery,
@@ -274,7 +263,7 @@ class Product extends Generator {
 				'tax_status'        => 'taxable',
 				'tax_class'         => '',
 				'manage_stock'      => $will_manage_stock,
-				'stock_quantity'    => $will_manage_stock ? self::$faker->numberBetween( -100, 100 ) : null,
+				'stock_quantity'    => $will_manage_stock ? self::$faker->numberBetween( -20, 100 ) : null,
 				'stock_status'      => 'instock',
 				'weight'            => $is_virtual ? '' : self::$faker->numberBetween( 1, 200 ),
 				'length'            => $is_virtual ? '' : self::$faker->numberBetween( 1, 200 ),
@@ -282,7 +271,7 @@ class Product extends Generator {
 				'height'            => $is_virtual ? '' : self::$faker->numberBetween( 1, 200 ),
 				'virtual'           => $is_virtual,
 				'downloadable'      => false,
-				'image_id'          => self::generate_image(),
+				'image_id'          => self::get_image(),
 			) );
 			$variation->save();
 		}
@@ -298,7 +287,7 @@ class Product extends Generator {
 	 * @return \WC_Product
 	 */
 	protected static function generate_simple_product() {
-		$name              = ucwords( self::$faker->words( self::$faker->numberBetween( 1, 5 ), true ) );
+		$name              = ucwords( self::$faker->words( self::$faker->numberBetween( 1, 3 ), true ) );
 		$will_manage_stock = self::$faker->boolean();
 		$is_virtual        = self::$faker->boolean();
 		$price             = self::$faker->randomFloat( 2, 1, 1000 );
@@ -306,7 +295,7 @@ class Product extends Generator {
 		$sale_price        = $is_on_sale ? self::$faker->randomFloat( 2, 0, $price ) : '';
 		$product           = new \WC_Product();
 
-		$image_id = self::generate_image();
+		$image_id = self::get_image();
 		$gallery  = self::maybe_get_gallery_image_ids();
 
 		$product->set_props( array(
@@ -367,7 +356,7 @@ class Product extends Generator {
 		$image_count = rand( 0, 3 );
 
 		for ( $i = 0; $i < $image_count; $i ++ ) {
-			$gallery[] = self::generate_image();
+			$gallery[] = self::get_image();
 		}
 
 		return $gallery;
@@ -381,7 +370,14 @@ class Product extends Generator {
 	 */
 	protected static function get_existing_product_ids( $limit = 5 ) {
 		if ( ! self::$product_ids ) {
-			return array();
+			self::$product_ids = wc_get_products(
+				array(
+					'limit'   => $limit,
+					'return'  => 'ids',
+					'status'  => 'publish',
+					'orderby' => 'rand',
+				)
+			);
 		}
 
 		$random_limit = rand( 0, $limit );

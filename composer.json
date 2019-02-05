@@ -8,7 +8,8 @@
   "minimum-stability": "dev",
   "require": {
     "composer/installers": "~1.2",
-    "fzaninotto/faker": "^1.8"
+    "fzaninotto/faker": "^1.8",
+    "jdenticon/jdenticon": "^0.10.0"
   },
   "autoload": {
     "psr-4": {"WC\\SmoothGenerator\\": "includes/"}
