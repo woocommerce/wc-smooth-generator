@@ -33,13 +33,21 @@ class CLI extends WP_CLI_Command {
 	public function products( $args, $assoc_args ) {
 		list( $amount ) = $args;
 
-		$progress = \WP_CLI\Utils\make_progress_bar( 'Generating products', $amount );
+		$progress   = \WP_CLI\Utils\make_progress_bar( 'Generating products', $amount );
+		$time_start = microtime( true );
+
 		for ( $i = 1; $i <= $amount; $i++ ) {
 			Generator\Product::generate();
 			$progress->tick();
 		}
+
+		$time_end       = microtime( true );
+		$execution_time = round( ( $time_end - $time_start ), 2 );
+		$display_time   = $execution_time < 60 ? $execution_time . ' seconds' : human_time_diff( $time_start, $time_end );
+
 		$progress->finish();
-		WP_CLI::success( $amount . ' products generated.' );
+
+		WP_CLI::success( $amount . ' products generated in ' . $display_time );
 	}
 
 	/**
