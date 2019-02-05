@@ -247,8 +247,8 @@ class Product extends Generator {
 			'upsell_ids'        => self::get_existing_product_ids(),
 			'cross_sell_ids'    => self::get_existing_product_ids(),
 			'image_id'          => $image_id,
-			'category_ids'      => self::generate_term_ids( self::$faker->numberBetween( 1, 10 ), 'product_cat' ),
-			'tag_ids'           => self::generate_term_ids( self::$faker->numberBetween( 1, 10 ), 'product_tag' ),
+			'category_ids'      => self::generate_term_ids( self::$faker->numberBetween( 0, 5 ), 'product_cat' ),
+			'tag_ids'           => self::generate_term_ids( self::$faker->numberBetween( 0, 5 ), 'product_tag' ),
 			'gallery_image_ids' => $gallery,
 			'reviews_allowed'   => self::$faker->boolean(),
 			'purchase_note'     => self::$faker->boolean() ? self::$faker->text() : '',
@@ -342,8 +342,8 @@ class Product extends Generator {
 			'menu_order'         => self::$faker->numberBetween( 0, 10000 ),
 			'virtual'            => $is_virtual,
 			'downloadable'       => false,
-			'category_ids'       => self::generate_term_ids( self::$faker->numberBetween( 1, 10 ), 'product_cat' ),
-			'tag_ids'            => self::generate_term_ids( self::$faker->numberBetween( 1, 10 ), 'product_tag' ),
+			'category_ids'       => self::generate_term_ids( self::$faker->numberBetween( 0, 5 ), 'product_cat' ),
+			'tag_ids'            => self::generate_term_ids( self::$faker->numberBetween( 0, 5 ), 'product_tag' ),
 			'shipping_class_id'  => 0,
 			'image_id'           => $image_id,
 			'gallery_image_ids'  => $gallery,
@@ -366,7 +366,7 @@ class Product extends Generator {
 			return;
 		}
 
-		$image_count = rand( 1, 3 );
+		$image_count = rand( 0, 3 );
 
 		for ( $i = 0; $i < $image_count; $i ++ ) {
 			$gallery[] = self::generate_image();
@@ -386,8 +386,14 @@ class Product extends Generator {
 			return array();
 		}
 
+		$random_limit = rand( 0, $limit );
+
+		if ( ! $random_limit ) {
+			return array();
+		}
+
 		shuffle( self::$product_ids );
 
-		return array_slice( self::$product_ids, 0, min( count( self::$product_ids ), $limit ) );
+		return array_slice( self::$product_ids, 0, min( count( self::$product_ids ), $random_limit ) );
 	}
 }
