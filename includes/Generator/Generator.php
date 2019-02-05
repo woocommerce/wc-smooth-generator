@@ -45,6 +45,15 @@ abstract class Generator {
 	abstract public static function generate( $save = true );
 
 	/**
+	 * Init faker library.
+	 */
+	protected static function init_faker() {
+		if ( ! self::$faker ) {
+			self::$faker = \Faker\Factory::create( 'en_US' );
+		}
+	}
+
+	/**
 	 * Get random term ids.
 	 *
 	 * @param int    $limit Number of term IDs to get.
@@ -52,9 +61,7 @@ abstract class Generator {
 	 * @return array
 	 */
 	protected static function generate_term_ids( $limit, $taxonomy ) {
-		if ( ! self::$faker ) {
-			self::$faker = \Faker\Factory::create();
-		}
+		self::init_faker();
 
 		$term_ids = array();
 
@@ -100,9 +107,7 @@ abstract class Generator {
 	 * @return int The attachment id of the image (0 on failure).
 	 */
 	protected static function generate_image( int $parent = 0 ) {
-		if ( ! self::$faker ) {
-			self::$faker = \Faker\Factory::create();
-		}
+		self::init_faker();
 
 		// Get existing attachments.
 		if ( empty( self::$attachment_ids ) ) {

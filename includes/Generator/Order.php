@@ -25,9 +25,7 @@ class Order extends Generator {
 			$_SERVER['SERVER_NAME'] = 'localhost';
 		}
 
-		if ( ! self::$faker ) {
-			self::$faker = \Faker\Factory::create( 'en_US' );
-		}
+		self::init_faker();
 
 		$order    = new \WC_Order();
 		$customer = self::get_customer();

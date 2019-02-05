@@ -19,9 +19,7 @@ class Customer extends Generator {
 	 * @return \WC_Customer Customer object with data populated.
 	 */
 	public static function generate( $save = true ) {
-		if ( ! self::$faker ) {
-			self::$faker = \Faker\Factory::create();
-		}
+		self::init_faker();
 
 		// Make sure a unique username and e-mail are used.
 		do {

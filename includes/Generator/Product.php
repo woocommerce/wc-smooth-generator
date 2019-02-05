@@ -72,9 +72,7 @@ class Product extends Generator {
 	 * @return \WC_Product The product object consisting of random data.
 	 */
 	public static function generate( $save = true ) {
-		if ( ! self::$faker ) {
-			self::$faker = \Faker\Factory::create();
-		}
+		self::init_faker();
 
 		if ( empty( self::$product_ids ) ) {
 			self::$product_ids = wc_get_products(
