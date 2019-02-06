@@ -95,6 +95,12 @@ class Product extends Generator {
 			$product->save();
 		}
 
+		// Limit size of stored relationship IDs.
+		if ( 100 < count( self::$product_ids ) ) {
+			shuffle( self::$product_ids );
+			self::$product_ids = array_slice( self::$product_ids, 0, 50 );
+		}
+
 		self::$product_ids[] = $product->get_id();
 
 		return $product;
