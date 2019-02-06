@@ -12,7 +12,7 @@ namespace WC\SmoothGenerator\Generator;
  */
 abstract class Generator {
 
-	const IMAGE_SIZE  = 700;
+	const IMAGE_SIZE = 700;
 
 	/**
 	 * Holds the faker factory object.
@@ -79,7 +79,7 @@ abstract class Generator {
 			$term_id  = 0;
 			$existing = get_term_by( 'name', $term, $taxonomy );
 
-			if ( $existing ) {
+			if ( $existing && ! is_wp_error( $existing ) ) {
 				$term_id = $existing->term_id;
 			} else {
 				$term_ob = wp_insert_term( $term, $taxonomy );
