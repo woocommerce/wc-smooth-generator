@@ -42,12 +42,16 @@ class Order extends Generator {
 		$order->set_customer_id( $customer->get_id() );
 		$order->set_created_via( 'smooth-generator' );
 		$order->set_currency( get_woocommerce_currency() );
+		$order->set_billing_first_name( $customer->get_billing_first_name() );
+		$order->set_billing_last_name( $customer->get_billing_last_name() );
 		$order->set_billing_address_1( $customer->get_billing_address_1() );
 		$order->set_billing_address_2( $customer->get_billing_address_2() );
 		$order->set_billing_city( $customer->get_billing_city() );
 		$order->set_billing_postcode( $customer->get_billing_postcode() );
 		$order->set_billing_state( $customer->get_billing_state() );
 		$order->set_billing_country( $customer->get_billing_country() );
+		$order->set_shipping_first_name( $customer->get_shipping_first_name() );
+		$order->set_shipping_last_name( $customer->get_shipping_last_name() );
 		$order->set_shipping_address_1( $customer->get_shipping_address_1() );
 		$order->set_shipping_address_2( $customer->get_shipping_address_2() );
 		$order->set_shipping_city( $customer->get_shipping_city() );
