@@ -162,7 +162,15 @@ class Order extends Generator {
 		) );
 
 		foreach ( $query->get_products() as $product_id ) {
-			$products[] = new \WC_Product( $product_id );
+			$product = wc_get_product( $product_id );
+
+			if ( $product->is_type( 'variable' ) ) {
+				$available_variations = $product->get_available_variations();
+				$index = self::$faker->numberBetween( 0, count( $available_variations ) - 1 );
+				$products[] = new \WC_Product_Variation( $available_variations[ $index ]['variation_id'] );
+			} else {
+				$products[] = new \WC_Product( $product_id );
+			}
 		}
 
 		return $products;
