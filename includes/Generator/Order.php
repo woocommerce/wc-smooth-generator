@@ -166,6 +166,9 @@ class Order extends Generator {
 
 			if ( $product->is_type( 'variable' ) ) {
 				$available_variations = $product->get_available_variations();
+				if ( empty( $available_variations ) ) {
+					continue;
+				}
 				$index = self::$faker->numberBetween( 0, count( $available_variations ) - 1 );
 				$products[] = new \WC_Product_Variation( $available_variations[ $index ]['variation_id'] );
 			} else {
