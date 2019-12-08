@@ -158,7 +158,7 @@ abstract class Generator {
 		imagepng( $image );
 		$file = ob_get_clean();
 		imagedestroy( $image );
-		$upload = wp_upload_bits( 'img-' . $seed . '.png', '', $file );
+		$upload = wp_upload_bits( 'img-' . $seed . '.png', null, $file );
 
 		if ( empty( $upload['error'] ) ) {
 			$attachment_id = (int) wp_insert_attachment(
