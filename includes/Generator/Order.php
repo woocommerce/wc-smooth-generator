@@ -67,7 +67,7 @@ class Order extends Generator {
 		$order->calculate_totals( true );
 
 		$date = self::get_date_created( $assoc_args );
-		$date .= ' ' . rand( 0, 23 ) . ':00:00';
+		$date .= ' ' . wp_rand( 0, 23 ) . ':00:00';
 
 		$order->set_date_created( $date );
 
@@ -85,8 +85,8 @@ class Order extends Generator {
 	public static function get_customer() {
 		global $wpdb;
 
-		$guest    = (bool) rand( 0, 1 );
-		$existing = (bool) rand( 0, 1 );
+		$guest    = (bool) wp_rand( 0, 1 );
+		$existing = (bool) wp_rand( 0, 1 );
 
 		if ( $existing ) {
 			$user_id = (int) $wpdb->get_var( "SELECT ID FROM {$wpdb->users} ORDER BY rand() LIMIT 1" ); // phpcs:ignore
@@ -149,7 +149,7 @@ class Order extends Generator {
 			AND post_status='publish'"
 		);
 
-		$num_products_to_get = rand( $min_amount, $max_amount );
+		$num_products_to_get = wp_rand( $min_amount, $max_amount );
 
 		if ( $num_products_to_get > $num_existing_products ) {
 			$num_products_to_get = $num_existing_products;

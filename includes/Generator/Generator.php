@@ -190,7 +190,7 @@ abstract class Generator {
 	 * @return mixed
 	 */
 	protected static function random_weighted_element( array $weighted_values ) {
-		$rand = mt_rand( 1, (int) array_sum( $weighted_values ) );
+		$rand = wp_rand( 1, (int) array_sum( $weighted_values ) );
 
 		foreach ( $weighted_values as $key => $value ) {
 			$rand -= $value;

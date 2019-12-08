@@ -367,7 +367,7 @@ class Product extends Generator {
 			return;
 		}
 
-		$image_count = rand( 0, 3 );
+		$image_count = wp_rand( 0, 3 );
 
 		for ( $i = 0; $i < $image_count; $i ++ ) {
 			$gallery[] = self::get_image();
@@ -394,7 +394,7 @@ class Product extends Generator {
 			);
 		}
 
-		$random_limit = rand( 0, $limit );
+		$random_limit = wp_rand( 0, $limit );
 
 		if ( ! $random_limit ) {
 			return array();
