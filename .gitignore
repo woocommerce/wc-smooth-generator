@@ -2,3 +2,7 @@ vendor/
 
 # PHPStorm
 .idea
+
+# PHPCS
+.phpcs.xml
+phpcs.xml

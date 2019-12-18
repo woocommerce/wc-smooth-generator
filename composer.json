@@ -16,12 +16,8 @@
     "psr-4": {"WC\\SmoothGenerator\\": "includes/"}
   },
   "require-dev": {
-    "squizlabs/php_codesniffer": "*",
-    "wp-coding-standards/wpcs": "^0.14",
     "woocommerce/woocommerce-git-hooks": "*",
-    "woocommerce/woocommerce-sniffs": "*",
-    "wimg/php-compatibility": "^8.0",
-    "dealerdirect/phpcodesniffer-composer-installer": "^0.4.3"
+    "woocommerce/woocommerce-sniffs": "*"
   },
   "scripts": {
     "pre-update-cmd": [
@@ -37,10 +33,10 @@
       "WooCommerce\\GitHooks\\Hooks::postHooks"
     ],
     "phpcs": [
-      "phpcs -s -p"
+      "vendor/bin/phpcs"
     ],
     "phpcbf": [
-      "phpcbf -p"
+      "vendor/bin/phpcbf"
     ]
   },
   "extra": {
