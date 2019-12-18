@@ -194,7 +194,7 @@ class Product extends Generator {
 				$values          = array();
 				$existing_values = self::$global_attributes[ $raw_name ];
 
-				for ( $i = 0; $i < $num_values; $i++ ) {
+				for ( $j = 0; $j < $num_values; $j++ ) {
 					$value = '';
 
 					if ( self::$faker->boolean( 80 ) && ! empty( $existing_values ) ) {
