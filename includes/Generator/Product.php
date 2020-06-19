@@ -237,6 +237,7 @@ class Product extends Generator {
 		$product->set_props( array(
 			'name'              => $name,
 			'featured'          => self::$faker->boolean( 10 ),
+			'sku'               => sanitize_title( $name ) . '-' . self::$faker->ean8,
 			'attributes'        => $attributes,
 			'tax_status'        => 'taxable',
 			'tax_class'         => '',
