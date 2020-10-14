@@ -30,7 +30,7 @@ class CLI extends WP_CLI_Command {
 	 * @param array $args Argumens specified.
 	 * @param arrat $assoc_args Associative arguments specified.
 	 */
-	public function products( $args, $assoc_args ) {
+	public static function products( $args, $assoc_args ) {
 		list( $amount ) = $args;
 
 		$time_start = microtime( true );
@@ -73,7 +73,7 @@ class CLI extends WP_CLI_Command {
 	 * @param array $args Argumens specified.
 	 * @param array $assoc_args Associative arguments specified.
 	 */
-	public function orders( $args, $assoc_args ) {
+	public static function orders( $args, $assoc_args ) {
 		list( $amount ) = $args;
 
 		$progress = \WP_CLI\Utils\make_progress_bar( 'Generating orders', $amount );
@@ -102,7 +102,7 @@ class CLI extends WP_CLI_Command {
 	 * @param array $args Argumens specified.
 	 * @param arrat $assoc_args Associative arguments specified.
 	 */
-	public function customers( $args, $assoc_args ) {
+	public static function customers( $args, $assoc_args ) {
 		list( $amount ) = $args;
 
 		$progress = \WP_CLI\Utils\make_progress_bar( 'Generating customers', $amount );
