@@ -13,7 +13,9 @@
 defined( 'ABSPATH' ) || exit;
 
 // autoloader.
-require __DIR__ . '/vendor/autoload.php';
+if( !class_exists( \WC\SmoothGenerator\Plugin::class ) ){
+	require __DIR__ . '/vendor/autoload.php';
+}
 
 /**
  * Fetch instance of plugin.
