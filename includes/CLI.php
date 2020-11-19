@@ -27,8 +27,8 @@ class CLI extends WP_CLI_Command {
 	 * ## EXAMPLES
 	 * wc generate products 100
 	 *
-	 * @param array $args Argumens specified.
-	 * @param arrat $assoc_args Associative arguments specified.
+	 * @param array $args Arguments specified.
+	 * @param array $assoc_args Associative arguments specified.
 	 */
 	public static function products( $args, $assoc_args ) {
 		list( $amount ) = $args;
@@ -70,18 +70,25 @@ class CLI extends WP_CLI_Command {
 	 * ## EXAMPLES
 	 * wc generate orders 100
 	 *
-	 * @param array $args Argumens specified.
+	 * @param array $args Arguments specified.
 	 * @param array $assoc_args Associative arguments specified.
 	 */
 	public static function orders( $args, $assoc_args ) {
 		list( $amount ) = $args;
 
-		$progress = \WP_CLI\Utils\make_progress_bar( 'Generating orders', $amount );
-		for ( $i = 1; $i <= $amount; $i++ ) {
-			Generator\Order::generate( true, $assoc_args );
-			$progress->tick();
+		$amount = (int) $amount;
+		if ( empty( $amount ) ) {
+			$amount = 100;
 		}
-		$progress->finish();
+
+		if ( $amount > 0 ) {
+			$progress = \WP_CLI\Utils\make_progress_bar('Generating orders', $amount);
+			for ($i = 1; $i <= $amount; $i++) {
+				Generator\Order::generate(true, $assoc_args);
+				$progress->tick();
+			}
+			$progress->finish();
+		}
 		WP_CLI::success( $amount . ' orders generated.' );
 	}
 
@@ -99,8 +106,8 @@ class CLI extends WP_CLI_Command {
 	 * ## EXAMPLES
 	 * wc generate customers 100
 	 *
-	 * @param array $args Argumens specified.
-	 * @param arrat $assoc_args Associative arguments specified.
+	 * @param array $args Arguments specified.
+	 * @param array $assoc_args Associative arguments specified.
 	 */
 	public static function customers( $args, $assoc_args ) {
 		list( $amount ) = $args;
@@ -118,9 +125,10 @@ WP_CLI::add_command( 'wc generate products', array( 'WC\SmoothGenerator\CLI', 'p
 WP_CLI::add_command( 'wc generate orders', array( 'WC\SmoothGenerator\CLI', 'orders' ), array(
 	'synopsis' => array(
 		array(
-			'name'     => 'id',
+			'name'     => 'amount',
 			'type'     => 'positional',
-			'optional' => false,
+			'optional' => true,
+			'default'  => 100
 		),
 		array(
 			'name'     => 'date-start',
