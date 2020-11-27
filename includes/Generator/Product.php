@@ -83,7 +83,7 @@ class Product extends Generator {
 		self::init_faker();
 
 		// 20% chance of a variable product.
-		$is_variable = self::$faker->boolean( 20 );
+		$is_variable = false;
 
 		if ( $is_variable ) {
 			$product = self::generate_variable_product();
@@ -303,12 +303,12 @@ class Product extends Generator {
 	 */
 	protected static function generate_simple_product() {
 		$name              = ucwords( self::$faker->productName );
-		$will_manage_stock = self::$faker->boolean();
+		$will_manage_stock = false;
 		$is_virtual        = self::$faker->boolean();
 		$price             = self::$faker->randomFloat( 2, 1, 1000 );
-		$is_on_sale        = self::$faker->boolean( 30 );
+		$is_on_sale        = false;
 		$sale_price        = $is_on_sale ? self::$faker->randomFloat( 2, 0, $price ) : '';
-		$product           = new \WC_Product();
+		$product           = new \WC_Product_Subscription();
 
 		$image_id = self::get_image();
 		$gallery  = self::maybe_get_gallery_image_ids();
@@ -350,6 +350,23 @@ class Product extends Generator {
 			'image_id'           => $image_id,
 			'gallery_image_ids'  => $gallery,
 		) );
+
+		$id = $product->save();
+
+		update_post_meta( $id, '_subscription_price', $price );
+		update_post_meta( $id, '_regular_price', $price );
+		update_post_meta( $id, '_sale_price', $sale_price );
+		update_post_meta( $id, '_sale_price_dates_from', '' );
+		update_post_meta( $id, '_sale_price_dates_to', '' );
+		update_post_meta( $id, '_price', $price );
+		update_post_meta( $id, '_subscription_trial_length', '0' );
+		update_post_meta( $id, '_subscription_sign_up_fee', '' );
+		update_post_meta( $id, '_subscription_period', 'year' );
+		update_post_meta( $id, '_subscription_period_interval', '1' );
+		update_post_meta( $id, '_subscription_length', '0' );
+		update_post_meta( $id, '_subscription_trial_period', 'day' );
+		update_post_meta( $id, '_subscription_limit', 'no' );
+		update_post_meta( $id, '_subscription_one_time_shipping', 'no' );
 
 		return $product;
 	}
