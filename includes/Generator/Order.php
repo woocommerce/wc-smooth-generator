@@ -58,22 +58,46 @@ class Order extends Generator {
 		$order->set_shipping_postcode( $customer->get_shipping_postcode() );
 		$order->set_shipping_state( $customer->get_shipping_state() );
 		$order->set_shipping_country( $customer->get_shipping_country() );
-		$order->set_status( self::random_weighted_element( array(
-			'completed'  => 70,
-			'processing' => 15,
-			'on-hold'    => 5,
-			'failed'     => 10,
-		) ) );
+		$order->set_status( 'completed' );
 		$order->calculate_totals( true );
 
-		$date = self::get_date_created( $assoc_args );
+		$date  = self::get_date_created( $assoc_args );
 		$date .= ' ' . wp_rand( 0, 23 ) . ':00:00';
 
 		$order->set_date_created( $date );
 
 		if ( $save ) {
-			$order->save();
+			$order_id = $order->save();
 		}
+
+		$subscription_args = array(
+			'order_id' => $order_id,
+			'billing_period' => 'year',
+			'billing_interval' => 1,
+			'status' => 'active',
+		);
+		$subscription = wcs_create_subscription( $subscription_args );
+		if ( is_wp_error( $subscription ) ) {
+			print_r( $subscription_args );
+			print_r( $subscription );
+			exit;
+		}
+		$subscription_id = $subscription->get_id();
+
+		$subscription = wcs_copy_order_address( $order, $subscription );
+		wcs_copy_order_meta( $order, $subscription, 'subscription' );
+
+		$order_items = $order->get_items( array( 'line_item', 'fee', 'shipping', 'tax', 'coupon' ) );
+		foreach ( $order_items as $order_item ) {
+			$sub_item_id = wc_add_order_item( $subscription_id, array(
+				'order_item_name' => $order_item['name'],
+				'order_item_type' => $order_item['type'],
+			) );
+			$sub_item = $subscription->get_item( $sub_item_id );
+			wcs_copy_order_item( $order_item, $sub_item );
+			$sub_item->save();
+		}
+
 		return $order;
 	}
 
@@ -85,7 +109,7 @@ class Order extends Generator {
 	public static function get_customer() {
 		global $wpdb;
 
-		$guest    = (bool) wp_rand( 0, 1 );
+		$guest    = false; // (bool) wp_rand( 0, 1 );
 		$existing = (bool) wp_rand( 0, 1 );
 
 		if ( $existing ) {
@@ -140,6 +164,8 @@ class Order extends Generator {
 		global $wpdb;
 
 		$products = array();
+
+		// todo: limit products to subscription (or non-subscription) only.
 
 		$num_existing_products = (int) $wpdb->get_var(
 			"SELECT COUNT( DISTINCT ID )
