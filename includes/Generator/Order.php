@@ -58,12 +58,7 @@ class Order extends Generator {
 		$order->set_shipping_postcode( $customer->get_shipping_postcode() );
 		$order->set_shipping_state( $customer->get_shipping_state() );
 		$order->set_shipping_country( $customer->get_shipping_country() );
-		$order->set_status( self::random_weighted_element( array(
-			'completed'  => 70,
-			'processing' => 15,
-			'on-hold'    => 5,
-			'failed'     => 10,
-		) ) );
+		$order->set_status( self::get_status( $assoc_args ) );
 		$order->calculate_totals( true );
 
 		$date = self::get_date_created( $assoc_args );
@@ -127,6 +122,26 @@ class Order extends Generator {
 		}
 
 		return $dates[ array_rand( $dates ) ];
+	}
+
+	/**
+	 * Returns a status to use as the order's status. If no status argument has been passed, this will
+	 * return a random status.
+	 *
+	 * @param array $assoc_args CLI arguments.
+	 * @return string An order status.
+	 */
+	private static function get_status( $assoc_args ) {
+		if ( ! empty( $assoc_args['status'] ) ) {
+			return $assoc_args['status'];
+		} else {
+			return self::random_weighted_element(array(
+				'completed'  => 70,
+				'processing' => 15,
+				'on-hold'    => 5,
+				'failed'     => 10,
+			) );
+		}
 	}
 
 	/**
