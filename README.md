@@ -30,6 +30,9 @@ Generate orders with random dates between `--date-start` and the current date.
 Generate orders with random dates between `--date-start` and `--date-end`.
 - `wp wc generate orders <nr of orders> --date-start=2018-04-01 --date-end=2018-04-24`
 
+Generate orders with a specific status.
+- `wp wc generate orders <nr of orders> --status=completed`
+
 ### Customers
 
 Generate customers based on the number of customers paramater.
