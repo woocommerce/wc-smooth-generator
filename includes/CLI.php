@@ -140,6 +140,11 @@ WP_CLI::add_command( 'wc generate orders', array( 'WC\SmoothGenerator\CLI', 'ord
 			'type'     => 'assoc',
 			'optional' => true,
 		),
+		array(
+			'name'     => 'status',
+			'type'     => 'assoc',
+			'optional' => true,
+		),
 	),
 ) );
 WP_CLI::add_command( 'wc generate customers', array( 'WC\SmoothGenerator\CLI', 'customers' ) );
