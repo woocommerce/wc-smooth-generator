@@ -82,9 +82,9 @@ class CLI extends WP_CLI_Command {
 		}
 
 		if ( $amount > 0 ) {
-			$progress = \WP_CLI\Utils\make_progress_bar('Generating orders', $amount);
-			for ($i = 1; $i <= $amount; $i++) {
-				Generator\Order::generate(true, $assoc_args);
+			$progress = \WP_CLI\Utils\make_progress_bar( 'Generating orders', $amount );
+			for ( $i = 1; $i <= $amount; $i++ ) {
+				Generator\Order::generate( true, $assoc_args );
 				$progress->tick();
 			}
 			$progress->finish();
@@ -128,7 +128,7 @@ WP_CLI::add_command( 'wc generate orders', array( 'WC\SmoothGenerator\CLI', 'ord
 			'name'     => 'amount',
 			'type'     => 'positional',
 			'optional' => true,
-			'default'  => 100
+			'default'  => 100,
 		),
 		array(
 			'name'     => 'date-start',
