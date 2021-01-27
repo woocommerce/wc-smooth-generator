@@ -30,6 +30,8 @@ Generate orders with random dates between `--date-start` and the current date.
 Generate orders with random dates between `--date-start` and `--date-end`.
 - `wp wc generate orders <nr of orders> --date-start=2018-04-01 --date-end=2018-04-24`
 
+You may wish to disable emails if creating a large number of orders as this will trigger emails. To block all emails from your site, install a plugin like [Disable Emails](https://wordpress.org/plugins/disable-emails/).
+
 ### Customers
 
 Generate customers based on the number of customers paramater.
