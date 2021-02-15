@@ -135,7 +135,7 @@ class Order extends Generator {
 		if ( ! empty( $assoc_args['status'] ) ) {
 			return $assoc_args['status'];
 		} else {
-			return self::random_weighted_element(array(
+			return self::random_weighted_element( array(
 				'completed'  => 70,
 				'processing' => 15,
 				'on-hold'    => 5,
