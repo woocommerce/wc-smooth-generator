@@ -81,6 +81,14 @@ class CLI extends WP_CLI_Command {
 			$amount = 100;
 		}
 
+		if ( ! empty( $assoc_args['status'] ) ) {
+			$status = $assoc_args['status'];
+			if ( ! wc_is_order_status( 'wc-' . $status ) ) {
+				WP_CLI::log( "The argument \"$status\" is not a valid order status." );
+				return;
+			}
+		}
+
 		if ( $amount > 0 ) {
 			$progress = \WP_CLI\Utils\make_progress_bar( 'Generating orders', $amount );
 			for ( $i = 1; $i <= $amount; $i++ ) {
