@@ -33,6 +33,8 @@ Generate orders with random dates between `--date-start` and `--date-end`.
 Generate orders with a specific status.
 - `wp wc generate orders <nr of orders> --status=completed`
 
+You may wish to disable emails if creating a large number of orders as this will trigger emails. To block all emails from your site, install a plugin like [Disable Emails](https://wordpress.org/plugins/disable-emails/).
+
 ### Customers
 
 Generate customers based on the number of customers paramater.
