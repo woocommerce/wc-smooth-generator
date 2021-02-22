@@ -81,10 +81,18 @@ class CLI extends WP_CLI_Command {
 			$amount = 100;
 		}
 
+		if ( ! empty( $assoc_args['status'] ) ) {
+			$status = $assoc_args['status'];
+			if ( ! wc_is_order_status( 'wc-' . $status ) ) {
+				WP_CLI::log( "The argument \"$status\" is not a valid order status." );
+				return;
+			}
+		}
+
 		if ( $amount > 0 ) {
-			$progress = \WP_CLI\Utils\make_progress_bar('Generating orders', $amount);
-			for ($i = 1; $i <= $amount; $i++) {
-				Generator\Order::generate(true, $assoc_args);
+			$progress = \WP_CLI\Utils\make_progress_bar( 'Generating orders', $amount );
+			for ( $i = 1; $i <= $amount; $i++ ) {
+				Generator\Order::generate( true, $assoc_args );
 				$progress->tick();
 			}
 			$progress->finish();
@@ -128,7 +136,7 @@ WP_CLI::add_command( 'wc generate orders', array( 'WC\SmoothGenerator\CLI', 'ord
 			'name'     => 'amount',
 			'type'     => 'positional',
 			'optional' => true,
-			'default'  => 100
+			'default'  => 100,
 		),
 		array(
 			'name'     => 'date-start',
@@ -137,6 +145,11 @@ WP_CLI::add_command( 'wc generate orders', array( 'WC\SmoothGenerator\CLI', 'ord
 		),
 		array(
 			'name'     => 'date-end',
+			'type'     => 'assoc',
+			'optional' => true,
+		),
+		array(
+			'name'     => 'status',
 			'type'     => 'assoc',
 			'optional' => true,
 		),
