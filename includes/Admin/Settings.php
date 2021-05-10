@@ -75,7 +75,7 @@ class Settings {
 			$num_to_generate = absint( $_POST['num_orders_to_generate'] );
 			wc_smooth_generate_schedule( 'order', $num_to_generate );
 			add_action( 'admin_notices', array( __CLASS__, 'order_generating_notice' ) );
-		} else if ( ! empty( $_POST['cancel_all_generations'] ) && absint( $_POST['cancel_all_generations'] ) ) {
+		} else if ( ! empty( $_POST['cancel_all_generations'] ) ) {
 			check_admin_referer( 'generate', 'smoothgenerator_nonce' );
 			wc_smooth_generate_cancel_all();
 		}
