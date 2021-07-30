@@ -149,9 +149,10 @@ class Product extends Generator {
 	 * Generate attributes for a product.
 	 *
 	 * @param integer $qty Number of attributes to generate.
+	 * @param integer $maximum_terms Maximum number of terms per attribute to generate.
 	 * @return array Array of attributes.
 	 */
-	protected static function generate_attributes( $qty = 1 ) {
+	protected static function generate_attributes( $qty = 1, $maximum_terms = 10 ) {
 		$used_names = array();
 		$attributes = array();
 
@@ -190,7 +191,7 @@ class Product extends Generator {
 
 				$used_names[] = $raw_name;
 
-				$num_values      = self::$faker->numberBetween( 1, 10 );
+				$num_values      = self::$faker->numberBetween( 1, $maximum_terms );
 				$values          = array();
 				$existing_values = self::$global_attributes[ $raw_name ];
 
@@ -232,7 +233,7 @@ class Product extends Generator {
 		$product           = new \WC_Product_Variable();
 
 		$gallery    = self::maybe_get_gallery_image_ids();
-		$attributes = self::generate_attributes( self::$faker->numberBetween( 1, 3 ) );
+		$attributes = self::generate_attributes( self::$faker->numberBetween( 1, 3 ), 5 );
 
 		$product->set_props( array(
 			'name'              => $name,
