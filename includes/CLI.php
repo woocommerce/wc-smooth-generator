@@ -90,6 +90,7 @@ class CLI extends WP_CLI_Command {
 		}
 
 		if ( $amount > 0 ) {
+			static::disable_emails();
 			$progress = \WP_CLI\Utils\make_progress_bar( 'Generating orders', $amount );
 			for ( $i = 1; $i <= $amount; $i++ ) {
 				Generator\Order::generate( true, $assoc_args );
@@ -120,6 +121,7 @@ class CLI extends WP_CLI_Command {
 	public static function customers( $args, $assoc_args ) {
 		list( $amount ) = $args;
 
+		static::disable_emails();
 		$progress = \WP_CLI\Utils\make_progress_bar( 'Generating customers', $amount );
 		for ( $i = 1; $i <= $amount; $i++ ) {
 			Generator\Customer::generate();
@@ -127,6 +129,26 @@ class CLI extends WP_CLI_Command {
 		}
 		$progress->finish();
 		WP_CLI::success( $amount . ' customers generated.' );
+	}
+
+	/**
+	 * Disable sending WooCommerce emails when generating objects.
+	 */
+	protected static function disable_emails() {
+		$wc_emails = \WC_Emails::instance();
+		remove_action( 'woocommerce_email_header', array( $wc_emails, 'email_header' ) );
+		remove_action( 'woocommerce_email_footer', array( $wc_emails, 'email_footer' ) );
+		remove_action( 'woocommerce_email_order_details', array( $wc_emails, 'order_downloads' ), 10, 4 );
+		remove_action( 'woocommerce_email_order_details', array( $wc_emails, 'order_details' ), 10, 4 );
+		remove_action( 'woocommerce_email_order_meta', array( $wc_emails, 'order_meta' ), 10, 3 );
+		remove_action( 'woocommerce_email_customer_details', array( $wc_emails, 'customer_details' ), 10, 3 );
+		remove_action( 'woocommerce_email_customer_details', array( $wc_emails, 'email_addresses' ), 20, 3 );
+		remove_action( 'woocommerce_low_stock_notification', array( $wc_emails, 'low_stock' ) );
+		remove_action( 'woocommerce_no_stock_notification', array( $wc_emails, 'no_stock' ) );
+		remove_action( 'woocommerce_product_on_backorder_notification', array( $wc_emails, 'backorder' ) );
+		remove_action( 'woocommerce_created_customer_notification', array( $wc_emails, 'customer_new_account' ), 10, 3 );
+		remove_filter( 'woocommerce_email_footer_text', array( $wc_emails, 'replace_placeholders' ) );
+
 	}
 }
 WP_CLI::add_command( 'wc generate products', array( 'WC\SmoothGenerator\CLI', 'products' ) );
