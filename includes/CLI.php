@@ -135,20 +135,34 @@ class CLI extends WP_CLI_Command {
 	 * Disable sending WooCommerce emails when generating objects.
 	 */
 	protected static function disable_emails() {
-		$wc_emails = \WC_Emails::instance();
-		remove_action( 'woocommerce_email_header', array( $wc_emails, 'email_header' ) );
-		remove_action( 'woocommerce_email_footer', array( $wc_emails, 'email_footer' ) );
-		remove_action( 'woocommerce_email_order_details', array( $wc_emails, 'order_downloads' ), 10, 4 );
-		remove_action( 'woocommerce_email_order_details', array( $wc_emails, 'order_details' ), 10, 4 );
-		remove_action( 'woocommerce_email_order_meta', array( $wc_emails, 'order_meta' ), 10, 3 );
-		remove_action( 'woocommerce_email_customer_details', array( $wc_emails, 'customer_details' ), 10, 3 );
-		remove_action( 'woocommerce_email_customer_details', array( $wc_emails, 'email_addresses' ), 20, 3 );
-		remove_action( 'woocommerce_low_stock_notification', array( $wc_emails, 'low_stock' ) );
-		remove_action( 'woocommerce_no_stock_notification', array( $wc_emails, 'no_stock' ) );
-		remove_action( 'woocommerce_product_on_backorder_notification', array( $wc_emails, 'backorder' ) );
-		remove_action( 'woocommerce_created_customer_notification', array( $wc_emails, 'customer_new_account' ), 10, 3 );
-		remove_filter( 'woocommerce_email_footer_text', array( $wc_emails, 'replace_placeholders' ) );
+		$email_actions = array(
+			'woocommerce_low_stock',
+			'woocommerce_no_stock',
+			'woocommerce_product_on_backorder',
+			'woocommerce_order_status_pending_to_processing',
+			'woocommerce_order_status_pending_to_completed',
+			'woocommerce_order_status_processing_to_cancelled',
+			'woocommerce_order_status_pending_to_failed',
+			'woocommerce_order_status_pending_to_on-hold',
+			'woocommerce_order_status_failed_to_processing',
+			'woocommerce_order_status_failed_to_completed',
+			'woocommerce_order_status_failed_to_on-hold',
+			'woocommerce_order_status_cancelled_to_processing',
+			'woocommerce_order_status_cancelled_to_completed',
+			'woocommerce_order_status_cancelled_to_on-hold',
+			'woocommerce_order_status_on-hold_to_processing',
+			'woocommerce_order_status_on-hold_to_cancelled',
+			'woocommerce_order_status_on-hold_to_failed',
+			'woocommerce_order_status_completed',
+			'woocommerce_order_fully_refunded',
+			'woocommerce_order_partially_refunded',
+			'woocommerce_new_customer_note',
+			'woocommerce_created_customer',
+		);
 
+		foreach ( $email_actions as $action ) {
+			remove_action( $action, array( 'WC_Emails', 'send_transactional_email' ), 10, 10 );
+		}
 	}
 }
 WP_CLI::add_command( 'wc generate products', array( 'WC\SmoothGenerator\CLI', 'products' ) );
