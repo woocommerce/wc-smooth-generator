@@ -1,0 +1,12 @@
+*** Changelog ***
+
+= 1.0.3 - xxxx-xx-x =
+* Add - --status argument to `generate orders` command
+* Add - UI support for generating products and orders
+* Dev - update Composer support for V2
+* Fix - reduce product generation time by reducing the maximum number of attribute terms on variable products
+* Fix - disable all email notifications on customer and order generation
+
+
+= 1.0.2 - 2020-11-19 =
+* Change log starts.

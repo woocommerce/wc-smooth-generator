@@ -9,6 +9,7 @@
 
 	<!-- Exclude paths -->
 	<exclude-pattern>*/vendor/*</exclude-pattern>
+	<exclude-pattern>*/node_modules/*</exclude-pattern>
 
 	<!-- Show progress, show the error codes for each message (source). -->
 	<arg value="ps"/>
@@ -35,7 +36,7 @@
 	</rule>
 	<rule ref="WordPress.WP.I18n">
 		<properties>
-			<property name="text_domain" type="array" value="woocommerce"/>
+			<property name="text_domain" type="array" value="wc-smooth-generator"/>
 		</properties>
 	</rule>
 </ruleset>
