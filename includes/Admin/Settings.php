@@ -49,11 +49,14 @@ class Settings {
 			<h2>Generate Orders</h2>
 			<p>
 				<input type="number" name="num_orders_to_generate" value="<?php echo esc_attr( self::DEFAULT_NUM_ORDERS ); ?>" min="1" />
-				Number of orders to generate over
-				<input type="number" name="order_generation_interval" value="<?php echo esc_attr( self::DEFAULT_ORDER_INTERVAL_MINUTES ); ?>" min="0" />
-				minutes.
+				Number of orders to generate.
 			</p>
 			<?php submit_button( 'Generate', 'primary', 'generate_orders' ); ?>
+
+			<h2>Cancel all scheduled generations</h2>
+			<p>
+			</p>
+			<?php submit_button( 'Cancel all', 'primary', 'cancel_all_generations' ); ?>
 		</form>
 		<?php
 	}
@@ -65,14 +68,16 @@ class Settings {
 		if ( ! empty( $_POST['generate_products'] ) && ! empty( $_POST['num_products_to_generate'] ) ) {
 			check_admin_referer( 'generate', 'smoothgenerator_nonce' );
 			$num_to_generate = absint( $_POST['num_products_to_generate'] );
-			// @todo kick off generation here
+			wc_smooth_generate_schedule( 'product', $num_to_generate );
 			add_action( 'admin_notices', array( __CLASS__, 'product_generating_notice' ) );
-		} else if ( ! empty( $_POST['generate_orders'] ) && ! empty( $_POST['num_orders_to_generate'] ) && ! empty( $_POST['order_generation_interval'] ) ) {
+		} else if ( ! empty( $_POST['generate_orders'] ) && ! empty( $_POST['num_orders_to_generate'] ) ) {
 			check_admin_referer( 'generate', 'smoothgenerator_nonce' );
 			$num_to_generate = absint( $_POST['num_orders_to_generate'] );
-			$order_generation_interval = absint( $_POST['order_generation_interval'] );
-			// @todo kick off generation here
+			wc_smooth_generate_schedule( 'order', $num_to_generate );
 			add_action( 'admin_notices', array( __CLASS__, 'order_generating_notice' ) );
+		} else if ( ! empty( $_POST['cancel_all_generations'] ) ) {
+			check_admin_referer( 'generate', 'smoothgenerator_nonce' );
+			wc_smooth_generate_cancel_all();
 		}
 	}
 

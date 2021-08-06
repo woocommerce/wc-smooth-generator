@@ -3,7 +3,7 @@
  * Plugin Name: WooCommerce Smooth Generator
  * Plugin URI: https://woocommerce.com/
  * Description: A smooth customer, order and product generator for WooCommerce.
- * Version: 1.0.2
+ * Version: 1.0.1
  * Author: Automattic
  * Author URI: https://woocommerce.com
  *
@@ -16,6 +16,8 @@
  */
 
 defined( 'ABSPATH' ) || exit;
+
+require_once __DIR__ . '/includes/GenerateBackgroundProcess.php';
 
 // autoloader.
 if ( ! class_exists( \WC\SmoothGenerator\Plugin::class ) ) {

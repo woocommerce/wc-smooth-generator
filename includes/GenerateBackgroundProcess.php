@@ -5,52 +5,51 @@
  * @package SmoothGenerator\Classes
  */
 
-namespace WC\SmoothGenerator;
-
-defined( 'ABSPATH' ) || exit;
-
-use WP_Background_Process;
+use WC\SmoothGenerator\Generator;
 
 /**
- * Background data generation and creation class.
+ * Calls generator for object type.
+ *
+ * @param string $type Type of object to generate.
+ *
+ * @return false If task was successful.
  */
-class GenerateBackgroundProcess extends WP_Background_Process {
-
-	/**
-	 * Initiate new background process.
-	 */
-	public function __construct() {
-		$this->prefix = 'wp_' . get_current_blog_id();
-		$this->action = 'wc_smoothgenerator_generate';
-		parent::__construct();
-	}
-
-	/**
-	 * Code to execute for each item in the queue
-	 *
-	 * @param array $item Item data.
-	 * @return boolean
-	 */
-	protected function task( $item ) {
-		if ( ! is_array( $item ) && ! isset( $item['task'] ) ) {
+function wc_smooth_generate_object( $type ) {
+	// Check what generation task to perform.
+	switch ( $type ) {
+		case 'order':
+			Generator\Order::generate();
+			break;
+		case 'product':
+			Generator\Product::generate();
+			break;
+		case 'customer':
+			Generator\Customer::generate();
+			break;
+		default:
 			return false;
-		}
-
-		// Check what generation task to perform.
-		switch ( $item['task'] ) {
-			case 'order':
-				Generator\Order::generate();
-				break;
-			case 'product':
-				Generator\Product::generate();
-				break;
-			case 'customer':
-				Generator\Customer::generate();
-				break;
-			default:
-				return false;
-		}
-
-		return false;
 	}
+
+	return false;
+}
+
+add_action( 'wc_smooth_generate_object', 'wc_smooth_generate_object' );
+
+/**
+ * Schedule async actions for generation of objects.
+ *
+ * @param string $type Type of object to generate.
+ * @param int    $qty  Quantity of objects.
+ */
+function wc_smooth_generate_schedule( $type, $qty ) {
+	for ( $i = 0; $i < $qty; $i++ ) {
+		as_enqueue_async_action( 'wc_smooth_generate_object', array( 'type' => $type ), 'wc_smooth_generate_object_group' );
+	}
+}
+
+/**
+ * Cancel any scheduled generation actions.
+ */
+function wc_smooth_generate_cancel_all() {
+	as_unschedule_all_actions( '', array(), 'wc_smooth_generate_object_group' );
 }
