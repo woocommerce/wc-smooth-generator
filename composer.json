@@ -50,7 +50,11 @@
       "composer.*",
       "package*.json",
       "phpcs*",
-      ".*"
+      ".*",
+      "!vendor/autoload.php",
+      "!vendor/composer",
+      "!vendor/fzaninotto",
+      "!vendor/mbezhanov"
     ]
   }
 }
