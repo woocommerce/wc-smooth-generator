@@ -7,17 +7,15 @@
   "prefer-stable": true,
   "minimum-stability": "dev",
   "require": {
-    "composer/installers": "~1.9",
-    "fakerphp/faker": "^1.14.1",
-    "jdenticon/jdenticon": "^1.0.0",
-    "mbezhanov/faker-provider-collection": "^2.0.1"
+    "composer/installers": "~1.2",
+    "fzaninotto/faker": "^1.8",
+    "jdenticon/jdenticon": "^0.10.0",
+    "mbezhanov/faker-provider-collection": "^1.2.1",
+    "woocommerce/woocommerce-git-hooks": "*",
+    "woocommerce/woocommerce-sniffs": "*"
   },
   "autoload": {
     "psr-4": {"WC\\SmoothGenerator\\": "includes/"}
-  },
-  "require-dev": {
-    "woocommerce/woocommerce-git-hooks": "*",
-    "woocommerce/woocommerce-sniffs": "*"
   },
   "scripts": {
     "pre-update-cmd": [
@@ -44,5 +42,19 @@
       "phpcs": "Analyze code against the WordPress coding standards with PHP_CodeSniffer",
       "phpcbf": "Fix coding standards warnings/errors automatically with PHP Code Beautifier"
     }
+  },
+  "archive": {
+    "exclude": [
+      "/node_modules",
+      "Gruntfile.js",
+      "composer.*",
+      "package*.json",
+      "phpcs*",
+      ".*",
+      "!vendor/autoload.php",
+      "!vendor/composer",
+      "!vendor/fzaninotto",
+      "!vendor/mbezhanov"
+    ]
   }
 }

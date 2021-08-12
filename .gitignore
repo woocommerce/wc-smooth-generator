@@ -1,4 +1,6 @@
 vendor/
+node_modules/
+wc-smooth-generator.zip
 
 # PHPStorm
 .idea
