@@ -1,6 +1,6 @@
 *** Changelog ***
 
-= 1.0.3 - xxxx-xx-x =
+= 1.0.3 - 2021-08-12 =
 * Add - --status argument to `generate orders` command
 * Add - UI support for generating products and orders
 * Dev - update Composer support for V2
