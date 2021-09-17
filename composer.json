@@ -54,6 +54,7 @@
       "!vendor/autoload.php",
       "!vendor/composer",
       "!vendor/fzaninotto",
+      "!vendor/jdenticon",
       "!vendor/mbezhanov"
     ]
   }
