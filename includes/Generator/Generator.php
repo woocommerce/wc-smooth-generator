@@ -69,10 +69,9 @@ abstract class Generator {
 			return $term_ids;
 		}
 
-		$words = explode( ' ', ucwords( $name ) );
-		if ( ! count( $words ) ) {
-			$words = explode( ',', self::$faker->department( $limit ) );
-		}
+		$words       = explode( ' ', ucwords( $name ) );
+		$extra_terms = explode( ',', self::$faker->department( $limit ) );
+		$words       = array_merge( $words, $extra_terms );
 
 		if ( 'product_cat' === $taxonomy ) {
 			$terms = array_slice( $words, 1 );
