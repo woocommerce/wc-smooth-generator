@@ -57,9 +57,10 @@ abstract class Generator {
 	 *
 	 * @param int    $limit Number of term IDs to get.
 	 * @param string $taxonomy Taxonomy name.
+	 * @param string $name Product name to extract terms from.
 	 * @return array
 	 */
-	protected static function generate_term_ids( $limit, $taxonomy ) {
+	protected static function generate_term_ids( $limit, $taxonomy, $name = '' ) {
 		self::init_faker();
 
 		$term_ids = array();
@@ -68,7 +69,16 @@ abstract class Generator {
 			return $term_ids;
 		}
 
-		$terms = self::$faker->words( $limit );
+		$words = explode( ' ', ucwords( $name ) );
+		if ( ! count( $words ) ) {
+			$words = explode( ',', self::$faker->department( $limit ) );
+		}
+
+		if ( 'product_cat' === $taxonomy ) {
+			$terms = array_slice( $words, 1 );
+		} else {
+			$terms = array_merge( self::$faker->words( $limit ), array_map( 'strtolower', $words ) );
+		}
 
 		foreach ( $terms as $term ) {
 			if ( isset( self::$term_ids[ $taxonomy ], self::$term_ids[ $taxonomy ][ $term ] ) ) {
@@ -90,7 +100,7 @@ abstract class Generator {
 			}
 
 			if ( $term_id ) {
-				$term_ids[] = $term_id;
+				$term_ids[]                           = $term_id;
 				self::$term_ids[ $taxonomy ][ $term ] = $term_id;
 			}
 		}
