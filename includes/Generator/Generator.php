@@ -69,15 +69,17 @@ abstract class Generator {
 			return $term_ids;
 		}
 
-		$words       = explode( ' ', ucwords( $name ) );
-		$extra_terms = explode( ',', self::$faker->department( $limit ) );
+		$words       = str_word_count( $name, 1 );
+		$extra_terms = str_word_count( implode( ' ', self::$faker->department( $limit ) ), 1 );
 		$words       = array_merge( $words, $extra_terms );
 
 		if ( 'product_cat' === $taxonomy ) {
 			$terms = array_slice( $words, 1 );
 		} else {
-			$terms = array_merge( self::$faker->words( $limit ), array_map( 'strtolower', $words ) );
+			$terms = array_merge( self::$faker->words( $limit ), array( strtolower( $words[0] ) ) );
 		}
+
+		$args = array( 'parent' => 0 );
 
 		foreach ( $terms as $term ) {
 			if ( isset( self::$term_ids[ $taxonomy ], self::$term_ids[ $taxonomy ][ $term ] ) ) {
@@ -91,7 +93,7 @@ abstract class Generator {
 			if ( $existing && ! is_wp_error( $existing ) ) {
 				$term_id = $existing->term_id;
 			} else {
-				$term_ob = wp_insert_term( $term, $taxonomy );
+				$term_ob = wp_insert_term( $term, $taxonomy, $args );
 
 				if ( $term_ob && ! is_wp_error( $term_ob ) ) {
 					$term_id = $term_ob['term_id'];
@@ -101,6 +103,7 @@ abstract class Generator {
 			if ( $term_id ) {
 				$term_ids[]                           = $term_id;
 				self::$term_ids[ $taxonomy ][ $term ] = $term_id;
+				$args['parent']                       = $term_id;
 			}
 		}
 
