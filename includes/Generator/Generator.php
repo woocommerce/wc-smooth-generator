@@ -70,7 +70,7 @@ abstract class Generator {
 		}
 
 		$words       = str_word_count( $name, 1 );
-		$extra_terms = str_word_count( implode( ' ', self::$faker->department( $limit ) ), 1 );
+		$extra_terms = str_word_count( self::$faker->department( $limit ), 1 );
 		$words       = array_merge( $words, $extra_terms );
 
 		if ( 'product_cat' === $taxonomy ) {
