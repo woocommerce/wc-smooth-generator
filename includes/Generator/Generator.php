@@ -82,16 +82,28 @@ abstract class Generator {
 		$args = array( 'parent' => 0 );
 
 		foreach ( $terms as $term ) {
-			if ( isset( self::$term_ids[ $taxonomy ], self::$term_ids[ $taxonomy ][ $term ] ) ) {
-				$term_ids[] = self::$term_ids[ $taxonomy ][ $term ];
+			if ( isset( self::$term_ids[ $taxonomy ][ $args['parent'] ], self::$term_ids[ $taxonomy ][ $args['parent'] ][ $term ] ) ) {
+				$term_id    = self::$term_ids[ $taxonomy ][ $args['parent'] ][ $term ];
+				$term_ids[] = $term_id;
+
+				if ( is_taxonomy_hierarchical( $taxonomy ) ) {
+					$args['parent'] = $term_id;
+				}
+
 				continue;
 			}
 
-			$term_id  = 0;
-			$existing = get_term_by( 'name', $term, $taxonomy );
+			$term_id = 0;
+			$args    = array(
+				'taxonomy' => $taxonomy,
+				'name'     => $term,
+				'parent'   => $args['parent'],
+			);
 
-			if ( $existing && ! is_wp_error( $existing ) ) {
-				$term_id = $existing->term_id;
+			$existing = get_terms( $args );
+
+			if ( $existing && count( $existing ) && ! is_wp_error( $existing ) ) {
+				$term_id = $existing[0]->term_id;
 			} else {
 				$term_ob = wp_insert_term( $term, $taxonomy, $args );
 
@@ -101,9 +113,13 @@ abstract class Generator {
 			}
 
 			if ( $term_id ) {
-				$term_ids[]                           = $term_id;
-				self::$term_ids[ $taxonomy ][ $term ] = $term_id;
-				$args['parent']                       = $term_id;
+
+				$term_ids[] = $term_id;
+				self::$term_ids[ $taxonomy ][ $args['parent'] ][ $term ] = $term_id;
+
+				if ( is_taxonomy_hierarchical( $taxonomy ) ) {
+					$args['parent'] = $term_id;
+				}
 			}
 		}
 
