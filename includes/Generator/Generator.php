@@ -79,16 +79,10 @@ abstract class Generator {
 			$terms = array_merge( self::$faker->words( $limit ), array( strtolower( $words[0] ) ) );
 		}
 
-		$args = array( 'parent' => 0 );
-
 		foreach ( $terms as $term ) {
-			if ( isset( self::$term_ids[ $taxonomy ][ $args['parent'] ], self::$term_ids[ $taxonomy ][ $args['parent'] ][ $term ] ) ) {
-				$term_id    = self::$term_ids[ $taxonomy ][ $args['parent'] ][ $term ];
+			if ( isset( self::$term_ids[ $taxonomy ], self::$term_ids[ $taxonomy ][ $term ] ) ) {
+				$term_id    = self::$term_ids[ $taxonomy ][ $term ];
 				$term_ids[] = $term_id;
-
-				if ( is_taxonomy_hierarchical( $taxonomy ) ) {
-					$args['parent'] = $term_id;
-				}
 
 				continue;
 			}
@@ -97,7 +91,6 @@ abstract class Generator {
 			$args    = array(
 				'taxonomy' => $taxonomy,
 				'name'     => $term,
-				'parent'   => $args['parent'],
 			);
 
 			$existing = get_terms( $args );
@@ -113,13 +106,8 @@ abstract class Generator {
 			}
 
 			if ( $term_id ) {
-
-				$term_ids[] = $term_id;
-				self::$term_ids[ $taxonomy ][ $args['parent'] ][ $term ] = $term_id;
-
-				if ( is_taxonomy_hierarchical( $taxonomy ) ) {
-					$args['parent'] = $term_id;
-				}
+				$term_ids[]                           = $term_id;
+				self::$term_ids[ $taxonomy ][ $term ] = $term_id;
 			}
 		}
 
