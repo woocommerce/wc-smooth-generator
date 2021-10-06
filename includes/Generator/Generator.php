@@ -57,9 +57,10 @@ abstract class Generator {
 	 *
 	 * @param int    $limit Number of term IDs to get.
 	 * @param string $taxonomy Taxonomy name.
+	 * @param string $name Product name to extract terms from.
 	 * @return array
 	 */
-	protected static function generate_term_ids( $limit, $taxonomy ) {
+	protected static function generate_term_ids( $limit, $taxonomy, $name = '' ) {
 		self::init_faker();
 
 		$term_ids = array();
@@ -68,21 +69,36 @@ abstract class Generator {
 			return $term_ids;
 		}
 
-		$terms = self::$faker->words( $limit );
+		$words       = str_word_count( $name, 1 );
+		$extra_terms = str_word_count( self::$faker->department( $limit ), 1 );
+		$words       = array_merge( $words, $extra_terms );
+
+		if ( 'product_cat' === $taxonomy ) {
+			$terms = array_slice( $words, 1 );
+		} else {
+			$terms = array_merge( self::$faker->words( $limit ), array( strtolower( $words[0] ) ) );
+		}
 
 		foreach ( $terms as $term ) {
 			if ( isset( self::$term_ids[ $taxonomy ], self::$term_ids[ $taxonomy ][ $term ] ) ) {
-				$term_ids[] = self::$term_ids[ $taxonomy ][ $term ];
+				$term_id    = self::$term_ids[ $taxonomy ][ $term ];
+				$term_ids[] = $term_id;
+
 				continue;
 			}
 
-			$term_id  = 0;
-			$existing = get_term_by( 'name', $term, $taxonomy );
+			$term_id = 0;
+			$args    = array(
+				'taxonomy' => $taxonomy,
+				'name'     => $term,
+			);
 
-			if ( $existing && ! is_wp_error( $existing ) ) {
-				$term_id = $existing->term_id;
+			$existing = get_terms( $args );
+
+			if ( $existing && count( $existing ) && ! is_wp_error( $existing ) ) {
+				$term_id = $existing[0]->term_id;
 			} else {
-				$term_ob = wp_insert_term( $term, $taxonomy );
+				$term_ob = wp_insert_term( $term, $taxonomy, $args );
 
 				if ( $term_ob && ! is_wp_error( $term_ob ) ) {
 					$term_id = $term_ob['term_id'];
@@ -90,7 +106,7 @@ abstract class Generator {
 			}
 
 			if ( $term_id ) {
-				$term_ids[] = $term_id;
+				$term_ids[]                           = $term_id;
 				self::$term_ids[ $taxonomy ][ $term ] = $term_id;
 			}
 		}
