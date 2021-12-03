@@ -25,14 +25,17 @@ class Coupon extends Generator {
 		self::init_faker();
 
 		$amount = random_int( $min, $max );
-		$coupon = new \WC_Coupon();
-		$coupon->set_props( array(
-			'code'   => "discount$amount",
-			'amount' => $amount,
-		) );
-		$coupon->save();
-
-		return new \WC_Coupon( $coupon->get_id() );
+		$coupon_id = "discount$amount";
+		$coupon = new \WC_Coupon( $coupon_id );
+		if ( $coupon->get_id() === 0 ) {
+			$coupon->set_props( array(
+				'code'   => "discount$amount",
+				'amount' => $amount,
+			) );
+			$coupon->save();
+			return new \WC_Coupon( $coupon->get_id() );
+		}
+		return $coupon;
 	}
 
 }
