@@ -61,10 +61,16 @@ class Order extends Generator {
 		$order->set_status( self::get_status( $assoc_args ) );
 		$order->calculate_totals( true );
 
-		$date = self::get_date_created( $assoc_args );
+		$date  = self::get_date_created( $assoc_args );
 		$date .= ' ' . wp_rand( 0, 23 ) . ':00:00';
 
 		$order->set_date_created( $date );
+
+		$include_coupon = ! empty( $assoc_args['status'] );
+		if ( $include_coupon ) {
+			$coupon = Coupon::generate( true );
+			$order->apply_coupon( $coupon );
+		}
 
 		if ( $save ) {
 			$order->save();
@@ -184,7 +190,7 @@ class Order extends Generator {
 				if ( empty( $available_variations ) ) {
 					continue;
 				}
-				$index = self::$faker->numberBetween( 0, count( $available_variations ) - 1 );
+				$index      = self::$faker->numberBetween( 0, count( $available_variations ) - 1 );
 				$products[] = new \WC_Product_Variation( $available_variations[ $index ]['variation_id'] );
 			} else {
 				$products[] = new \WC_Product( $product_id );

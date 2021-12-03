@@ -134,7 +134,8 @@ class CLI extends WP_CLI_Command {
 	/**
 	 * Disable sending WooCommerce emails when generating objects.
 	 */
-	protected static function disable_emails() {
+	protected static function disable_emails()
+	{
 		$email_actions = array(
 			'woocommerce_low_stock',
 			'woocommerce_no_stock',
@@ -160,11 +161,57 @@ class CLI extends WP_CLI_Command {
 			'woocommerce_created_customer',
 		);
 
-		foreach ( $email_actions as $action ) {
-			remove_action( $action, array( 'WC_Emails', 'send_transactional_email' ), 10, 10 );
+		foreach ($email_actions as $action) {
+			remove_action($action, array('WC_Emails', 'send_transactional_email'), 10, 10);
 		}
 	}
+
+	/**
+	 * Generate coupons.
+	 *
+	 * ## OPTIONS
+	 *
+	 * <amount>
+	 * : The amount of coupons to generate
+	 * ---
+	 * default: 100
+	 * ---
+	 *
+	 * ## EXAMPLES
+	 * wc generate coupons 100
+	 *
+	 * @param array $args Arguments specified.
+	 * @param array $assoc_args Associative arguments specified.
+	 */
+	public static function coupons( $args, $assoc_args ) {
+		list( $amount ) = $args;
+
+		$amount = (int) $amount;
+		if ( empty( $amount ) ) {
+			$amount = 10;
+		}
+
+		$min = 5;
+		$max = 100;
+		if ( ! empty( $assoc_args['min'] ) ) {
+			$min = $assoc_args['min'];
+		}
+		if ( ! empty( $assoc_args['max'] ) ) {
+			$max = $assoc_args['max'];
+		}
+
+		if ( $amount > 0 ) {
+			$progress = \WP_CLI\Utils\make_progress_bar( 'Generating coupons', $amount );
+			for ( $i = 1; $i <= $amount; $i++ ) {
+				Generator\Coupon::generate( true, $min, $max );
+				$progress->tick();
+			}
+			$progress->finish();
+		}
+		WP_CLI::success( $amount . ' coupons generated.' );
+	}
 }
+
 WP_CLI::add_command( 'wc generate products', array( 'WC\SmoothGenerator\CLI', 'products' ) );
 WP_CLI::add_command( 'wc generate orders', array( 'WC\SmoothGenerator\CLI', 'orders' ), array(
 	'synopsis' => array(
@@ -189,7 +236,34 @@ WP_CLI::add_command( 'wc generate orders', array( 'WC\SmoothGenerator\CLI', 'ord
 			'type'     => 'assoc',
 			'optional' => true,
 		),
+		array(
+			'name'     => 'coupons',
+			'type'     => 'assoc',
+			'optional' => true,
+		),
 	),
 ) );
 WP_CLI::add_command( 'wc generate customers', array( 'WC\SmoothGenerator\CLI', 'customers' ) );
 
+WP_CLI::add_command( 'wc generate coupons', array( 'WC\SmoothGenerator\CLI', 'coupons' ), array(
+	'synopsis' => array(
+		array(
+			'name'     => 'amount',
+			'type'     => 'positional',
+			'optional' => true,
+			'default'  => 10,
+		),
+		array(
+			'name'     => 'min',
+			'optional' => true,
+			'type'     => 'assoc',
+			'default'  => 5,
+		),
+		array(
+			'name'     => 'max',
+			'optional' => true,
+			'type'     => 'assoc',
+			'default'  => 100,
+		),
+	),
+) );
