@@ -134,8 +134,7 @@ class CLI extends WP_CLI_Command {
 	/**
 	 * Disable sending WooCommerce emails when generating objects.
 	 */
-	protected static function disable_emails()
-	{
+	protected static function disable_emails() {
 		$email_actions = array(
 			'woocommerce_low_stock',
 			'woocommerce_no_stock',
@@ -161,8 +160,8 @@ class CLI extends WP_CLI_Command {
 			'woocommerce_created_customer',
 		);
 
-		foreach ($email_actions as $action) {
-			remove_action($action, array('WC_Emails', 'send_transactional_email'), 10, 10);
+		foreach ( $email_actions as $action ) {
+			remove_action( $action, array( 'WC_Emails', 'send_transactional_email' ), 10, 10 );
 		}
 	}
 
