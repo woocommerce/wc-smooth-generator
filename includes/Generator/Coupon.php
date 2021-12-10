@@ -22,8 +22,6 @@ class Coupon extends Generator {
 	 * @return \WC_Customer Customer object with data populated.
 	 */
 	public static function generate( $save = true, $min = 5, $max = 100 ) {
-		self::init_faker();
-
 		$amount    = random_int( $min, $max );
 		$coupon_id = "discount$amount";
 		$coupon    = new \WC_Coupon( $coupon_id );

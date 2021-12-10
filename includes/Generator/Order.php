@@ -66,7 +66,7 @@ class Order extends Generator {
 
 		$order->set_date_created( $date );
 
-		$include_coupon = ! empty( $assoc_args['status'] );
+		$include_coupon = ! empty( $assoc_args['coupons'] );
 		if ( $include_coupon ) {
 			$coupon = Coupon::generate( true );
 			$order->apply_coupon( $coupon );
