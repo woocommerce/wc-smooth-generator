@@ -26,6 +26,9 @@ function wc_smooth_generate_object( $type ) {
 		case 'customer':
 			Generator\Customer::generate();
 			break;
+		case 'coupon':
+			Generator\Coupon::generate();
+			break;
 		default:
 			return false;
 	}
