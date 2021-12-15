@@ -1,5 +1,10 @@
 *** Changelog ***
 
+2021-12-15 - version 1.0.4
+* Add - coupon generator and a new option for orders to allow for coupon generation.
+* Add - use product name to generate more realistic product term names.
+* Fix - include jdenticon package in generated zip.
+
 = 1.0.3 - 2021-08-12 =
 * Add - --status argument to `generate orders` command
 * Add - UI support for generating products and orders
