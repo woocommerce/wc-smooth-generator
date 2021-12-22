@@ -193,7 +193,7 @@ class Product extends Generator {
 
 				$num_values      = self::$faker->numberBetween( 1, $maximum_terms );
 				$values          = array();
-				$existing_values = self::$global_attributes[ $raw_name ];
+				$existing_values = isset( self::$global_attributes[ $raw_name ] ) ? self::$global_attributes[ $raw_name ] : array();
 
 				for ( $j = 0; $j < $num_values; $j++ ) {
 					$value = '';
