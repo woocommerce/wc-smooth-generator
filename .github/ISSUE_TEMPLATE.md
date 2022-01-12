@@ -1,4 +1,4 @@
-<!-- This form is for other issue types specific to WooCommerce E2E Tests Boilerplate. This is not a support portal. -->
+<!-- This form is for other issue types specific to WooCommerce Smooth Generator. This is not a support portal. -->
 
 **Prerequisites (mark completed items with an [x]):**
 - [ ] I have checked that my issue type is not listed here https://github.com/woocommerce/wc-smooth-generator/issues/new/choose
