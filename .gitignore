@@ -8,3 +8,6 @@ wc-smooth-generator.zip
 # PHPCS
 .phpcs.xml
 phpcs.xml
+
+# PHP xdebug
+.vscode/launch.json
