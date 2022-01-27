@@ -17,28 +17,28 @@ use WC\SmoothGenerator\Generator;
  */
 function wc_smooth_generate_object( $type, $count = 1) {
 
-        // Check what generation task to perform
-        $i = 0;
-        while($i++ < $count) {
-			switch ( $type ) {
-					case 'order':
-							Generator\Order::generate();
+	// Check what generation task to perform
+	$i = 0;
+       while($i++ < $count) {
+		switch ( $type ) {
+				case 'order':
+						Generator\Order::generate();
+						break;
+				case 'product':
+						Generator\Product::generate();
+						break;
+				case 'customer':
+						Generator\Customer::generate();
 							break;
-					case 'product':
-							Generator\Product::generate();
-							break;
-					case 'customer':
-							Generator\Customer::generate();
-							break;
-					case 'coupon':
-							Generator\Coupon::generate();
-							break;
-					default:
-							return false;
-			}
-        }
-
-        return false;
+				case 'coupon':
+						Generator\Coupon::generate();
+						break;
+				default:
+						return false;
+		}
+	}
+	
+	return false;
 }
 
 add_action( 'wc_smooth_generate_object', 'wc_smooth_generate_object' , 10, 2);
