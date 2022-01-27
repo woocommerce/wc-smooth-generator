@@ -91,7 +91,7 @@ class Order extends Generator {
 
 		if ( $existing ) {
 			$total_users = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->users}" );	
-			$offset      = wp_rand(0, $total_users);	
+			$offset      = wp_rand( 0, $total_users );	
 			$user_id     = (int) $wpdb->get_var( "SELECT ID FROM {$wpdb->users} ORDER BY rand() LIMIT $offset, 1" ); // phpcs:ignore
 			return new \WC_Customer( $user_id );
 		}
