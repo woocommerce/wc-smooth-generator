@@ -15,7 +15,7 @@ use WC\SmoothGenerator\Generator;
  *
  * @return false If task was successful.
  */
-function wc_smooth_generate_object( $type, $count = 1) {
+function wc_smooth_generate_object( $type, $count = 1 ) {
 
 	// Check what generation task to perform
 	$i = 0;
