@@ -46,10 +46,12 @@ class Order extends Generator {
 		$order->set_billing_last_name( $customer->get_billing_last_name() );
 		$order->set_billing_address_1( $customer->get_billing_address_1() );
 		$order->set_billing_address_2( $customer->get_billing_address_2() );
+		$order->set_billing_phone( $customer->get_billing_phone() );
 		$order->set_billing_city( $customer->get_billing_city() );
 		$order->set_billing_postcode( $customer->get_billing_postcode() );
 		$order->set_billing_state( $customer->get_billing_state() );
 		$order->set_billing_country( $customer->get_billing_country() );
+		$order->set_billing_company( $customer->get_billing_company() );
 		$order->set_shipping_first_name( $customer->get_shipping_first_name() );
 		$order->set_shipping_last_name( $customer->get_shipping_last_name() );
 		$order->set_shipping_address_1( $customer->get_shipping_address_1() );
@@ -58,6 +60,7 @@ class Order extends Generator {
 		$order->set_shipping_postcode( $customer->get_shipping_postcode() );
 		$order->set_shipping_state( $customer->get_shipping_state() );
 		$order->set_shipping_country( $customer->get_shipping_country() );
+		$order->set_shipping_company( $customer->get_shipping_company() );
 		$order->set_status( self::get_status( $assoc_args ) );
 		$order->calculate_totals( true );
 

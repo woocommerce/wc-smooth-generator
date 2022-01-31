@@ -89,7 +89,6 @@ class Customer extends Generator {
 			$address['shipping']['state']    = self::$faker->stateAbbr();
 			$address['shipping']['postcode'] = self::$faker->postcode();
 			$address['shipping']['country']  = self::$faker->countryCode();
-			$address['shipping']['phone']    = self::$faker->e164PhoneNumber();
 		} else {
 			$address['shipping']['address0'] = $address['billing']['address0'];
 			$address['shipping']['address1'] = $address['billing']['address1'];
