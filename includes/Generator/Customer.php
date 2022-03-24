@@ -15,23 +15,23 @@ class Customer extends Generator {
 	/**
 	 * Return a new customer.
 	 *
-	 * @param bool $save Save the object before returning or not.
+	 * @param bool   $save Save the object before returning or not.
+	 * @param string $emailDomain An optional domain to be used for all customers' email addresses.
 	 * @return \WC_Customer Customer object with data populated.
 	 */
-	public static function generate( $save = true ) {
+	public static function generate( $save = true, $emailDomain = '' ) {
 		self::init_faker();
+
+		$safeEmailDomain = $emailDomain ? $emailDomain : self::$faker->safeEmailDomain();
 
 		// Make sure a unique username and e-mail are used.
 		do {
-			$username = self::$faker->userName();
-		} while ( username_exists( $username ) );
+			$firstname = self::$faker->firstName( self::$faker->randomElement( array( 'male', 'female' ) ) );
+			$lastname  = self::$faker->lastName();
+			$username  = strtolower( "$firstname.$lastname" );
+			$email     = "$username@$safeEmailDomain";
+		} while ( username_exists( $username ) || email_exists( $email ) );
 
-		do {
-			$email = self::$faker->safeEmail();
-		} while ( email_exists( $email ) );
-
-		$firstname   = self::$faker->firstName( self::$faker->randomElement( array( 'male', 'female' ) ) );
-		$lastname    = self::$faker->lastName();
 		$company     = self::$faker->company();
 		$address1    = self::$faker->buildingNumber() . ' ' . self::$faker->streetName();
 		$address2    = self::$faker->streetAddress();

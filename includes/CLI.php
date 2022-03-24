@@ -121,10 +121,16 @@ class CLI extends WP_CLI_Command {
 	public static function customers( $args, $assoc_args ) {
 		list( $amount ) = $args;
 
+		$domain = '';
+
+		if ( ! empty( $assoc_args['email-domain'] ) ) {
+			$domain = $assoc_args['email-domain'];
+		}
+
 		static::disable_emails();
 		$progress = \WP_CLI\Utils\make_progress_bar( 'Generating customers', $amount );
 		for ( $i = 1; $i <= $amount; $i++ ) {
-			Generator\Customer::generate();
+			Generator\Customer::generate( true, $domain );
 			$progress->tick();
 		}
 		$progress->finish();
@@ -242,7 +248,21 @@ WP_CLI::add_command( 'wc generate orders', array( 'WC\SmoothGenerator\CLI', 'ord
 		),
 	),
 ) );
-WP_CLI::add_command( 'wc generate customers', array( 'WC\SmoothGenerator\CLI', 'customers' ) );
+WP_CLI::add_command( 'wc generate customers', array( 'WC\SmoothGenerator\CLI', 'customers' ), array(
+	'synopsis' => array(
+		array(
+			'name'     => 'amount',
+			'type'     => 'positional',
+			'optional' => true,
+			'default'  => 100,
+		),
+		array(
+			'name'     => 'email-domain',
+			'type'     => 'assoc',
+			'optional' => true,
+		),
+	),
+) );
 
 WP_CLI::add_command( 'wc generate coupons', array( 'WC\SmoothGenerator\CLI', 'coupons' ), array(
 	'synopsis' => array(
