@@ -7,7 +7,7 @@
   "prefer-stable": true,
   "minimum-stability": "dev",
   "require": {
-    "php": ">=7.0",
+    "php": "^7.1 || ^8.0",
     "composer/installers": "~1.2",
     "fakerphp/faker": "^1.17.0",
     "jdenticon/jdenticon": "^0.10.0",
@@ -59,5 +59,11 @@
       "!vendor/mbezhanov",
       "!vendor/symfony"
     ]
+  },
+  "config": {
+    "allow-plugins": {
+      "composer/installers": true,
+      "dealerdirect/phpcodesniffer-composer-installer": true
+    }
   }
 }
