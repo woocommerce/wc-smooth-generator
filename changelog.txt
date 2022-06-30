@@ -1,5 +1,8 @@
 *** Changelog ***
 
+2022-06-30 - version 1.0.5
+* Dev - Run PHPCS checks in CI.
+
 2021-12-15 - version 1.0.4
 * Add - coupon generator and a new option for orders to allow for coupon generation.
 * Add - use product name to generate more realistic product term names.
