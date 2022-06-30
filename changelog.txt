@@ -1,6 +1,7 @@
 *** Changelog ***
 
 2022-06-30 - version 1.0.5
+* Fix - Lower version requirement from PHP 8.0.2 to PHP 7.1.
 * Dev - Run PHPCS checks in CI.
 
 2021-12-15 - version 1.0.4
