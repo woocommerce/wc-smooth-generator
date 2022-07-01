@@ -19,7 +19,7 @@ function wc_smooth_generate_object( $type, $count = 1 ) {
 
 	// Check what generation task to perform
 	$i = 0;
-	while( $i++ < intval( $count ) ) {
+	do {
 		switch ( $type ) {
 				case 'order':
 						Generator\Order::generate();
@@ -36,7 +36,7 @@ function wc_smooth_generate_object( $type, $count = 1 ) {
 				default:
 						return false;
 		}
-	}
+	} while( $i++ < intval( $count ) );
 	
 	return false;
 }
