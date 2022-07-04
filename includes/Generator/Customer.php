@@ -35,7 +35,8 @@ class Customer extends Generator {
 		$person['billing']['firstname'] = self::$faker->firstName( self::$faker->randomElement( array( 'male', 'female' ) ) );
 		$person['billing']['lastname']  = self::$faker->lastName();
 
-		if ( self::$faker->randomFloat( 0, 0, 1 ) == 1 ) {
+		// 50% chance
+		if ( (bool) wp_rand( 0, 1 ) ) {
 			$person['shipping']['firstname'] = self::$faker->firstName( self::$faker->randomElement( array( 'male', 'female' ) ) );
 			$person['shipping']['lastname']  = self::$faker->lastName();
 		} else {
