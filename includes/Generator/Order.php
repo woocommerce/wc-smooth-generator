@@ -59,7 +59,8 @@ class Order extends Generator {
 		$order->set_shipping_state( $customer->get_shipping_state() );
 		$order->set_shipping_country( $customer->get_shipping_country() );
 
-		if ( self::$faker->randomFloat( 0, 1, 5 ) == 1 ) {
+		// 20% chance
+		if ( rand( 0, 100 ) <= 20 ) {
 			$country_code = $order->get_shipping_country();
 
 			$calculate_tax_for = array(
