@@ -83,7 +83,8 @@ class Customer extends Generator {
 		$address['billing']['phone']    = self::$faker->e164PhoneNumber();
 		$address['billing']['email']    = $email;
 
-		if ( self::$faker->randomFloat( 0, 0, 1 ) == 1 ) {
+		// 50% chance
+		if ( (bool) wp_rand( 0, 1 ) ) {
 			$address['shipping']['address0'] = self::$faker->buildingNumber() . ' ' . self::$faker->streetName();
 			$address['shipping']['address1'] = self::$faker->streetAddress();
 			$address['shipping']['city']     = self::$faker->city();
