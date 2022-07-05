@@ -8,6 +8,7 @@
   "minimum-stability": "dev",
   "require": {
     "php": "^7.1 || ^8.0",
+    "psr/container": "1.0.0",
     "composer/installers": "~1.2",
     "fakerphp/faker": "^1.17.0",
     "jdenticon/jdenticon": "^0.10.0",
