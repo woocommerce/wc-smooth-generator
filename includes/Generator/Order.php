@@ -100,6 +100,38 @@ class Order extends Generator {
 	}
 
 	/**
+	 * Disable sending WooCommerce emails when generating objects.
+	 */
+	public static function disable_emails() {
+		$email_actions = array(
+			'woocommerce_low_stock',
+			'woocommerce_no_stock',
+			'woocommerce_product_on_backorder',
+			'woocommerce_order_status_pending_to_processing',
+			'woocommerce_order_status_pending_to_completed',
+			'woocommerce_order_status_processing_to_cancelled',
+			'woocommerce_order_status_pending_to_failed',
+			'woocommerce_order_status_pending_to_on-hold',
+			'woocommerce_order_status_failed_to_processing',
+			'woocommerce_order_status_failed_to_completed',
+			'woocommerce_order_status_failed_to_on-hold',
+			'woocommerce_order_status_cancelled_to_processing',
+			'woocommerce_order_status_cancelled_to_completed',
+			'woocommerce_order_status_cancelled_to_on-hold',
+			'woocommerce_order_status_on-hold_to_processing',
+			'woocommerce_order_status_on-hold_to_cancelled',
+			'woocommerce_order_status_on-hold_to_failed',
+			'woocommerce_order_status_completed',
+			'woocommerce_order_fully_refunded',
+			'woocommerce_order_partially_refunded',
+		);
+
+		foreach ( $email_actions as $action ) {
+			remove_action( $action, array( 'WC_Emails', 'send_transactional_email' ), 10, 10 );
+		}
+	}
+
+	/**
 	 * Returns a date to use as the order date. If no date arguments have been passed, this will
 	 * return the current date. If a `date-start` argument is provided, a random date will be chosen
 	 * between `date-start` and the current date. You can pass an `end-date` and a random date between start

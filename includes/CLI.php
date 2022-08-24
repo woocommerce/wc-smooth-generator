@@ -90,7 +90,7 @@ class CLI extends WP_CLI_Command {
 		}
 
 		if ( $amount > 0 ) {
-			static::disable_emails();
+			Generator\Order::disable_emails();
 			$progress = \WP_CLI\Utils\make_progress_bar( 'Generating orders', $amount );
 			for ( $i = 1; $i <= $amount; $i++ ) {
 				Generator\Order::generate( true, $assoc_args );
@@ -121,7 +121,7 @@ class CLI extends WP_CLI_Command {
 	public static function customers( $args, $assoc_args ) {
 		list( $amount ) = $args;
 
-		static::disable_emails();
+		Generator\Customer::disable_emails();
 		$progress = \WP_CLI\Utils\make_progress_bar( 'Generating customers', $amount );
 		for ( $i = 1; $i <= $amount; $i++ ) {
 			Generator\Customer::generate();
@@ -129,40 +129,6 @@ class CLI extends WP_CLI_Command {
 		}
 		$progress->finish();
 		WP_CLI::success( $amount . ' customers generated.' );
-	}
-
-	/**
-	 * Disable sending WooCommerce emails when generating objects.
-	 */
-	protected static function disable_emails() {
-		$email_actions = array(
-			'woocommerce_low_stock',
-			'woocommerce_no_stock',
-			'woocommerce_product_on_backorder',
-			'woocommerce_order_status_pending_to_processing',
-			'woocommerce_order_status_pending_to_completed',
-			'woocommerce_order_status_processing_to_cancelled',
-			'woocommerce_order_status_pending_to_failed',
-			'woocommerce_order_status_pending_to_on-hold',
-			'woocommerce_order_status_failed_to_processing',
-			'woocommerce_order_status_failed_to_completed',
-			'woocommerce_order_status_failed_to_on-hold',
-			'woocommerce_order_status_cancelled_to_processing',
-			'woocommerce_order_status_cancelled_to_completed',
-			'woocommerce_order_status_cancelled_to_on-hold',
-			'woocommerce_order_status_on-hold_to_processing',
-			'woocommerce_order_status_on-hold_to_cancelled',
-			'woocommerce_order_status_on-hold_to_failed',
-			'woocommerce_order_status_completed',
-			'woocommerce_order_fully_refunded',
-			'woocommerce_order_partially_refunded',
-			'woocommerce_new_customer_note',
-			'woocommerce_created_customer',
-		);
-
-		foreach ( $email_actions as $action ) {
-			remove_action( $action, array( 'WC_Emails', 'send_transactional_email' ), 10, 10 );
-		}
 	}
 
 	/**
