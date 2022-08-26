@@ -94,6 +94,7 @@ class Order extends Generator {
 			return new \WC_Customer( $user_id );
 		}
 
+		Customer::disable_emails();
 		$customer = Customer::generate( ! $guest );
 
 		return $customer;
