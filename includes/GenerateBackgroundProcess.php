@@ -18,12 +18,14 @@ function wc_smooth_generate_object( $type ) {
 	// Check what generation task to perform.
 	switch ( $type ) {
 		case 'order':
+			Generator\Order::disable_emails();
 			Generator\Order::generate();
 			break;
 		case 'product':
 			Generator\Product::generate();
 			break;
 		case 'customer':
+			Generator\Customer::disable_emails();
 			Generator\Customer::generate();
 			break;
 		case 'coupon':
