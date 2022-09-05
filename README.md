@@ -1,3 +1,5 @@
+[![PHPCS](https://github.com/woocommerce/wc-smooth-generator/actions/workflows/phpcs.yml/badge.svg)](https://github.com/woocommerce/wc-smooth-generator/actions/workflows/phpcs.yml)
+
 # WooCommerce Smooth Generator
 A smooth products, customer and order generator using WP-CLI. Future versions will include scheduled auto generation functionality.
 

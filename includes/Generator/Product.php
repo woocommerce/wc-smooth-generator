@@ -126,8 +126,8 @@ class Product extends Generator {
 		$taxonomy_name = wc_attribute_taxonomy_name( $slug );
 		register_taxonomy(
 			$taxonomy_name,
-			apply_filters( 'woocommerce_taxonomy_objects_' . $taxonomy_name, array( 'product' ) ),
-			apply_filters( 'woocommerce_taxonomy_args_' . $taxonomy_name, array(
+			apply_filters( 'woocommerce_taxonomy_objects_' . $taxonomy_name, array( 'product' ) ), // phpcs:ignore WooCommerce.Commenting.CommentHooks.MissingHookComment
+			apply_filters( 'woocommerce_taxonomy_args_' . $taxonomy_name, array( // phpcs:ignore WooCommerce.Commenting.CommentHooks.MissingHookComment
 				'labels'       => array(
 					'name' => $raw_name,
 				),

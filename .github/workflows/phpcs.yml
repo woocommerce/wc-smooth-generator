@@ -1,0 +1,33 @@
+name: PHPCS check
+on:
+  push
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  phpcs:
+    name: PHPCS check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup PHP
+        uses: "shivammathur/setup-php@v2"
+        with:
+          php-version: "7.4"
+          ini-values: "memory_limit=1G"
+          coverage: none
+          tools: cs2pr
+
+      - name: Install Composer dependencies
+        uses: "ramsey/composer-install@v2"
+
+      - name: Run PHPCS checks
+        continue-on-error: true
+        run: vendor/bin/phpcs --report-full --report-checkstyle=./phpcs-report.xml
+
+      - name: Show PHPCS results in PR
+        run: cs2pr ./phpcs-report.xml
