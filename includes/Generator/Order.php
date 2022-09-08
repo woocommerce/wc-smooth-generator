@@ -58,6 +58,29 @@ class Order extends Generator {
 		$order->set_shipping_postcode( $customer->get_shipping_postcode() );
 		$order->set_shipping_state( $customer->get_shipping_state() );
 		$order->set_shipping_country( $customer->get_shipping_country() );
+
+		// 20% chance
+		if ( rand( 0, 100 ) <= 20 ) {
+			$country_code = $order->get_shipping_country();
+
+			$calculate_tax_for = array(
+				'country' => $country_code,
+				'state' => '',
+				'postcode' => '',
+				'city' => '',
+			);
+
+			$fee = new \WC_Order_Item_Fee();
+			$randomAmount = self::$faker->randomFloat( 2, 0.05, 100 );
+
+			$fee->set_name( 'Extra Fee' );
+			$fee->set_amount( $randomAmount );
+			$fee->set_tax_class( '' );
+			$fee->set_tax_status( 'taxable' );
+			$fee->set_total( $randomAmount );
+			$fee->calculate_taxes( $calculate_tax_for );
+			$order->add_item( $fee );
+		}
 		$order->set_status( self::get_status( $assoc_args ) );
 		$order->calculate_totals( true );
 
