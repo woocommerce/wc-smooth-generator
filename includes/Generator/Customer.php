@@ -82,4 +82,18 @@ class Customer extends Generator {
 		return $customer;
 	}
 
+
+	/**
+	 * Disable sending WooCommerce emails when generating objects.
+	 */
+	public static function disable_emails() {
+		$email_actions = array(
+			'woocommerce_new_customer_note',
+			'woocommerce_created_customer',
+		);
+
+		foreach ( $email_actions as $action ) {
+			remove_action( $action, array( 'WC_Emails', 'send_transactional_email' ), 10, 10 );
+		}
+	}
 }

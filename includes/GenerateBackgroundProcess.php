@@ -16,26 +16,28 @@ use WC\SmoothGenerator\Generator;
  * @return false If task was successful.
  */
 function wc_smooth_generate_object( $type, $count = 1 ) {
-
 	// Check what generation task to perform
 	$i = 0;
 	do {
-		switch ( $type ) {
-				case 'order':
-						Generator\Order::generate();
-						break;
-				case 'product':
-						Generator\Product::generate();
-						break;
-				case 'customer':
-						Generator\Customer::generate();
-							break;
-				case 'coupon':
-						Generator\Coupon::generate();
-						break;
-				default:
-						return false;
-		}
+		// Check what generation task to perform.
+    switch ( $type ) {
+      case 'order':
+        Generator\Order::disable_emails();
+        Generator\Order::generate();
+        break;
+      case 'product':
+        Generator\Product::generate();
+        break;
+      case 'customer':
+        Generator\Customer::disable_emails();
+        Generator\Customer::generate();
+        break;
+      case 'coupon':
+        Generator\Coupon::generate();
+        break;
+      default:
+        return false;
+    }
 	} while( $i++ < intval( $count ) );
 	
 	return false;

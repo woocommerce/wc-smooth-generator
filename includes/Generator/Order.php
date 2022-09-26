@@ -58,6 +58,29 @@ class Order extends Generator {
 		$order->set_shipping_postcode( $customer->get_shipping_postcode() );
 		$order->set_shipping_state( $customer->get_shipping_state() );
 		$order->set_shipping_country( $customer->get_shipping_country() );
+
+		// 20% chance
+		if ( rand( 0, 100 ) <= 20 ) {
+			$country_code = $order->get_shipping_country();
+
+			$calculate_tax_for = array(
+				'country' => $country_code,
+				'state' => '',
+				'postcode' => '',
+				'city' => '',
+			);
+
+			$fee = new \WC_Order_Item_Fee();
+			$randomAmount = self::$faker->randomFloat( 2, 0.05, 100 );
+
+			$fee->set_name( 'Extra Fee' );
+			$fee->set_amount( $randomAmount );
+			$fee->set_tax_class( '' );
+			$fee->set_tax_status( 'taxable' );
+			$fee->set_total( $randomAmount );
+			$fee->calculate_taxes( $calculate_tax_for );
+			$order->add_item( $fee );
+		}
 		$order->set_status( self::get_status( $assoc_args ) );
 		$order->calculate_totals( true );
 
@@ -90,13 +113,48 @@ class Order extends Generator {
 		$existing = (bool) wp_rand( 0, 1 );
 
 		if ( $existing ) {
-			$user_id = (int) $wpdb->get_var( "SELECT ID FROM {$wpdb->users} ORDER BY rand() LIMIT 1" ); // phpcs:ignore
+			$total_users = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->users}" );	
+			$offset      = wp_rand( 0, $total_users );	
+			$user_id     = (int) $wpdb->get_var( "SELECT ID FROM {$wpdb->users} ORDER BY rand() LIMIT $offset, 1" ); // phpcs:ignore
 			return new \WC_Customer( $user_id );
 		}
 
+		Customer::disable_emails();
 		$customer = Customer::generate( ! $guest );
 
 		return $customer;
+	}
+
+	/**
+	 * Disable sending WooCommerce emails when generating objects.
+	 */
+	public static function disable_emails() {
+		$email_actions = array(
+			'woocommerce_low_stock',
+			'woocommerce_no_stock',
+			'woocommerce_product_on_backorder',
+			'woocommerce_order_status_pending_to_processing',
+			'woocommerce_order_status_pending_to_completed',
+			'woocommerce_order_status_processing_to_cancelled',
+			'woocommerce_order_status_pending_to_failed',
+			'woocommerce_order_status_pending_to_on-hold',
+			'woocommerce_order_status_failed_to_processing',
+			'woocommerce_order_status_failed_to_completed',
+			'woocommerce_order_status_failed_to_on-hold',
+			'woocommerce_order_status_cancelled_to_processing',
+			'woocommerce_order_status_cancelled_to_completed',
+			'woocommerce_order_status_cancelled_to_on-hold',
+			'woocommerce_order_status_on-hold_to_processing',
+			'woocommerce_order_status_on-hold_to_cancelled',
+			'woocommerce_order_status_on-hold_to_failed',
+			'woocommerce_order_status_completed',
+			'woocommerce_order_fully_refunded',
+			'woocommerce_order_partially_refunded',
+		);
+
+		foreach ( $email_actions as $action ) {
+			remove_action( $action, array( 'WC_Emails', 'send_transactional_email' ), 10, 10 );
+		}
 	}
 
 	/**
