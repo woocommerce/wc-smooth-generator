@@ -8,7 +8,7 @@
  * Author URI: https://woocommerce.com
  *
  * Tested up to: 5.7
- * Requires PHP: 8.0.2
+ * Requires PHP: 7.1
  * WC requires at least: 5.0.0
  * WC tested up to: 6.0.0
  * Woo: 000000:0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0
