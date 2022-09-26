@@ -17,7 +17,7 @@ abstract class Generator {
 	/**
 	 * Holds the faker factory object.
 	 *
-	 * @var \Faker\Factory Factory object.
+	 * @var \Faker\Generator Factory object.
 	 */
 	protected static $faker;
 
