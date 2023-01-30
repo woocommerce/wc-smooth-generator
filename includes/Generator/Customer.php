@@ -31,18 +31,6 @@ class Customer extends Generator {
 			$email = self::$faker->safeEmail();
 		} while ( email_exists( $email ) );
 
-		/*PERSON*/
-		$person['billing']['firstname'] = self::$faker->firstName( self::$faker->randomElement( array( 'male', 'female' ) ) );
-		$person['billing']['lastname']  = self::$faker->lastName();
-
-		// 50% chance
-		if ( (bool) wp_rand( 0, 1 ) ) {
-			$person['shipping']['firstname'] = self::$faker->firstName( self::$faker->randomElement( array( 'male', 'female' ) ) );
-			$person['shipping']['lastname']  = self::$faker->lastName();
-		} else {
-			$person['shipping']['firstname'] = $person['billing']['firstname'];
-			$person['shipping']['lastname']  = $person['billing']['lastname'];
-		}
 
 		/*COMPANY*/
 		$company_variations = array( 'B2B', 'C2C', 'C2B', 'B2C' );
@@ -57,16 +45,6 @@ class Customer extends Generator {
 					$company['shipping']['company_name'] = $company['billing']['company_name'];
 				}
 
-				if (( (bool) wp_rand( 0, 1 ) )){
-					$person['billing']['firstname']  = '';
-					$person['billing']['lastname']  = '';
-				}
-
-				if (( (bool) wp_rand( 0, 1 ) )){
-					$person['shipping']['firstname']  = '';
-					$person['shipping']['lastname']  = '';
-				}
-
 				break;
 			case 'C2C':
 				$company['billing']['company_name']  = '';
@@ -74,13 +52,7 @@ class Customer extends Generator {
 				break;
 			case 'B2C':
 				$company['billing']['company_name']  = self::$faker->company();
-				$company['shipping']['company_name'] = '';
-
-				if (( (bool) wp_rand( 0, 1 ) )){
-					$person['billing']['firstname']  = '';
-					$person['billing']['lastname']  = '';
-				}
-				
+				$company['shipping']['company_name'] = '';		
 				break;
 			case 'C2B':
 				$company['billing']['company_name']  = '';
@@ -89,6 +61,30 @@ class Customer extends Generator {
 			default:
 				break;
 		}
+
+
+		/*PERSON*/
+		if(strlen($company['billing']['company_name']) >= 1 && (bool) wp_rand( 0, 1 )){
+			$person['billing']['firstname'] = '';
+			$person['billing']['lastname'] = '';
+		} else {
+			$person['billing']['firstname'] = self::$faker->firstName( self::$faker->randomElement( array( 'male', 'female' ) ) );
+			$person['billing']['lastname']  = self::$faker->lastName();
+		}
+
+		if(strlen($company['shipping']['company_name']) >= 1 && (bool) wp_rand( 0, 1 )){
+			if(strlen($company['billing']['company_name']) >= 1 && (bool) wp_rand( 0, 1 )){
+				$person['shipping']['firstname'] = $person['billing']['firstname'];
+				$person['shipping']['lastname']  = $person['billing']['lastname'];
+			} else {
+				$person['shipping']['firstname'] = '';
+				$person['shipping']['lastname'] = '';
+			}
+		} else {
+				$person['shipping']['firstname'] = self::$faker->firstName( self::$faker->randomElement( array( 'male', 'female' ) ) );
+				$person['shipping']['lastname']  = self::$faker->lastName();
+		}
+
 		/*ADDRESS*/
 		$address['billing']['address0'] = self::$faker->buildingNumber() . ' ' . self::$faker->streetName();
 		$address['billing']['address1'] = self::$faker->streetAddress();
@@ -175,4 +171,3 @@ class Customer extends Generator {
 		}
 	}
 }
-?>
