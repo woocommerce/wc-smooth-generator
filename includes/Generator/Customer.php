@@ -91,7 +91,7 @@ class Customer extends Generator {
 		$address['billing']['city']     = self::$faker->city();
 		$address['billing']['state']    = self::$faker->stateAbbr();
 		$address['billing']['postcode'] = self::$faker->postcode();
-		$address['billing']['country']  = self::$faker->countryCode();
+		$address['billing']['country'] = Customer::getAllowedCountry();
 		$address['billing']['phone']    = self::$faker->e164PhoneNumber();
 		$address['billing']['email']    = $email;
 
@@ -102,7 +102,7 @@ class Customer extends Generator {
 			$address['shipping']['city']     = self::$faker->city();
 			$address['shipping']['state']    = self::$faker->stateAbbr();
 			$address['shipping']['postcode'] = self::$faker->postcode();
-			$address['shipping']['country']  = self::$faker->countryCode();
+			$address['shipping']['country']  = Customer::getAllowedCountry();
 		} else {
 			$address['shipping']['address0'] = $address['billing']['address0'];
 			$address['shipping']['address1'] = $address['billing']['address1'];
@@ -154,6 +154,28 @@ class Customer extends Generator {
 		}
 
 		return $customer;
+	}
+
+	/**
+	 * returns allowed country based on the woocommerce settings
+	 */
+	public static function getAllowedCountry(){
+		$allowedCountries = get_option('woocommerce_allowed_countries');
+		$allowedOnes = get_option('woocommerce_specific_allowed_countries');
+		$restrictedOnes = get_option('woocommerce_all_except_countries');
+
+		if ($allowedCountries == 'specific'){
+			$country = self::$faker->randomElements( $allowedOnes, $count = 1 );
+			$country = $country[0];
+		} else if ($allowedCountries == 'all_except'){
+			do{
+				$country  = self::$faker->countryCode(); 
+			} while (in_array($country,$restrictedOnes));
+		} else {
+			$country =  self::$faker->countryCode(); 
+		}
+
+		return $country;
 	}
 
 
