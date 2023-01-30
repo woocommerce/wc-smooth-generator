@@ -52,7 +52,7 @@ class Customer extends Generator {
 				break;
 			case 'B2C':
 				$company['billing']['company_name']  = self::$faker->company();
-				$company['shipping']['company_name'] = '';		
+				$company['shipping']['company_name'] = '';
 				break;
 			case 'C2B':
 				$company['billing']['company_name']  = '';
