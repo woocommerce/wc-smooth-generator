@@ -57,6 +57,16 @@ class Customer extends Generator {
 					$company['shipping']['company_name'] = $company['billing']['company_name'];
 				}
 
+				if (( (bool) wp_rand( 0, 1 ) )){
+					$person['billing']['firstname']  = '';
+					$person['billing']['lastname']  = '';
+				}
+
+				if (( (bool) wp_rand( 0, 1 ) )){
+					$person['shipping']['firstname']  = '';
+					$person['shipping']['lastname']  = '';
+				}
+
 				break;
 			case 'C2C':
 				$company['billing']['company_name']  = '';
@@ -65,6 +75,12 @@ class Customer extends Generator {
 			case 'B2C':
 				$company['billing']['company_name']  = self::$faker->company();
 				$company['shipping']['company_name'] = '';
+
+				if (( (bool) wp_rand( 0, 1 ) )){
+					$person['billing']['firstname']  = '';
+					$person['billing']['lastname']  = '';
+				}
+				
 				break;
 			case 'C2B':
 				$company['billing']['company_name']  = '';
@@ -159,3 +175,4 @@ class Customer extends Generator {
 		}
 	}
 }
+?>
