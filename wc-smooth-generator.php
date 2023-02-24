@@ -50,3 +50,7 @@ function load_wc_smooth_generator() {
 if ( version_compare( PHP_VERSION, '5.3', '>' ) ) {
 	add_action( 'plugins_loaded', 'load_wc_smooth_generator', 20 );
 }
+
+// Update some WC settings to make the generator faster.
+update_option( 'woocommerce_attribute_lookup_direct_updates', 'yes' );
+add_filter( 'woocommerce_product_recount_terms', '__return_false' );
