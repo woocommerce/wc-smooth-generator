@@ -306,7 +306,7 @@ class Product extends Generator {
 			'catalog_visibility' => 'visible',
 			'description'        => self::$faker->paragraphs( self::$faker->numberBetween( 1, 5 ), true ),
 			'short_description'  => self::$faker->text(),
-			'sku'                => sanitize_title( $name ) . '-' . self::$faker->ean8,
+			// 'sku'                => sanitize_title( $name ) . '-' . self::$faker->ean8,
 			'regular_price'      => $price,
 			'sale_price'         => $sale_price,
 			'date_on_sale_from'  => '',
