@@ -82,26 +82,12 @@ class Product extends Generator {
 	public static function generate( $save = true ) {
 		self::init_faker();
 
-		// 20% chance of a variable product.
-		$is_variable = self::$faker->boolean( 20 );
-
-		if ( $is_variable ) {
-			$product = self::generate_variable_product();
-		} else {
-			$product = self::generate_simple_product();
-		}
+		// Only simple products in high-performance mode.
+		$product = self::generate_simple_product();
 
 		if ( $product ) {
 			$product->save();
 		}
-
-		// Limit size of stored relationship IDs.
-		if ( 100 < count( self::$product_ids ) ) {
-			shuffle( self::$product_ids );
-			self::$product_ids = array_slice( self::$product_ids, 0, 50 );
-		}
-
-		self::$product_ids[] = $product->get_id();
 
 		return $product;
 	}
@@ -337,16 +323,16 @@ class Product extends Generator {
 			'length'             => $is_virtual ? '' : self::$faker->numberBetween( 1, 200 ),
 			'width'              => $is_virtual ? '' : self::$faker->numberBetween( 1, 200 ),
 			'height'             => $is_virtual ? '' : self::$faker->numberBetween( 1, 200 ),
-			'upsell_ids'         => self::get_existing_product_ids(),
-			'cross_sell_ids'     => self::get_existing_product_ids(),
+			// 'upsell_ids'         => self::get_existing_product_ids(),
+			// 'cross_sell_ids'     => self::get_existing_product_ids(),
 			'parent_id'          => 0,
 			'reviews_allowed'    => self::$faker->boolean(),
 			'purchase_note'      => self::$faker->boolean() ? self::$faker->text() : '',
 			'menu_order'         => self::$faker->numberBetween( 0, 10000 ),
 			'virtual'            => $is_virtual,
 			'downloadable'       => false,
-			'category_ids'       => self::generate_term_ids( self::$faker->numberBetween( 0, 5 ), 'product_cat', $name ),
-			'tag_ids'            => self::generate_term_ids( self::$faker->numberBetween( 0, 5 ), 'product_tag', $name ),
+			// 'category_ids'       => self::generate_term_ids( self::$faker->numberBetween( 0, 5 ), 'product_cat', $name ),
+			// 'tag_ids'            => self::generate_term_ids( self::$faker->numberBetween( 0, 5 ), 'product_tag', $name ),
 			'shipping_class_id'  => 0,
 			'image_id'           => $image_id,
 			'gallery_image_ids'  => $gallery,
