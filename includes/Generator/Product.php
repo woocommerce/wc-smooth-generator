@@ -328,7 +328,7 @@ class Product extends Generator {
 			'parent_id'          => 0,
 			'reviews_allowed'    => self::$faker->boolean(),
 			'purchase_note'      => self::$faker->boolean() ? self::$faker->text() : '',
-			'menu_order'         => self::$faker->numberBetween( 0, 10000 ),
+			// 'menu_order'         => self::$faker->numberBetween( 0, 10000 ),
 			'virtual'            => $is_virtual,
 			'downloadable'       => false,
 			// 'category_ids'       => self::generate_term_ids( self::$faker->numberBetween( 0, 5 ), 'product_cat', $name ),
