@@ -43,7 +43,7 @@ class CLI extends WP_CLI_Command {
 		$progress = \WP_CLI\Utils\make_progress_bar( 'Generating products', $amount );
 
 		for ( $i = 1; $i <= $amount; $i++ ) {
-			Generator\Product::generate();
+			Generator\Product::generate( true, $assoc_args );
 			$progress->tick();
 		}
 
@@ -177,7 +177,22 @@ class CLI extends WP_CLI_Command {
 	}
 }
 
-WP_CLI::add_command( 'wc generate products', array( 'WC\SmoothGenerator\CLI', 'products' ) );
+WP_CLI::add_command( 'wc generate products', array( 'WC\SmoothGenerator\CLI', 'products' ), array(
+	'synopsis' => array(
+		array(
+			'name'     => 'amount',
+			'type'     => 'positional',
+			'optional' => true,
+			'default'  => 100,
+		),
+		array(
+			'name'     => 'type',
+			'type'     => 'assoc',
+			'optional' => true,
+		),
+	),
+) );
+
 WP_CLI::add_command( 'wc generate orders', array( 'WC\SmoothGenerator\CLI', 'orders' ), array(
 	'synopsis' => array(
 		array(
@@ -208,6 +223,7 @@ WP_CLI::add_command( 'wc generate orders', array( 'WC\SmoothGenerator\CLI', 'ord
 		),
 	),
 ) );
+
 WP_CLI::add_command( 'wc generate customers', array( 'WC\SmoothGenerator\CLI', 'customers' ) );
 
 WP_CLI::add_command( 'wc generate coupons', array( 'WC\SmoothGenerator\CLI', 'coupons' ), array(

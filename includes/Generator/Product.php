@@ -76,19 +76,22 @@ class Product extends Generator {
 	/**
 	 * Return a new product.
 	 *
-	 * @param bool $save Save the object before returning or not.
+	 * @param bool  $save Save the object before returning or not.
+	 * @param array $assoc_args Arguments passed via the CLI for additional customization.
 	 * @return \WC_Product The product object consisting of random data.
 	 */
-	public static function generate( $save = true ) {
+	public static function generate( $save = true, $assoc_args = array() ) {
 		self::init_faker();
 
-		// 20% chance of a variable product.
-		$is_variable = self::$faker->boolean( 20 );
-
-		if ( $is_variable ) {
-			$product = self::generate_variable_product();
-		} else {
-			$product = self::generate_simple_product();
+		$type = self::get_product_type( $assoc_args );
+		switch ( $type ) {
+			case 'simple':
+			default:
+				$product = self::generate_simple_product();
+				break;
+			case 'variable':
+				$product = self::generate_variable_product();
+				break;
 		}
 
 		if ( $product ) {
@@ -220,6 +223,30 @@ class Product extends Generator {
 		}
 
 		return $attributes;
+	}
+
+	/**
+	 * Returns a product type to generate. If no type is specified, or an invalid type is specified,
+	 * a weighted random type is returned.
+	 *
+	 * @param array $assoc_args CLI arguments.
+	 * @return string A product type.
+	 */
+	protected static function get_product_type( array $assoc_args ) {
+		$type  = $assoc_args['type'] ?? null;
+		$types = array(
+			'simple',
+			'variable',
+		);
+
+		if ( ! is_null( $type ) && in_array( $type, $types, true ) ) {
+			return $type;
+		} else {
+			return self::random_weighted_element( array(
+				'simple'   => 80,
+				'variable' => 20,
+			) );
+		}
 	}
 
 	/**
