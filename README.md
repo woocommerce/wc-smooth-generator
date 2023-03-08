@@ -14,12 +14,12 @@ WooCommerce Smooth Generator requires Composer and WP-CLI to function.
 
 ### Products
 
-Generate products based on the number of products paramater.
+Generate products based on the number of products parameter.
 - `wp wc generate products <nr of products>`
 
 ### Orders
 
-Generate orders from existing products based on the number of orders paramater, customers will also be generated to mimic guest checkout.
+Generate orders from existing products based on the number of orders parameter, customers will also be generated to mimic guest checkout.
 
 Generate orders for the current date
 - `wp wc generate orders <nr of orders>`
@@ -35,7 +35,18 @@ Generate orders with a specific status.
 
 You may wish to disable emails if creating a large number of orders as this will trigger emails. To block all emails from your site, install a plugin like [Disable Emails](https://wordpress.org/plugins/disable-emails/).
 
+### Coupons
+
+Generate coupons based on the number of coupons parameter.
+- `wp wc generate coupons <nr of coupons>`
+
+Generate coupons with a minimum discount amount.
+- `wp wc generate coupons <nr of coupons> --min=5`
+
+Generate coupons with a maximum discount amount.
+- `wp wc generate coupons <nr of coupons> --max=50`
+
 ### Customers
 
-Generate customers based on the number of customers paramater.
+Generate customers based on the number of customers parameter.
 - `wp wc generate customers <nr of customers>`
