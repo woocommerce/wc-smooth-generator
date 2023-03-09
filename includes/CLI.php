@@ -76,6 +76,8 @@ class CLI extends WP_CLI_Command {
 	public static function orders( $args, $assoc_args ) {
 		list( $amount ) = $args;
 
+		$time_start = microtime( true );
+
 		$amount = (int) $amount;
 		if ( empty( $amount ) ) {
 			$amount = 100;
@@ -98,7 +100,12 @@ class CLI extends WP_CLI_Command {
 			}
 			$progress->finish();
 		}
-		WP_CLI::success( $amount . ' orders generated.' );
+
+		$time_end       = microtime( true );
+		$execution_time = round( ( $time_end - $time_start ), 2 );
+		$display_time   = $execution_time < 60 ? $execution_time . ' seconds' : human_time_diff( $time_start, $time_end );
+
+		WP_CLI::success( $amount . ' orders generated in ' . $display_time );
 	}
 
 	/**
@@ -121,6 +128,8 @@ class CLI extends WP_CLI_Command {
 	public static function customers( $args, $assoc_args ) {
 		list( $amount ) = $args;
 
+		$time_start = microtime( true );
+
 		Generator\Customer::disable_emails();
 		$progress = \WP_CLI\Utils\make_progress_bar( 'Generating customers', $amount );
 		for ( $i = 1; $i <= $amount; $i++ ) {
@@ -128,7 +137,12 @@ class CLI extends WP_CLI_Command {
 			$progress->tick();
 		}
 		$progress->finish();
-		WP_CLI::success( $amount . ' customers generated.' );
+
+		$time_end       = microtime( true );
+		$execution_time = round( ( $time_end - $time_start ), 2 );
+		$display_time   = $execution_time < 60 ? $execution_time . ' seconds' : human_time_diff( $time_start, $time_end );
+
+		WP_CLI::success( $amount . ' customers generated in ' . $display_time );
 	}
 
 	/**
@@ -150,6 +164,8 @@ class CLI extends WP_CLI_Command {
 	 */
 	public static function coupons( $args, $assoc_args ) {
 		list( $amount ) = $args;
+
+		$time_start = microtime( true );
 
 		$amount = (int) $amount;
 		if ( empty( $amount ) ) {
@@ -173,7 +189,12 @@ class CLI extends WP_CLI_Command {
 			}
 			$progress->finish();
 		}
-		WP_CLI::success( $amount . ' coupons generated.' );
+
+		$time_end       = microtime( true );
+		$execution_time = round( ( $time_end - $time_start ), 2 );
+		$display_time   = $execution_time < 60 ? $execution_time . ' seconds' : human_time_diff( $time_start, $time_end );
+
+		WP_CLI::success( $amount . ' coupons generated in ' . $display_time );
 	}
 }
 
