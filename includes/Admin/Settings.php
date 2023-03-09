@@ -37,6 +37,7 @@ class Settings {
 	public static function render_admin_page() {
 		?>
 		<h1>WooCommerce Smooth Generator</h1>
+		<?php echo self::while_you_wait(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 		<form method="post">
 			<?php wp_nonce_field( 'generate', 'smoothgenerator_nonce' ); ?>
 			<h2>Generate Products</h2>
@@ -78,6 +79,7 @@ class Settings {
 		} else if ( ! empty( $_POST['cancel_all_generations'] ) ) {
 			check_admin_referer( 'generate', 'smoothgenerator_nonce' );
 			wc_smooth_generate_cancel_all();
+			add_action( 'admin_notices', array( __CLASS__, 'cancel_generations_notice' ) );
 		}
 	}
 
@@ -88,9 +90,6 @@ class Settings {
 		?>
 		<div class="notice notice-success is-dismissible">
 			<p>Generating products in the background . . . </p>
-			<p>
-				<iframe frameborder="0" scrolling="no" marginheight="0" marginwidth="0"width="427.2" height="240" type="text/html" src="https://www.youtube.com/embed/4TYv2PhG89A?autoplay=1&fs=0&iv_load_policy=3&showinfo=0&rel=0&cc_load_policy=0&start=0&end=0"></iframe>
-			</p>
 		</div>
 		<?php
 	}
@@ -102,10 +101,53 @@ class Settings {
 		?>
 		<div class="notice notice-success is-dismissible">
 			<p>Generating orders in the background . . . </p>
-			<p>
-				<iframe frameborder="0" scrolling="no" marginheight="0" marginwidth="0"width="427.2" height="240" type="text/html" src="https://www.youtube.com/embed/4TYv2PhG89A?autoplay=1&fs=0&iv_load_policy=3&showinfo=0&rel=0&cc_load_policy=0&start=0&end=0"></iframe>
-			</p>
 		</div>
 		<?php
+	}
+
+	/**
+	 * Render notice about canceling generations.
+	 */
+	public static function cancel_generations_notice() {
+		?>
+		<div class="notice notice-warning is-dismissible">
+			<p>Canceling all generations . . . </p>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Render some entertainment while waiting for the generator to finish.
+	 *
+	 * @return string
+	 */
+	protected static function while_you_wait() {
+		$content = '';
+
+		if ( filter_input( INPUT_POST, 'smoothgenerator_nonce' ) ) {
+			if ( filter_input( INPUT_POST, 'cancel_all_generations' ) ) {
+				$embed = 'NF9Y3GVuPfY';
+			} else {
+				$videos    = array(
+					'4TYv2PhG89A',
+					'6Whgn_iE5uc',
+					'h_D3VFfhvs4',
+					'QcjAXI4jANw',
+				);
+				$next_wait = filter_input( INPUT_COOKIE, 'smoothgenerator_next_wait' );
+				if ( ! isset( $videos[ $next_wait ] ) ) {
+					$next_wait = 0;
+				}
+				$embed = $videos[ $next_wait ];
+				$next_wait ++;
+				setcookie( 'smoothgenerator_next_wait', $next_wait, time() + WEEK_IN_SECONDS, ADMIN_COOKIE_PATH, COOKIE_DOMAIN, is_ssl() );
+			}
+
+			$content = <<<"EMBED"
+<div class="wp-block-embed__wrapper"><iframe width="560" height="315" src="https://www.youtube.com/embed/$embed?autoplay=1&fs=0&iv_load_policy=3&showinfo=0&rel=0&cc_load_policy=0&start=0&end=0" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen>></iframe></div>
+EMBED;
+		}
+
+		return $content;
 	}
 }
