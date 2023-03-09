@@ -1,16 +1,16 @@
 <?php
 /**
  * Plugin Name: WooCommerce Smooth Generator
- * Plugin URI: https://woocommerce.com/
- * Description: A smooth customer, order and product generator for WooCommerce.
+ * Plugin URI: https://woocommerce.com
+ * Description: A smooth product, order, customer, and coupon generator for WooCommerce.
  * Version: 1.0.4
  * Author: Automattic
  * Author URI: https://woocommerce.com
  *
- * Tested up to: 5.7
- * Requires PHP: 7.1
+ * Tested up to: 6.1
+ * Requires PHP: 7.4
  * WC requires at least: 5.0.0
- * WC tested up to: 6.0.0
+ * WC tested up to: 7.4.0
  * Woo: 000000:0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0
  *
  * @package WooCommerce
