@@ -185,7 +185,7 @@ WP_CLI::add_command( 'wc generate products', array( 'WC\SmoothGenerator\CLI', 'p
 			'type'        => 'positional',
 			'description' => 'The number of products to generate.',
 			'optional'    => true,
-			'default'     => 100,
+			'default'     => 10,
 		),
 		array(
 			'name'        => 'type',
@@ -195,7 +195,7 @@ WP_CLI::add_command( 'wc generate products', array( 'WC\SmoothGenerator\CLI', 'p
 			'options'     => array( 'simple', 'variable' ),
 		),
 	),
-	'longdesc' => "## EXAMPLES\n\nwc generate products 100\n\nwc generate products 10 --type=variable",
+	'longdesc' => "## EXAMPLES\n\nwc generate products 10\n\nwc generate products 20 --type=variable",
 ) );
 
 WP_CLI::add_command( 'wc generate orders', array( 'WC\SmoothGenerator\CLI', 'orders' ), array(
