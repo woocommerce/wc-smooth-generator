@@ -178,19 +178,24 @@ class CLI extends WP_CLI_Command {
 }
 
 WP_CLI::add_command( 'wc generate products', array( 'WC\SmoothGenerator\CLI', 'products' ), array(
+	'shortdesc' => 'Generate products.',
 	'synopsis' => array(
 		array(
-			'name'     => 'amount',
-			'type'     => 'positional',
-			'optional' => true,
-			'default'  => 100,
+			'name'        => 'amount',
+			'type'        => 'positional',
+			'description' => 'The number of products to generate.',
+			'optional'    => true,
+			'default'     => 100,
 		),
 		array(
-			'name'     => 'type',
-			'type'     => 'assoc',
-			'optional' => true,
+			'name'        => 'type',
+			'type'        => 'assoc',
+			'description' => 'Specify one type of product to generate. Otherwise defaults to a mix.',
+			'optional'    => true,
+			'options'     => array( 'simple', 'variable' ),
 		),
 	),
+	'longdesc' => "## EXAMPLES\n\nwc generate products 100\n\nwc generate products 10 --type=variable",
 ) );
 
 WP_CLI::add_command( 'wc generate orders', array( 'WC\SmoothGenerator\CLI', 'orders' ), array(
