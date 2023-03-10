@@ -48,7 +48,7 @@ class Term extends Generator {
 
 		$term_name = self::$faker->department( 3 );
 		$term_args = array(
-			'description' => self::$faker->realTextBetween( 20, 300, 5 ),
+			'description' => self::$faker->realTextBetween( 40, 100, 3 ),
 		);
 		if ( 0 !== $parent ) {
 			$term_args['parent'] = $parent;
