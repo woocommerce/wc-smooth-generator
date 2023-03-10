@@ -21,6 +21,7 @@ class CLI extends WP_CLI_Command {
 	 */
 	public static function products( $args, $assoc_args ) {
 		list( $amount ) = $args;
+		$amount = absint( $amount );
 
 		$time_start = microtime( true );
 
@@ -53,6 +54,7 @@ class CLI extends WP_CLI_Command {
 	 */
 	public static function orders( $args, $assoc_args ) {
 		list( $amount ) = $args;
+		$amount = absint( $amount );
 
 		$time_start = microtime( true );
 
@@ -89,6 +91,7 @@ class CLI extends WP_CLI_Command {
 	 */
 	public static function customers( $args, $assoc_args ) {
 		list( $amount ) = $args;
+		$amount = absint( $amount );
 
 		$time_start = microtime( true );
 
@@ -115,6 +118,7 @@ class CLI extends WP_CLI_Command {
 	 */
 	public static function coupons( $args, $assoc_args ) {
 		list( $amount ) = $args;
+		$amount = absint( $amount );
 
 		$time_start = microtime( true );
 
