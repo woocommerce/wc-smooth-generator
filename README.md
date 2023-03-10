@@ -17,6 +17,9 @@ WooCommerce Smooth Generator requires Composer and WP-CLI to function.
 Generate products based on the number of products parameter.
 - `wp wc generate products <nr of products>`
 
+Generate products of the specified type. `simple` or `variable`.
+- `wp wc generate products <nr of products> --type=simple`
+
 ### Orders
 
 Generate orders from existing products based on the number of orders parameter, customers will also be generated to mimic guest checkout.
