@@ -196,6 +196,96 @@ class CLI extends WP_CLI_Command {
 
 		WP_CLI::success( $amount . ' coupons generated in ' . $display_time );
 	}
+
+	/**
+	 * Generate terms for the Product Category taxonomy.
+	 *
+	 * @param array $args Arguments specified.
+	 * @param array $assoc_args Associative arguments specified.
+	 */
+	public static function product_categories( $args, $assoc_args ) {
+		list( $amount ) = $args;
+		if ( $amount > 100 ) {
+			WP_CLI::error( 'Amount cannot be over 100.' );
+		}
+		$max_depth = intval( $assoc_args['max_depth'] ) ?? 1;
+		$parent = intval( $assoc_args['parent'] ) ?? 0;
+		$taxonomy = 'product_cat';
+
+		$time_start = microtime( true );
+
+		if ( $amount > 0 ) {
+			$progress  = \WP_CLI\Utils\make_progress_bar( 'Generating terms', $amount );
+
+			if ( $parent || 1 === $max_depth ) {
+				for ( $i = 1; $i <= $amount; $i ++ ) {
+					$term = Generator\Term::generate( true, $taxonomy, $parent );
+					if ( is_wp_error( $term ) ) {
+						if ( 'term_exists' === $term->get_error_code() ) {
+							$i --;
+							continue;
+						}
+						WP_CLI::error( $term );
+					}
+					$progress->tick();
+				}
+			} else {
+				$remaining = $amount;
+				$term_max  = 1;
+				if ( $amount > 2 ) {
+					$term_max = floor( log( $amount ) );
+				}
+				$levels = array_fill( 1, $max_depth, array() );
+
+				for ( $i = 1; $i <= $max_depth; $i ++ ) {
+					if ( 1 === $i ) {
+						for ( $j = 1; $j <= $term_max && $remaining > 0; $j ++ ) {
+							$term = Generator\Term::generate( true, $taxonomy );
+							if ( is_wp_error( $term ) ) {
+								if ( 'term_exists' === $term->get_error_code() ) {
+									$j --;
+									continue;
+								}
+								WP_CLI::error( $term );
+							}
+							$levels[ $i ][] = $term->term_id;
+							$remaining --;
+							$progress->tick();
+						}
+					} else {
+						foreach ( $levels[ $i - 1 ] as $term_id ) {
+							$tcount = rand( 0, $term_max );
+
+							for ( $j = 1; $j <= $tcount && $remaining > 0; $j ++ ) {
+								$term = Generator\Term::generate( true, $taxonomy, $term_id );
+								if ( is_wp_error( $term ) ) {
+									if ( 'term_exists' === $term->get_error_code() ) {
+										$j --;
+										continue;
+									}
+									WP_CLI::error( $term );
+								}
+								$levels[ $i ][] = $term->term_id;
+								$remaining --;
+								$progress->tick();
+							}
+						}
+					}
+					if ( $i === $max_depth && $remaining > 0 ) {
+						$i = 0;
+					}
+				}
+			}
+
+			$progress->finish();
+		}
+
+		$time_end       = microtime( true );
+		$execution_time = round( ( $time_end - $time_start ), 2 );
+		$display_time   = $execution_time < 60 ? $execution_time . ' seconds' : human_time_diff( $time_start, $time_end );
+
+		WP_CLI::success( $amount . ' terms generated in ' . $display_time );
+	}
 }
 
 WP_CLI::add_command( 'wc generate products', array( 'WC\SmoothGenerator\CLI', 'products' ) );
@@ -250,6 +340,34 @@ WP_CLI::add_command( 'wc generate coupons', array( 'WC\SmoothGenerator\CLI', 'co
 			'optional' => true,
 			'type'     => 'assoc',
 			'default'  => 100,
+		),
+	),
+) );
+
+WP_CLI::add_command( 'wc generate product-categories', array( 'WC\SmoothGenerator\CLI', 'product_categories' ), array(
+	'shortdesc' => 'Generate product categories.',
+	'synopsis'  => array(
+		array(
+			'name'        => 'amount',
+			'type'        => 'positional',
+			'description' => 'The number of product categories to generate. Max value 100.',
+			'optional'    => true,
+			'default'     => 10,
+		),
+		array(
+			'name'        => 'max_depth',
+			'type'        => 'assoc',
+			'description' => 'The maximum number of hierarchy levels for the categories. A value of 1 means all categories will be top-level. Max value 5.',
+			'optional'    => true,
+			'options'     => array( 1, 2, 3, 4, 5 ),
+			'default'     => 1,
+		),
+		array(
+			'name'        => 'parent',
+			'type'        => 'assoc',
+			'description' => 'Specify an existing product category ID as the parent of the new categories.',
+			'optional'    => true,
+			'default'     => 0,
 		),
 	),
 ) );
