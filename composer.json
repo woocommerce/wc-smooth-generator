@@ -1,18 +1,21 @@
 {
   "name": "woocommerce/wc-smooth-generator",
-  "description": "A smooth coupon, customer, order and product generator for WooCommerce.",
+  "description": "A smooth product, order, customer, and coupon generator for WooCommerce.",
   "homepage": "https://woocommerce.com/",
   "type": "wordpress-plugin",
   "license": "GPL-3.0-or-later",
   "prefer-stable": true,
   "minimum-stability": "dev",
   "require": {
-    "php": "^7.1 || ^8.0",
+    "php": "^7.4 || ^8.0",
     "psr/container": "1.0.0",
     "composer/installers": "~1.2",
-    "fakerphp/faker": "^1.17.0",
+    "fakerphp/faker": "^1.21.0",
     "jdenticon/jdenticon": "^0.10.0",
     "mbezhanov/faker-provider-collection": "^2.0.1",
+    "symfony/deprecation-contracts": "^2.2"
+  },
+  "require-dev": {
     "woocommerce/woocommerce-git-hooks": "*",
     "woocommerce/woocommerce-sniffs": "*"
   },
