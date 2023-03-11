@@ -205,86 +205,33 @@ class CLI extends WP_CLI_Command {
 	 */
 	public static function product_categories( $args, $assoc_args ) {
 		list( $amount ) = $args;
-		if ( $amount > 100 ) {
-			WP_CLI::error( 'Amount cannot be over 100.' );
-		}
-		$max_depth = intval( $assoc_args['max_depth'] ) ?? 1;
-		$parent = intval( $assoc_args['parent'] ) ?? 0;
 		$taxonomy = 'product_cat';
 
 		$time_start = microtime( true );
 
-		if ( $amount > 0 ) {
-			$progress  = \WP_CLI\Utils\make_progress_bar( 'Generating terms', $amount );
+		$progress = \WP_CLI\Utils\make_progress_bar( 'Generating terms', $amount );
 
-			if ( $parent || 1 === $max_depth ) {
-				for ( $i = 1; $i <= $amount; $i ++ ) {
-					$term = Generator\Term::generate( true, $taxonomy, $parent );
-					if ( is_wp_error( $term ) ) {
-						if ( 'term_exists' === $term->get_error_code() ) {
-							$i --;
-							continue;
-						}
-						WP_CLI::error( $term );
-					}
-					$progress->tick();
-				}
-			} else {
-				$remaining = $amount;
-				$term_max  = 1;
-				if ( $amount > 2 ) {
-					$term_max = floor( log( $amount ) );
-				}
-				$levels = array_fill( 1, $max_depth, array() );
-
-				for ( $i = 1; $i <= $max_depth; $i ++ ) {
-					if ( 1 === $i ) {
-						for ( $j = 1; $j <= $term_max && $remaining > 0; $j ++ ) {
-							$term = Generator\Term::generate( true, $taxonomy );
-							if ( is_wp_error( $term ) ) {
-								if ( 'term_exists' === $term->get_error_code() ) {
-									$j --;
-									continue;
-								}
-								WP_CLI::error( $term );
-							}
-							$levels[ $i ][] = $term->term_id;
-							$remaining --;
-							$progress->tick();
-						}
-					} else {
-						foreach ( $levels[ $i - 1 ] as $term_id ) {
-							$tcount = rand( 0, $term_max );
-
-							for ( $j = 1; $j <= $tcount && $remaining > 0; $j ++ ) {
-								$term = Generator\Term::generate( true, $taxonomy, $term_id );
-								if ( is_wp_error( $term ) ) {
-									if ( 'term_exists' === $term->get_error_code() ) {
-										$j --;
-										continue;
-									}
-									WP_CLI::error( $term );
-								}
-								$levels[ $i ][] = $term->term_id;
-								$remaining --;
-								$progress->tick();
-							}
-						}
-					}
-					if ( $i === $max_depth && $remaining > 0 ) {
-						$i = 0;
-					}
-				}
+		add_action(
+			'smoothgenerator_term_generated',
+			function () use ( $progress ) {
+				$progress->tick();
 			}
+		);
 
-			$progress->finish();
+		$result = Generator\Term::batch( $amount, $taxonomy, $assoc_args );
+
+		if ( is_wp_error( $result ) ) {
+			WP_CLI::error( $result );
 		}
 
+		$progress->finish();
+
+		$generated      = count( $result );
 		$time_end       = microtime( true );
 		$execution_time = round( ( $time_end - $time_start ), 2 );
 		$display_time   = $execution_time < 60 ? $execution_time . ' seconds' : human_time_diff( $time_start, $time_end );
 
-		WP_CLI::success( $amount . ' terms generated in ' . $display_time );
+		WP_CLI::success( $generated . ' terms generated in ' . $display_time );
 	}
 }
 
