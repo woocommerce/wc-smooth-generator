@@ -58,7 +58,7 @@ class Term extends Generator {
 		}
 
 		$term_args = array(
-			'description' => self::$faker->realTextBetween( 20, rand( 20, 300 ), 4 ),
+			'description' => self::$faker->realTextBetween( 20, wp_rand( 20, 300 ), 4 ),
 		);
 		if ( 0 !== $parent ) {
 			$term_args['parent'] = $parent;
@@ -230,7 +230,7 @@ class Term extends Generator {
 				} else {
 					// Subsequent hierarchy levels.
 					foreach ( $levels[ $i - 1 ] as $term_id ) {
-						$tcount = rand( 0, $term_max );
+						$tcount = wp_rand( 0, $term_max );
 
 						for ( $j = 1; $j <= $tcount && $remaining > 0; $j ++ ) {
 							$term = self::generate( true, $taxonomy, $term_id );
