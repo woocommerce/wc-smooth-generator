@@ -205,6 +205,7 @@ class CLI extends WP_CLI_Command {
 	 */
 	public static function terms( $args, $assoc_args ) {
 		list( $taxonomy, $amount ) = $args;
+		$amount = absint( $amount );
 
 		$time_start = microtime( true );
 
