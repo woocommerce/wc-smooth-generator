@@ -203,9 +203,8 @@ class CLI extends WP_CLI_Command {
 	 * @param array $args Arguments specified.
 	 * @param array $assoc_args Associative arguments specified.
 	 */
-	public static function product_categories( $args, $assoc_args ) {
-		list( $amount ) = $args;
-		$taxonomy = 'product_cat';
+	public static function terms( $args, $assoc_args ) {
+		list( $taxonomy, $amount ) = $args;
 
 		$time_start = microtime( true );
 
@@ -291,20 +290,26 @@ WP_CLI::add_command( 'wc generate coupons', array( 'WC\SmoothGenerator\CLI', 'co
 	),
 ) );
 
-WP_CLI::add_command( 'wc generate product-categories', array( 'WC\SmoothGenerator\CLI', 'product_categories' ), array(
+WP_CLI::add_command( 'wc generate terms', array( 'WC\SmoothGenerator\CLI', 'terms' ), array(
 	'shortdesc' => 'Generate product categories.',
 	'synopsis'  => array(
 		array(
+			'name'        => 'taxonomy',
+			'type'        => 'positional',
+			'description' => 'The taxonomy to generate the terms for.',
+			'options'     => array( 'product_cat', 'product_tag' ),
+		),
+		array(
 			'name'        => 'amount',
 			'type'        => 'positional',
-			'description' => 'The number of product categories to generate. Max value 100.',
+			'description' => 'The number of terms to generate. Max value 100.',
 			'optional'    => true,
 			'default'     => 10,
 		),
 		array(
 			'name'        => 'max_depth',
 			'type'        => 'assoc',
-			'description' => 'The maximum number of hierarchy levels for the categories. A value of 1 means all categories will be top-level. Max value 5.',
+			'description' => 'The maximum number of hierarchy levels for the terms. A value of 1 means all categories will be top-level. Max value 5. Only applies to taxonomies that are hierarchical.',
 			'optional'    => true,
 			'options'     => array( 1, 2, 3, 4, 5 ),
 			'default'     => 1,
@@ -312,9 +317,10 @@ WP_CLI::add_command( 'wc generate product-categories', array( 'WC\SmoothGenerato
 		array(
 			'name'        => 'parent',
 			'type'        => 'assoc',
-			'description' => 'Specify an existing product category ID as the parent of the new categories.',
+			'description' => 'Specify an existing term ID as the parent for the new terms. Only applies to taxonomies that are hierarchical.',
 			'optional'    => true,
 			'default'     => 0,
 		),
 	),
+	'longdesc' => "## EXAMPLES\n\nwc generate terms product_tag 10\n\nwc generate terms product_cat 50 --max_depth=3",
 ) );
