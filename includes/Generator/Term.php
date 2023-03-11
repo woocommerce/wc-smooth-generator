@@ -46,9 +46,19 @@ class Term extends Generator {
 
 		self::init_faker();
 
-		$term_name = self::$faker->department( 3 );
+		if ( $taxonomy_obj->hierarchical ) {
+			$term_name = ucwords( self::$faker->department( 3 ) );
+		} else {
+			$term_name = self::random_weighted_element( array(
+				self::$faker->lastName()       => 45,
+				self::$faker->colorName()      => 35,
+				self::$faker->words( 3, true ) => 20,
+			) );
+			$term_name = strtolower( $term_name );
+		}
+
 		$term_args = array(
-			'description' => self::$faker->realTextBetween( 40, 100, 3 ),
+			'description' => self::$faker->realTextBetween( 20, rand( 20, 300 ), 4 ),
 		);
 		if ( 0 !== $parent ) {
 			$term_args['parent'] = $parent;
