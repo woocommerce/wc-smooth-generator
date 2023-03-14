@@ -1,9 +1,21 @@
 *** Changelog ***
 
-2022-06-30 - version 1.0.5
+= 1.1.0 - 2023-03-14 =
+* Add - some generated orders will now include fees.
+* Add - the possibility for billing, shipping, and location addresses to be different in orders.
+* Add - declare compatibility with WooCommerce's High Performance Order Storage feature.
+* Add - all CLI commands now show elapsed time upon completion.
+* Add - introduce --type argument to the `generate products` command.
+* Add - more music video possibilities on the Smooth Generator admin screen.
+* Add - new generator for terms in the product categories and product tags taxonomies.
+* Dev - update PHP version requirement to 7.4.
+* Fix - ensure emails are disabled during generation.
+* Fix - add missing documentation about the coupons CLI command to the readme.
+
+= 1.0.5 - 2022-06-30 =
 * Fix - Lower version requirement from PHP 8.0.2 to PHP 7.1.
 
-2021-12-15 - version 1.0.4
+= 1.0.4 - 2021-12-15 =
 * Add - coupon generator and a new option for orders to allow for coupon generation.
 * Add - use product name to generate more realistic product term names.
 * Fix - include jdenticon package in generated zip.
