@@ -48,3 +48,17 @@ Generate coupons with a maximum discount amount.
 
 Generate customers based on the number of customers parameter.
 - `wp wc generate customers <nr of customers>`
+
+### Terms
+
+Generate terms in the Product Categories taxonomy based on the number of terms parameter.
+- `wp wc generate terms product_cat <nr of terms>`
+
+Generate hierarchical product categories with a maximum number of sub-levels.
+- `wp wc generate terms product_cat <nr of terms> --max-depth=5`
+
+Generate product categories that are all child terms of an existing product category term.
+- `wp wc generate terms product_cat <nr of terms> --parent=123`
+
+Generate terms in the Product Tags taxonomy based on the number of terms parameter.
+- `wp wc generate terms product_tag <nr of terms>`
