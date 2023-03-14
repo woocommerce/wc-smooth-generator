@@ -153,14 +153,14 @@ class Term extends Generator {
 	 */
 	protected static function batch_hierarchical( int $amount, string $taxonomy, array $args = array() ) {
 		$defaults = array(
-			'max_depth' => 1,
+			'max-depth' => 1,
 			'parent'    => 0,
 		);
 
-		list( 'max_depth' => $max_depth, 'parent' => $parent ) = filter_var_array(
+		list( 'max-depth' => $max_depth, 'parent' => $parent ) = filter_var_array(
 			wp_parse_args( $args, $defaults ),
 			array(
-				'max_depth' => array(
+				'max-depth' => array(
 					'filter'  => FILTER_VALIDATE_INT,
 					'options' => array(
 						'min_range' => 1,

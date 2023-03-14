@@ -308,7 +308,7 @@ WP_CLI::add_command( 'wc generate terms', array( 'WC\SmoothGenerator\CLI', 'term
 			'default'     => 10,
 		),
 		array(
-			'name'        => 'max_depth',
+			'name'        => 'max-depth',
 			'type'        => 'assoc',
 			'description' => 'The maximum number of hierarchy levels for the terms. A value of 1 means all categories will be top-level. Max value 5. Only applies to taxonomies that are hierarchical.',
 			'optional'    => true,
