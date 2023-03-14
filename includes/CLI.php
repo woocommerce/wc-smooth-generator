@@ -319,5 +319,5 @@ WP_CLI::add_command( 'wc generate terms', array( 'WC\SmoothGenerator\CLI', 'term
 			'default'     => 0,
 		),
 	),
-	'longdesc' => "## EXAMPLES\n\nwc generate terms product_tag 10\n\nwc generate terms product_cat 50 --max_depth=3",
+	'longdesc' => "## EXAMPLES\n\nwc generate terms product_tag 10\n\nwc generate terms product_cat 50 --max-depth=3",
 ) );
