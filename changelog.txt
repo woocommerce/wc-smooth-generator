@@ -1,6 +1,6 @@
 *** Changelog ***
 
-= 1.1.0 - xxxx-xx-xx =
+= 1.1.0 - 2023-03-14 =
 * Add - some generated orders will now include fees.
 * Add - the possibility for billing, shipping, and location addresses to be different in orders.
 * Add - declare compatibility with WooCommerce's High Performance Order Storage feature.

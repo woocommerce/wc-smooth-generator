@@ -1,7 +1,7 @@
 {
   "name": "wc-smooth-generator",
   "title": "WooCommerce Smooth Generator",
-  "version": "1.0.4",
+  "version": "1.1.0",
   "homepage": "https://github.com/woocommerce/wc-smooth-generator",
   "repository": {
     "type": "git",
