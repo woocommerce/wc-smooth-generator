@@ -16,22 +16,12 @@ class CLI extends WP_CLI_Command {
 	/**
 	 * Generate products.
 	 *
-	 * ## OPTIONS
-	 *
-	 * <amount>
-	 * : The amount of products to generate
-	 * ---
-	 * default: 100
-	 * ---
-	 *
-	 * ## EXAMPLES
-	 * wc generate products 100
-	 *
 	 * @param array $args Arguments specified.
 	 * @param array $assoc_args Associative arguments specified.
 	 */
 	public static function products( $args, $assoc_args ) {
 		list( $amount ) = $args;
+		$amount = absint( $amount );
 
 		$time_start = microtime( true );
 
@@ -59,29 +49,14 @@ class CLI extends WP_CLI_Command {
 	/**
 	 * Generate orders.
 	 *
-	 * ## OPTIONS
-	 *
-	 * <amount>
-	 * : The amount of orders to generate
-	 * ---
-	 * default: 100
-	 * ---
-	 *
-	 * ## EXAMPLES
-	 * wc generate orders 100
-	 *
 	 * @param array $args Arguments specified.
 	 * @param array $assoc_args Associative arguments specified.
 	 */
 	public static function orders( $args, $assoc_args ) {
 		list( $amount ) = $args;
+		$amount = absint( $amount );
 
 		$time_start = microtime( true );
-
-		$amount = (int) $amount;
-		if ( empty( $amount ) ) {
-			$amount = 100;
-		}
 
 		if ( ! empty( $assoc_args['status'] ) ) {
 			$status = $assoc_args['status'];
@@ -111,22 +86,12 @@ class CLI extends WP_CLI_Command {
 	/**
 	 * Generate customers.
 	 *
-	 * ## OPTIONS
-	 *
-	 * <amount>
-	 * : The amount of customers to generate
-	 * ---
-	 * default: 100
-	 * ---
-	 *
-	 * ## EXAMPLES
-	 * wc generate customers 100
-	 *
 	 * @param array $args Arguments specified.
 	 * @param array $assoc_args Associative arguments specified.
 	 */
 	public static function customers( $args, $assoc_args ) {
 		list( $amount ) = $args;
+		$amount = absint( $amount );
 
 		$time_start = microtime( true );
 
@@ -148,29 +113,14 @@ class CLI extends WP_CLI_Command {
 	/**
 	 * Generate coupons.
 	 *
-	 * ## OPTIONS
-	 *
-	 * <amount>
-	 * : The amount of coupons to generate
-	 * ---
-	 * default: 100
-	 * ---
-	 *
-	 * ## EXAMPLES
-	 * wc generate coupons 100
-	 *
 	 * @param array $args Arguments specified.
 	 * @param array $assoc_args Associative arguments specified.
 	 */
 	public static function coupons( $args, $assoc_args ) {
 		list( $amount ) = $args;
+		$amount = absint( $amount );
 
 		$time_start = microtime( true );
-
-		$amount = (int) $amount;
-		if ( empty( $amount ) ) {
-			$amount = 10;
-		}
 
 		$min = 5;
 		$max = 100;
@@ -257,59 +207,84 @@ WP_CLI::add_command( 'wc generate products', array( 'WC\SmoothGenerator\CLI', 'p
 ) );
 
 WP_CLI::add_command( 'wc generate orders', array( 'WC\SmoothGenerator\CLI', 'orders' ), array(
-	'synopsis' => array(
+	'shortdesc' => 'Generate orders.',
+	'synopsis'  => array(
 		array(
-			'name'     => 'amount',
-			'type'     => 'positional',
-			'optional' => true,
-			'default'  => 100,
+			'name'        => 'amount',
+			'type'        => 'positional',
+			'description' => 'The number of orders to generate.',
+			'optional'    => true,
+			'default'     => 10,
 		),
 		array(
-			'name'     => 'date-start',
-			'type'     => 'assoc',
-			'optional' => true,
+			'name'        => 'date-start',
+			'type'        => 'assoc',
+			'description' => 'Randomize the order date using this as the lower limit. Format as YYYY-MM-DD.',
+			'optional'    => true,
 		),
 		array(
-			'name'     => 'date-end',
-			'type'     => 'assoc',
-			'optional' => true,
+			'name'        => 'date-end',
+			'type'        => 'assoc',
+			'description' => 'Randomize the order date using this as the upper limit. Only works in conjunction with date-start. Format as YYYY-MM-DD.',
+			'optional'    => true,
 		),
 		array(
-			'name'     => 'status',
-			'type'     => 'assoc',
-			'optional' => true,
+			'name'        => 'status',
+			'type'        => 'assoc',
+			'description' => 'Specify one status for all the generated orders. Otherwise defaults to a mix.',
+			'optional'    => true,
+			'options'     => array( 'completed', 'processing', 'on-hold', 'failed' ),
 		),
 		array(
-			'name'     => 'coupons',
-			'type'     => 'assoc',
-			'optional' => true,
+			'name'        => 'coupons',
+			'type'        => 'flag',
+			'description' => 'Create and apply a coupon to each generated order.',
+			'optional'    => true,
 		),
 	),
+	'longdesc'  => "## EXAMPLES\n\nwc generate orders 10\n\nwc generate orders 50 --date-start=2020-01-01 --date-end=2022-12-31 --status=completed --coupons",
 ) );
 
-WP_CLI::add_command( 'wc generate customers', array( 'WC\SmoothGenerator\CLI', 'customers' ) );
-
-WP_CLI::add_command( 'wc generate coupons', array( 'WC\SmoothGenerator\CLI', 'coupons' ), array(
-	'synopsis' => array(
+WP_CLI::add_command( 'wc generate customers', array( 'WC\SmoothGenerator\CLI', 'customers' ), array(
+	'shortdesc' => 'Generate customers.',
+	'synopsis'  => array(
 		array(
-			'name'     => 'amount',
-			'type'     => 'positional',
-			'optional' => true,
-			'default'  => 10,
-		),
-		array(
-			'name'     => 'min',
-			'optional' => true,
-			'type'     => 'assoc',
-			'default'  => 5,
-		),
-		array(
-			'name'     => 'max',
-			'optional' => true,
-			'type'     => 'assoc',
-			'default'  => 100,
+			'name'        => 'amount',
+			'type'        => 'positional',
+			'description' => 'The number of customers to generate.',
+			'optional'    => true,
+			'default'     => 10,
 		),
 	),
+	'longdesc'  => "## EXAMPLES\n\nwc generate customers 10",
+) );
+
+WP_CLI::add_command( 'wc generate coupons', array( 'WC\SmoothGenerator\CLI', 'coupons' ), array(
+	'shortdesc' => 'Generate coupons.',
+	'synopsis'  => array(
+		array(
+			'name'        => 'amount',
+			'type'        => 'positional',
+			'description' => 'The number of coupons to generate.',
+			'optional'    => true,
+			'default'     => 10,
+		),
+		array(
+			'name'        => 'min',
+			'type'        => 'assoc',
+			'description' => 'Specify the minimum discount of each coupon.',
+			'optional'    => true,
+			'default'     => 5,
+		),
+		array(
+			'name'        => 'max',
+			'type'        => 'assoc',
+			'description' => 'Specify the maximum discount of each coupon.',
+			'optional'    => true,
+			'default'     => 100,
+		),
+	),
+	'longdesc'  => "## EXAMPLES\n\nwc generate coupons 10\n\nwc generate coupons 50 --min=1 --max=50",
 ) );
 
 WP_CLI::add_command( 'wc generate terms', array( 'WC\SmoothGenerator\CLI', 'terms' ), array(
@@ -344,5 +319,5 @@ WP_CLI::add_command( 'wc generate terms', array( 'WC\SmoothGenerator\CLI', 'term
 			'default'     => 0,
 		),
 	),
-	'longdesc' => "## EXAMPLES\n\nwc generate terms product_tag 10\n\nwc generate terms product_cat 50 --max_depth=3",
+	'longdesc' => "## EXAMPLES\n\nwc generate terms product_tag 10\n\nwc generate terms product_cat 50 --max-depth=3",
 ) );
