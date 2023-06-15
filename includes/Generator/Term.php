@@ -75,7 +75,7 @@ class Term extends Generator {
 		/**
 		 * Action: Term generator returned a new term.
 		 *
-		 * @since TBD
+		 * @since 1.1.0
 		 *
 		 * @param \WP_Term $term
 		 */
@@ -98,15 +98,20 @@ class Term extends Generator {
 			$amount,
 			FILTER_VALIDATE_INT,
 			array(
-				'min_range' => 1,
-				'max_range' => 100,
+				'options' => array(
+					'min_range' => 1,
+					'max_range' => self::MAX_BATCH_SIZE,
+				),
 			)
 		);
 
 		if ( false === $amount ) {
 			return new \WP_Error(
 				'smoothgenerator_term_batch_invalid_amount',
-				'Amount must be a number between 1 and 100.'
+				sprintf(
+					'Amount must be a number between 1 and %d.',
+					self::MAX_BATCH_SIZE
+				)
 			);
 		}
 
