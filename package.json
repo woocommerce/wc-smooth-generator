@@ -9,23 +9,20 @@
   },
   "license": "GPL-3.0+",
   "scripts": {
+    "setup": "npm install && composer install && npm run prepare",
     "build": "composer install --no-dev && npm install --only=prod && composer archive --file=$npm_package_name --format=zip && npm run postarchive",
     "postarchive": "rm -rf $npm_package_name && unzip $npm_package_name.zip -d $npm_package_name && rm $npm_package_name.zip && zip -r $npm_package_name.zip $npm_package_name && rm -rf $npm_package_name",
     "phpcs": "composer run phpcs",
     "lint": "composer run lint",
     "lint:staged": "composer run lint-staged",
-    "lint:branch": "composer run lint-branch"
+    "lint:branch": "composer run lint-branch",
+    "prepare": "husky install"
   },
   "devDependencies": {
-    "husky": "3.0.9"
+    "husky": "^8.0.0"
   },
   "engines": {
-    "node": ">=10.15.0",
+    "node": ">=14",
     "npm": ">=6.4.1"
-  },
-  "husky": {
-    "hooks": {
-      "pre-commit": "lint:staged"
-    }
   }
 }

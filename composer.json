@@ -16,7 +16,6 @@
     "symfony/deprecation-contracts": "^2.2"
   },
   "require-dev": {
-    "woocommerce/woocommerce-git-hooks": "*",
     "woocommerce/woocommerce-sniffs": "*",
     "sirbrillig/phpcs-changed": "^2.10.2"
   },
@@ -24,18 +23,6 @@
     "psr-4": {"WC\\SmoothGenerator\\": "includes/"}
   },
   "scripts": {
-    "pre-update-cmd": [
-      "WooCommerce\\GitHooks\\Hooks::preHooks"
-    ],
-    "pre-install-cmd": [
-      "WooCommerce\\GitHooks\\Hooks::preHooks"
-    ],
-    "post-install-cmd": [
-      "WooCommerce\\GitHooks\\Hooks::postHooks"
-    ],
-    "post-update-cmd": [
-      "WooCommerce\\GitHooks\\Hooks::postHooks"
-    ],
     "phpcs": [
       "vendor/bin/phpcs"
     ],
@@ -60,9 +47,10 @@
   },
   "archive": {
     "exclude": [
+      "/.github",
+      "/.husky",
       "/bin",
       "/node_modules",
-      "Gruntfile.js",
       "composer.*",
       "package*.json",
       "phpcs*",
