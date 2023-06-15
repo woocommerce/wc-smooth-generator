@@ -17,7 +17,8 @@
   },
   "require-dev": {
     "woocommerce/woocommerce-git-hooks": "*",
-    "woocommerce/woocommerce-sniffs": "*"
+    "woocommerce/woocommerce-sniffs": "*",
+    "sirbrillig/phpcs-changed": "^2.10.2"
   },
   "autoload": {
     "psr-4": {"WC\\SmoothGenerator\\": "includes/"}
@@ -40,6 +41,15 @@
     ],
     "phpcbf": [
       "vendor/bin/phpcbf"
+    ],
+    "lint": [
+      "chg=$(git diff --relative --name-only -- '*.php'); [[ -z $chg ]] || phpcs-changed -s --git --git-unstaged $chg"
+    ],
+    "lint-staged": [
+      "chg=$(git diff HEAD --relative --name-only -- '*.php'); [[ -z $chg ]] || phpcs-changed -s --git $chg"
+    ],
+    "lint-branch": [
+      "sh ./bin/lint-branch.sh"
     ]
   },
   "extra": {
@@ -50,6 +60,7 @@
   },
   "archive": {
     "exclude": [
+      "/bin",
       "/node_modules",
       "Gruntfile.js",
       "composer.*",
