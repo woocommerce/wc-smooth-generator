@@ -205,15 +205,24 @@ class CLI extends WP_CLI_Command {
 			}
 		);
 
-		$result = Generator\Term::batch( $amount, $taxonomy, $assoc_args );
+		$remaining_amount = $amount;
+		$generated        = 0;
 
-		if ( is_wp_error( $result ) ) {
-			WP_CLI::error( $result );
+		while ( $remaining_amount > 0 ) {
+			$batch = $remaining_amount > Generator\Term::MAX_BATCH_SIZE ? Generator\Term::MAX_BATCH_SIZE : $remaining_amount;
+
+			$result = Generator\Term::batch( $amount, $taxonomy, $assoc_args );
+
+			if ( is_wp_error( $result ) ) {
+				WP_CLI::error( $result );
+			}
+
+			$generated        += count( $result );
+			$remaining_amount -= $batch;
 		}
 
 		$progress->finish();
 
-		$generated      = count( $result );
 		$time_end       = microtime( true );
 		$execution_time = round( ( $time_end - $time_start ), 2 );
 		$display_time   = $execution_time < 60 ? $execution_time . ' seconds' : human_time_diff( $time_start, $time_end );
@@ -336,7 +345,7 @@ WP_CLI::add_command( 'wc generate terms', array( 'WC\SmoothGenerator\CLI', 'term
 		array(
 			'name'        => 'amount',
 			'type'        => 'positional',
-			'description' => 'The number of terms to generate. Max value 100.',
+			'description' => 'The number of terms to generate.',
 			'optional'    => true,
 			'default'     => 10,
 		),
