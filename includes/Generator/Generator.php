@@ -12,6 +12,8 @@ namespace WC\SmoothGenerator\Generator;
  */
 abstract class Generator {
 
+	const MAX_BATCH_SIZE = 100;
+
 	const IMAGE_SIZE = 700;
 
 	/**
