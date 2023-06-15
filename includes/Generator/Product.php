@@ -106,7 +106,56 @@ class Product extends Generator {
 
 		self::$product_ids[] = $product->get_id();
 
+		/**
+		 * Action: Product generator returned a new product.
+		 *
+		 * @since 1.2.0
+		 *
+		 * @param \WC_Product $product
+		 */
+		do_action( 'smoothgenerator_product_generated', $product );
+
 		return $product;
+	}
+
+	/**
+	 * Create multiple products.
+	 *
+	 * @param int    $amount   The number of products to create.
+	 * @param array  $args     Additional args for product creation.
+	 *
+	 * @return int[]|\WP_Error
+	 */
+	public static function batch( $amount, array $args = array() ) {
+		$amount = filter_var(
+			$amount,
+			FILTER_VALIDATE_INT,
+			array(
+				'options' => array(
+					'min_range' => 1,
+					'max_range' => self::MAX_BATCH_SIZE,
+				),
+			)
+		);
+
+		if ( false === $amount ) {
+			return new \WP_Error(
+				'smoothgenerator_product_batch_invalid_amount',
+				sprintf(
+					'Amount must be a number between 1 and %d.',
+					self::MAX_BATCH_SIZE
+				)
+			);
+		}
+
+		$product_ids = array();
+
+		for ( $i = 1; $i <= $amount; $i ++ ) {
+			$product       = self::generate( true, $args );
+			$product_ids[] = $product->get_id();
+		}
+
+		return $product_ids;
 	}
 
 	/**
