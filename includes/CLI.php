@@ -99,7 +99,7 @@ class CLI extends WP_CLI_Command {
 		$generated        = 0;
 
 		while ( $remaining_amount > 0 ) {
-			$batch = $remaining_amount > Generator\Product::MAX_BATCH_SIZE ? Generator\Product::MAX_BATCH_SIZE : $remaining_amount;
+			$batch = $remaining_amount > Generator\Order::MAX_BATCH_SIZE ? Generator\Order::MAX_BATCH_SIZE : $remaining_amount;
 
 			$result = Generator\Order::batch( $batch, $assoc_args );
 
