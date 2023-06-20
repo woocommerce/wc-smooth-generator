@@ -32,18 +32,36 @@ class CLI extends WP_CLI_Command {
 
 		$progress = \WP_CLI\Utils\make_progress_bar( 'Generating products', $amount );
 
-		for ( $i = 1; $i <= $amount; $i++ ) {
-			Generator\Product::generate( true, $assoc_args );
-			$progress->tick();
+		add_action(
+			'smoothgenerator_product_generated',
+			function () use ( $progress ) {
+				$progress->tick();
+			}
+		);
+
+		$remaining_amount = $amount;
+		$generated        = 0;
+
+		while ( $remaining_amount > 0 ) {
+			$batch = $remaining_amount > Generator\Product::MAX_BATCH_SIZE ? Generator\Product::MAX_BATCH_SIZE : $remaining_amount;
+
+			$result = Generator\Product::batch( $batch, $assoc_args );
+
+			if ( is_wp_error( $result ) ) {
+				WP_CLI::error( $result );
+			}
+
+			$generated        += count( $result );
+			$remaining_amount -= $batch;
 		}
+
+		$progress->finish();
 
 		$time_end       = microtime( true );
 		$execution_time = round( ( $time_end - $time_start ), 2 );
 		$display_time   = $execution_time < 60 ? $execution_time . ' seconds' : human_time_diff( $time_start, $time_end );
 
-		$progress->finish();
-
-		WP_CLI::success( $amount . ' products generated in ' . $display_time );
+		WP_CLI::success( $generated . ' products generated in ' . $display_time );
 	}
 
 	/**
@@ -61,26 +79,45 @@ class CLI extends WP_CLI_Command {
 		if ( ! empty( $assoc_args['status'] ) ) {
 			$status = $assoc_args['status'];
 			if ( ! wc_is_order_status( 'wc-' . $status ) ) {
-				WP_CLI::log( "The argument \"$status\" is not a valid order status." );
+				WP_CLI::error( "The argument \"$status\" is not a valid order status." );
 				return;
 			}
 		}
 
-		if ( $amount > 0 ) {
-			Generator\Order::disable_emails();
-			$progress = \WP_CLI\Utils\make_progress_bar( 'Generating orders', $amount );
-			for ( $i = 1; $i <= $amount; $i++ ) {
-				Generator\Order::generate( true, $assoc_args );
+		Generator\Order::disable_emails();
+
+		$progress = \WP_CLI\Utils\make_progress_bar( 'Generating orders', $amount );
+
+		add_action(
+			'smoothgenerator_order_generated',
+			function () use ( $progress ) {
 				$progress->tick();
 			}
-			$progress->finish();
+		);
+
+		$remaining_amount = $amount;
+		$generated        = 0;
+
+		while ( $remaining_amount > 0 ) {
+			$batch = $remaining_amount > Generator\Order::MAX_BATCH_SIZE ? Generator\Order::MAX_BATCH_SIZE : $remaining_amount;
+
+			$result = Generator\Order::batch( $batch, $assoc_args );
+
+			if ( is_wp_error( $result ) ) {
+				WP_CLI::error( $result );
+			}
+
+			$generated        += count( $result );
+			$remaining_amount -= $batch;
 		}
+
+		$progress->finish();
 
 		$time_end       = microtime( true );
 		$execution_time = round( ( $time_end - $time_start ), 2 );
 		$display_time   = $execution_time < 60 ? $execution_time . ' seconds' : human_time_diff( $time_start, $time_end );
 
-		WP_CLI::success( $amount . ' orders generated in ' . $display_time );
+		WP_CLI::success( $generated . ' orders generated in ' . $display_time );
 	}
 
 	/**
@@ -168,15 +205,24 @@ class CLI extends WP_CLI_Command {
 			}
 		);
 
-		$result = Generator\Term::batch( $amount, $taxonomy, $assoc_args );
+		$remaining_amount = $amount;
+		$generated        = 0;
 
-		if ( is_wp_error( $result ) ) {
-			WP_CLI::error( $result );
+		while ( $remaining_amount > 0 ) {
+			$batch = $remaining_amount > Generator\Term::MAX_BATCH_SIZE ? Generator\Term::MAX_BATCH_SIZE : $remaining_amount;
+
+			$result = Generator\Term::batch( $amount, $taxonomy, $assoc_args );
+
+			if ( is_wp_error( $result ) ) {
+				WP_CLI::error( $result );
+			}
+
+			$generated        += count( $result );
+			$remaining_amount -= $batch;
 		}
 
 		$progress->finish();
 
-		$generated      = count( $result );
 		$time_end       = microtime( true );
 		$execution_time = round( ( $time_end - $time_start ), 2 );
 		$display_time   = $execution_time < 60 ? $execution_time . ' seconds' : human_time_diff( $time_start, $time_end );
@@ -299,7 +345,7 @@ WP_CLI::add_command( 'wc generate terms', array( 'WC\SmoothGenerator\CLI', 'term
 		array(
 			'name'        => 'amount',
 			'type'        => 'positional',
-			'description' => 'The number of terms to generate. Max value 100.',
+			'description' => 'The number of terms to generate.',
 			'optional'    => true,
 			'default'     => 10,
 		),

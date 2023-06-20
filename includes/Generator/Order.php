@@ -61,7 +61,7 @@ class Order extends Generator {
 		$order->set_shipping_state( $customer->get_shipping_state() );
 		$order->set_shipping_country( $customer->get_shipping_country() );
 		$order->set_shipping_company( $customer->get_shipping_company() );
-    
+
 		// 20% chance
 		if ( rand( 0, 100 ) <= 20 ) {
 			$country_code = $order->get_shipping_country();
@@ -101,7 +101,57 @@ class Order extends Generator {
 		if ( $save ) {
 			$order->save();
 		}
+
+		/**
+		 * Action: Order generator returned a new order.
+		 *
+		 * @since 1.2.0
+		 *
+		 * @param \WC_Order $order
+		 */
+		do_action( 'smoothgenerator_order_generated', $order );
+
 		return $order;
+	}
+
+	/**
+	 * Create multiple orders.
+	 *
+	 * @param int    $amount   The number of orders to create.
+	 * @param array  $args     Additional args for order creation.
+	 *
+	 * @return int[]|\WP_Error
+	 */
+	public static function batch( $amount, array $args = array() ) {
+		$amount = filter_var(
+			$amount,
+			FILTER_VALIDATE_INT,
+			array(
+				'options' => array(
+					'min_range' => 1,
+					'max_range' => self::MAX_BATCH_SIZE,
+				),
+			)
+		);
+
+		if ( false === $amount ) {
+			return new \WP_Error(
+				'smoothgenerator_order_batch_invalid_amount',
+				sprintf(
+					'Amount must be a number between 1 and %d.',
+					self::MAX_BATCH_SIZE
+				)
+			);
+		}
+
+		$order_ids = array();
+
+		for ( $i = 1; $i <= $amount; $i ++ ) {
+			$order       = self::generate( true, $args );
+			$order_ids[] = $order->get_id();
+		}
+
+		return $order_ids;
 	}
 
 	/**
@@ -116,8 +166,8 @@ class Order extends Generator {
 		$existing = (bool) wp_rand( 0, 1 );
 
 		if ( $existing ) {
-			$total_users = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->users}" );	
-			$offset      = wp_rand( 0, $total_users );	
+			$total_users = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->users}" );
+			$offset      = wp_rand( 0, $total_users );
 			$user_id     = (int) $wpdb->get_var( "SELECT ID FROM {$wpdb->users} ORDER BY rand() LIMIT $offset, 1" ); // phpcs:ignore
 			return new \WC_Customer( $user_id );
 		}
