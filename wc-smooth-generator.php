@@ -7,10 +7,10 @@
  * Author: Automattic
  * Author URI: https://woocommerce.com
  *
- * Tested up to: 6.1
+ * Tested up to: 6.2
  * Requires PHP: 7.4
  * WC requires at least: 5.0.0
- * WC tested up to: 7.4.0
+ * WC tested up to: 7.9.0
  * Woo: 000000:0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0
  *
  * @package WooCommerce
@@ -47,7 +47,7 @@ function load_wc_smooth_generator() {
 	wc_smooth_generator();
 }
 
-if ( version_compare( PHP_VERSION, '5.3', '>' ) ) {
+if ( version_compare( PHP_VERSION, '7.4', '>=' ) ) {
 	add_action( 'plugins_loaded', 'load_wc_smooth_generator', 20 );
 }
 
