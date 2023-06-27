@@ -73,4 +73,5 @@ Requirements
 * Node.js v14+
 * Composer v2+
 
-Run `npm run setup` to get started. This will install a pre-commit Git hook that will lint changes to PHP files before they are committed.
+1. If you use [Node Version Manager](https://github.com/nvm-sh/nvm) (nvm) you can run `nvm use` to ensure your current Node version is compatible.
+1. Run `npm run setup` to get started. This will install a pre-commit Git hook that will lint changes to PHP files before they are committed. It uses the same phpcs ruleset that's used by WooCommerce Core.
