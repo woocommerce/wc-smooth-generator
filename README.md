@@ -65,3 +65,13 @@ Generate product categories that are all child terms of an existing product cate
 
 Generate terms in the Product Tags taxonomy based on the number of terms parameter.
 - `wp wc generate terms product_tag <nr of terms>`
+
+## Development
+
+Requirements
+
+* Node.js v14+
+* Composer v2+
+
+1. If you use [Node Version Manager](https://github.com/nvm-sh/nvm) (nvm) you can run `nvm use` to ensure your current Node version is compatible.
+1. Run `npm run setup` to get started. This will install a pre-commit Git hook that will lint changes to PHP files before they are committed. It uses the same phpcs ruleset that's used by WooCommerce Core.
