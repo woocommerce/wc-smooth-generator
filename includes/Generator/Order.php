@@ -84,7 +84,7 @@ class Order extends Generator {
 			$fee->calculate_taxes( $calculate_tax_for );
 			$order->add_item( $fee );
 		}
-    $order->set_status( self::get_status( $assoc_args ) );
+    	$order->set_status( self::get_status( $assoc_args ) );
 		$order->calculate_totals( true );
 
 		$date  = self::get_date_created( $assoc_args );
@@ -97,6 +97,8 @@ class Order extends Generator {
 			$coupon = Coupon::generate( true );
 			$order->apply_coupon( $coupon );
 		}
+
+		OrderAttribution::add_order_attribution_meta( $order, $assoc_args );
 
 		if ( $save ) {
 			$order->save();
