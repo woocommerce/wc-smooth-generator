@@ -22,8 +22,10 @@ class OrderAttribution {
         $origin = self::get_origin( $source_type, $source );
 
         $order_products = $order->get_items();
-        $random_product = array_rand( $order_products );
-        $product_url = get_permalink( $order_products[ $random_product ]->get_id() );
+        $product_url = get_permalink( $order_products[ array_rand( $order_products ) ]->get_id() );
+
+        $utm_content = ['/', 'campaign_a', 'campaign_b'];
+        $utm_content = $utm_content[ array_rand( $utm_content ) ];
 
         $meta = array(
 			'_wc_order_attribution_origin'             => $origin,
@@ -33,7 +35,7 @@ class OrderAttribution {
 			'_wc_order_attribution_session_pages'      => wp_rand( 1, 10 ),
 			'_wc_order_attribution_session_start_time' => self::get_random_session_start_time( $order ),
 			'_wc_order_attribution_session_entry'      => $product_url,
-			'_wc_order_attribution_utm_content'        => array_rand( ['/', 'campaign_a', 'campaign_b'] ),
+			'_wc_order_attribution_utm_content'        => $utm_content,
 			'_wc_order_attribution_utm_medium'         => self::get_random_utm_medium(),
 			'_wc_order_attribution_utm_source'         => self::get_source( $source_type ),
 			'_wc_order_attribution_referrer'           => self::get_referrer( $source_type ),
@@ -55,11 +57,24 @@ class OrderAttribution {
         // Set up the label based on the source type.
         switch ( $source_type ) {
             case 'utm':
-                return return_rand( ['https://woocommerce.com/', 'https://twitter.com' ] );
+                $utm = array(
+                    'https://woocommerce.com/',
+                    'https://twitter.com',
+                );
+                return $utm[ array_rand( $utm ) ];
             case 'organic':
-                return return_rand( ['https://google.com', 'https://bing.com'] );
+                $organic = array(
+                    'https://google.com',
+                    'https://bing.com',
+                );
+                return $organic[ array_rand( $organic ) ];
             case 'referral':
-                return return_rand( ['https://woocommerce.com/', 'https://instagram.com' ] );
+                $refferal = array(
+                    'https://woocommerce.com/',
+                    'https://facebook.com',
+                    'https://twitter.com',
+                );
+                return $refferal[ array_rand( $refferal ) ];
             case 'typein':
                 return '';
             case 'admin':
@@ -84,7 +99,7 @@ class OrderAttribution {
             'unknown'
         );
 
-        return array_rand( $utm_mediums );
+        return $utm_mediums[ array_rand( $utm_mediums ) ];
     }
 
     /**
@@ -128,7 +143,7 @@ class OrderAttribution {
             'unknown'
         );
 
-        return array_rand( $source_types );
+        return $source_types[ array_rand( $source_types ) ];
     }
 
     /**
@@ -140,13 +155,29 @@ class OrderAttribution {
     public static function get_source( $source_type ) {
         switch ( $source_type ) {
             case 'typein':
-                return array_rand( );
+                return '';
             case 'organic':
-                return array_rand( ['google', 'bing', 'yahoo' ] );
+                $organic = array(
+                    'google',
+                    'bing',
+                    'yahoo',
+                );
+                return $organic[ array_rand( $organic ) ];
             case 'referral':
-                return array_rand( [ 'woocommerce.com', 'facebook.com', 'twitter.com', ] );
+                $refferal = array(
+                    'woocommerce.com',
+                    'facebook.com',
+                    'twitter.com',
+                );
+                return $refferal[ array_rand( $refferal ) ];
             case 'social':
-                return array_rand( [ 'facebook', 'twitter', 'instagram', 'pinterest' ] );
+                $social = array(
+                    'facebook.com',
+                    'twitter.com',
+                    'instagram.com',
+                    'pinterest.com',
+                );
+                return $social( array_rand( $social ) );
             case 'utm':
                 return 'UTM';
             default:
@@ -208,7 +239,7 @@ class OrderAttribution {
             "Mozilla/5.0 (Linux; Android 13; SAMSUNG SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/21.0 Chrome/110.0.5481.154 Mobile Safari/537.36",
         );
 
-        return array_rand( $user_agents );
+        return $user_agents[ array_rand( $user_agents ) ];
     }
 
     /**
@@ -222,7 +253,7 @@ class OrderAttribution {
             "Mozilla/5.0 (Linux; Android 12; SM-X906C Build/QP1A.190711.020; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/80.0.3987.119 Mobile Safari/537.36",
         );
 
-        return array_rand( $user_agents );
+        return $user_agents[ array_rand( $user_agents ) ];
     }
 
     /**
@@ -237,7 +268,7 @@ class OrderAttribution {
             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_2) AppleWebKit/601.3.9 (KHTML, like Gecko) Version/9.0.2 Safari/601.3.9",
         );
 
-        return array_rand( $user_agents );
+        return $user_agents[ array_rand( $user_agents ) ];
     }
 
     /**
