@@ -33,7 +33,7 @@ class OrderAttribution {
 			'_wc_order_attribution_session_pages'      => wp_rand( 1, 10 ),
 			'_wc_order_attribution_session_start_time' => self::get_random_session_start_time( $order ),
 			'_wc_order_attribution_session_entry'      => $product_url,
-			'_wc_order_attribution_utm_content'        => return_rand( ['/', 'campaign_a', 'campaign_b'] ),
+			'_wc_order_attribution_utm_content'        => array_rand( ['/', 'campaign_a', 'campaign_b'] ),
 			'_wc_order_attribution_utm_medium'         => self::get_random_utm_medium(),
 			'_wc_order_attribution_utm_source'         => self::get_source( $source_type ),
 			'_wc_order_attribution_referrer'           => self::get_referrer( $source_type ),
@@ -59,7 +59,7 @@ class OrderAttribution {
             case 'organic':
                 return return_rand( ['https://google.com', 'https://bing.com'] );
             case 'referral':
-                return return_rand( ['https://woocommerce.com/', 'https://instagram.com' ] )];
+                return return_rand( ['https://woocommerce.com/', 'https://instagram.com' ] );
             case 'typein':
                 return '';
             case 'admin':
