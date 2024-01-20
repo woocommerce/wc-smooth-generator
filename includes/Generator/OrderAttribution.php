@@ -16,16 +16,14 @@ class OrderAttribution {
      */
     public static function add_order_attribution_meta( $order, $assoc_args = array() ) {
 
-        $device_type = self::get_random_device_type();
-        $source = 'woocommerce.com';
-        $source_type = self::get_source_type();
-        $origin = self::get_origin( $source_type, $source );
-
+        $device_type    = self::get_random_device_type();
+        $source         = 'woo.com';
+        $source_type    = self::get_source_type();
+        $origin         = self::get_origin( $source_type, $source );
         $order_products = $order->get_items();
-        $product_url = get_permalink( $order_products[ array_rand( $order_products ) ]->get_id() );
-
-        $utm_content = ['/', 'campaign_a', 'campaign_b'];
-        $utm_content = $utm_content[ array_rand( $utm_content ) ];
+        $product_url    = get_permalink( $order_products[ array_rand( $order_products ) ]->get_id() );
+        $utm_content    = ['/', 'campaign_a', 'campaign_b'];
+        $utm_content    = $utm_content[ array_rand( $utm_content ) ];
 
         $meta = array(
 			'_wc_order_attribution_origin'             => $origin,
@@ -51,14 +49,14 @@ class OrderAttribution {
      * Get a random referrer based on the source type.
      *
      * @param string $source_type The source type.
-     * @return array The referrer.
+     * @return string The referrer.
      */
     public static function get_referrer( string $source_type ) {
         // Set up the label based on the source type.
         switch ( $source_type ) {
             case 'utm':
                 $utm = array(
-                    'https://woocommerce.com/',
+                    'https://woo.com/',
                     'https://twitter.com',
                 );
                 return $utm[ array_rand( $utm ) ];
@@ -70,7 +68,7 @@ class OrderAttribution {
                 return $organic[ array_rand( $organic ) ];
             case 'referral':
                 $refferal = array(
-                    'https://woocommerce.com/',
+                    'https://woo.com/',
                     'https://facebook.com',
                     'https://twitter.com',
                 );
@@ -165,7 +163,7 @@ class OrderAttribution {
                 return $organic[ array_rand( $organic ) ];
             case 'referral':
                 $refferal = array(
-                    'woocommerce.com',
+                    'woo.com',
                     'facebook.com',
                     'twitter.com',
                 );
@@ -196,15 +194,19 @@ class OrderAttribution {
     public static function get_random_device_type() {
         $randomNumber = rand(1, 100); // Generate a random number between 1 and 100
 
-        if ($randomNumber <= 50) {
+        if ( $randomNumber <= 50 ) {
             return "Mobile";
-        } elseif ($randomNumber <= 80) {
-            return "Desktop";
-        } elseif ($randomNumber <= 90) {
-            return "Tablet";
-        } else {
-            return "Unknown";
         }
+
+        if ( $randomNumber <= 80 ) {
+            return "Desktop";
+        }
+
+        if ( $randomNumber <= 90 ) {
+            return "Tablet";
+        }
+
+        return "Unknown";
     }
 
     /**
@@ -274,36 +276,21 @@ class OrderAttribution {
     /**
      * Get a random session start time based on the order creation time.
      *
-     * @param \DateTime $order_created_date The order creation date.
+     * @param \WC_Order $order The order.
      * @return string The session start time.
      */
     public static function get_random_session_start_time( $order ) {
-        $order_created_date = $order->get_date_created();
-        $session_start_hour = self::calculate_and_randomise_sesion_start_time( $order_created_date->format('H:i:s') );
-        $session_start_time = $order_created_date->format('Y-m-d') . ' ' . $session_start_hour;
-        return $session_start_time;
-    }
 
-    /**
-     * Get a random session start time based on the order creation time.
-     *
-     * @param string $endTime The order creation time.
-     * @return string The session start time.
-     */
-    public static function calculate_and_randomise_sesion_start_time( $endTime ) {
-        // Convert the end time to seconds
-        list( $hours, $minutes, $seconds) = explode( ':', $endTime );
-        $endTimeInSeconds = $hours * 3600 + $minutes * 60 + $seconds;
+        // Clone the order creation date so we don't modify the original.
+        $order_created_date = clone $order->get_date_created();
 
-        // Generate a random time in seconds between midnight and the end time
-        $randomTimeInSeconds = rand( 0, $endTimeInSeconds );
+        // Random DateTimeInterval between 10 minutes and 6 hours.
+        $random_interval    = new \DateInterval( 'PT' . (string) rand( 10, 360 ) . 'M' );
 
-        // Convert the random time back to HH:MM:SS format
-        $hours = floor( $randomTimeInSeconds / 3600 );
-        $minutes = floor( ( $randomTimeInSeconds / 60 ) % 60 );
-        $seconds = $randomTimeInSeconds % 60;
+        // Subtract the random interval from the order creation date.
+        $order_created_date->sub( $random_interval );
 
-        return sprintf( '%02d:%02d:%02d', $hours, $minutes, $seconds );
+        return $order_created_date->format('Y-m-d H:i:s');
     }
 
 }
