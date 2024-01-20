@@ -29,8 +29,8 @@ class OrderAttribution {
 			'_wc_order_attribution_origin'             => $origin,
 			'_wc_order_attribution_device_type'        => $device_type,
 			'_wc_order_attribution_user_agent'         => self::get_random_user_agent_for_device( $device_type ),
-			'_wc_order_attribution_session_count'      => rand( 1, 10 ),
-			'_wc_order_attribution_session_pages'      => rand( 1, 10 ),
+			'_wc_order_attribution_session_count'      => wp_rand( 1, 10 ),
+			'_wc_order_attribution_session_pages'      => wp_rand( 1, 10 ),
 			'_wc_order_attribution_session_start_time' => self::get_random_session_start_time( $order ),
 			'_wc_order_attribution_session_entry'      => $product_url,
 			'_wc_order_attribution_utm_content'        => $utm_content,
@@ -192,7 +192,7 @@ class OrderAttribution {
      *
      */
     public static function get_random_device_type() {
-        $randomNumber = rand(1, 100); // Generate a random number between 1 and 100
+        $randomNumber = wp_rand(1, 100); // Generate a random number between 1 and 100
 
         if ( $randomNumber <= 50 ) {
             return "Mobile";
@@ -285,7 +285,7 @@ class OrderAttribution {
         $order_created_date = clone $order->get_date_created();
 
         // Random DateTimeInterval between 10 minutes and 6 hours.
-        $random_interval    = new \DateInterval( 'PT' . (string) rand( 10, 360 ) . 'M' );
+        $random_interval    = new \DateInterval( 'PT' . (string) wp_rand( 10, 360 ) . 'M' );
 
         // Subtract the random interval from the order creation date.
         $order_created_date->sub( $random_interval );
