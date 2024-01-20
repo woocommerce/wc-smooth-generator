@@ -98,7 +98,10 @@ class Order extends Generator {
 			$order->apply_coupon( $coupon );
 		}
 
-		OrderAttribution::add_order_attribution_meta( $order, $assoc_args );
+		// Orders created before 2024-01-09	represents orders created before the attribution feature was added.
+		if ( ! ( strtotime( $date ) < strtotime( '2024-01-09' ) ) ) {
+			OrderAttribution::add_order_attribution_meta( $order, $assoc_args );
+		}
 
 		if ( $save ) {
 			$order->save();

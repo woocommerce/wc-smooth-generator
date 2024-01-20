@@ -16,6 +16,10 @@ class OrderAttribution {
      */
     public static function add_order_attribution_meta( $order, $assoc_args = array() ) {
 
+        if ( isset( $assoc_args['skip-order-attribution'] ) ) {
+            return;
+        }
+
         $device_type    = self::get_random_device_type();
         $source         = 'woo.com';
         $source_type    = self::get_source_type();

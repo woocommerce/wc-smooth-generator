@@ -287,6 +287,12 @@ WP_CLI::add_command( 'wc generate orders', array( 'WC\SmoothGenerator\CLI', 'ord
 			'description' => 'Create and apply a coupon to each generated order.',
 			'optional'    => true,
 		),
+		array(
+			'name'        => 'skip-order-attribution',
+			'type'        => 'flag',
+			'description' => 'Skip adding order attribution meta to the generated orders.',
+			'optional'    => true,
+		)
 	),
 	'longdesc'  => "## EXAMPLES\n\nwc generate orders 10\n\nwc generate orders 50 --date-start=2020-01-01 --date-end=2022-12-31 --status=completed --coupons",
 ) );
