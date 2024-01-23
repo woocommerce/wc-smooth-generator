@@ -179,7 +179,7 @@ class OrderAttribution {
                     'instagram.com',
                     'pinterest.com',
                 );
-                return $social( array_rand( $social ) );
+                return $social[ array_rand( $social ) ];
             case 'utm':
                 return 'UTM';
             default:
