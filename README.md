@@ -38,7 +38,7 @@ Generate orders with a specific status.
 
 #### Order Attribution
 
-Order Attribution represents the origin of data for the order. By default a random values are generated and assigned to the order. Orders with the creation date before 2024-01-09 will not have attribution meta data added as the feature was not available in WooCommerce at that time.
+Order Attribution represents the origin of data for an order. By default, random values are generated and assigned to the order. Orders with a creation date before 2024-01-09 will not have attribution metadata added, as the feature was not available in WooCommerce at that time.
 
 Skip order attribution meta data genereation.
 - `wp wc generate orders <nr of orders> --skip-order-attribution`
