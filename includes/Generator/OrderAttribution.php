@@ -33,20 +33,33 @@ class OrderAttribution {
 		$utm_content    = [ '/', 'campaign_a', 'campaign_b' ];
 		$utm_content    = $utm_content[ array_rand( $utm_content ) ];
 
-		$meta = array(
-			'_wc_order_attribution_origin'             => $origin,
-			'_wc_order_attribution_device_type'        => $device_type,
-			'_wc_order_attribution_user_agent'         => self::get_random_user_agent_for_device( $device_type ),
-			'_wc_order_attribution_session_count'      => wp_rand( 1, 10 ),
-			'_wc_order_attribution_session_pages'      => wp_rand( 1, 10 ),
-			'_wc_order_attribution_session_start_time' => self::get_random_session_start_time( $order ),
-			'_wc_order_attribution_session_entry'      => $product_url,
-			'_wc_order_attribution_utm_content'        => $utm_content,
-			'_wc_order_attribution_utm_medium'         => self::get_random_utm_medium(),
-			'_wc_order_attribution_utm_source'         => self::get_source( $source_type ),
-			'_wc_order_attribution_referrer'           => self::get_referrer( $source_type ),
-			'_wc_order_attribution_source_type'        => $source_type,
-		);
+		$meta = array();
+
+		// If the source type is admin, we only need to set the source type.
+		if ( 'admin' === $source_type ) {
+			$meta = array(
+				'_wc_order_attribution_source_type' => $source_type,
+			);
+		} else {
+			$meta = array(
+				'_wc_order_attribution_origin'             => $origin,
+				'_wc_order_attribution_device_type'        => $device_type,
+				'_wc_order_attribution_user_agent'         => self::get_random_user_agent_for_device( $device_type ),
+				'_wc_order_attribution_session_count'      => wp_rand( 1, 10 ),
+				'_wc_order_attribution_session_pages'      => wp_rand( 1, 10 ),
+				'_wc_order_attribution_session_start_time' => self::get_random_session_start_time( $order ),
+				'_wc_order_attribution_session_entry'      => $product_url,
+				'_wc_order_attribution_utm_content'        => $utm_content,
+				'_wc_order_attribution_utm_source'         => self::get_source( $source_type ),
+				'_wc_order_attribution_referrer'           => self::get_referrer( $source_type ),
+				'_wc_order_attribution_source_type'        => $source_type,
+			);
+		}
+
+		// If the source type is not typein ( Direct ), set a random utm medium.
+		if ( 'typein' !== $source_type ) {
+			$meta['_wc_order_attribution_utm_medium'] = self::get_random_utm_medium();
+		}
 
 		foreach ( $meta as $key => $value ) {
 			$order->add_meta_data( $key, $value );
@@ -161,7 +174,7 @@ class OrderAttribution {
 	public static function get_source( $source_type ) {
 		switch ( $source_type ) {
 			case 'typein':
-				return '';
+				return '(direct)';
 			case 'organic':
 				$organic = array(
 					'google',
