@@ -142,6 +142,8 @@ class OrderAttribution {
 				return 'Direct';
 			case 'admin':
 				return 'Web admin';
+			case 'mobile_app':
+				return 'Mobile app';
 			default:
 				return 'Unknown';
 		}
