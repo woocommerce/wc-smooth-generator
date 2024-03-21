@@ -57,7 +57,7 @@ class OrderAttribution {
 		}
 
 		// If the source type is not typein ( Direct ), set a random utm medium.
-		if ( 'typein' !== $source_type ) {
+		if ( ! in_array( $source_type, [ 'typein', 'admin', 'mobile_app', 'unknown' ], true ) ) {
 			$meta['_wc_order_attribution_utm_medium'] = self::get_random_utm_medium();
 		}
 
