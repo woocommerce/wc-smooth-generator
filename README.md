@@ -36,6 +36,13 @@ Generate orders with random dates between `--date-start` and `--date-end`.
 Generate orders with a specific status.
 - `wp wc generate orders <nr of orders> --status=completed`
 
+#### Order Attribution
+
+Order Attribution represents the origin of data for an order. By default, random values are generated and assigned to the order. Orders with a creation date before 2024-01-09 will not have attribution metadata added, as the feature was not available in WooCommerce at that time.
+
+Skip order attribution meta data genereation.
+- `wp wc generate orders <nr of orders> --skip-order-attribution`
+
 ### Coupons
 
 Generate coupons based on the number of coupons parameter.
