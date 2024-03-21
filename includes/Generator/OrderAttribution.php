@@ -35,8 +35,8 @@ class OrderAttribution {
 
 		$meta = array();
 
-		// If the source type is admin, we only need to set the source type.
-		if ( 'admin' === $source_type ) {
+		// For these source types, we only need to set the source type.
+		if ( in_array( $source_type, [ 'admin', 'mobile_app', 'unknown' ], true ) ) {
 			$meta = array(
 				'_wc_order_attribution_source_type' => $source_type,
 			);
