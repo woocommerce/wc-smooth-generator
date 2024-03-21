@@ -201,7 +201,7 @@ class OrderAttribution {
 				$utm = array(
 					'mailchimp',
 					'google',
-					'newsleater',
+					'newsletter',
 				);
 				return $utm[ array_rand( $utm ) ];
 			default:
