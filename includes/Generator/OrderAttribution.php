@@ -98,6 +98,8 @@ class OrderAttribution {
 				return '';
 			case 'admin':
 				return '';
+			case 'mobile_app':
+				return '';
 			default:
 				return '';
 		}
