@@ -161,6 +161,7 @@ class OrderAttribution {
 			'referral',
 			'utm',
 			'admin',
+			'mobile_app',
 			'unknown',
 		);
 
