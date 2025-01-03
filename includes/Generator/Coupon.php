@@ -13,15 +13,6 @@ use WC_Data_Store;
  * Customer data generator.
  */
 class Coupon extends Generator {
-
-	/**
-	 * Init faker library.
-	 */
-	protected static function init_faker() {
-		parent::init_faker();
-		self::$faker->addProvider( new \Bezhanov\Faker\Provider\Commerce( self::$faker ) );
-	}
-
 	/**
 	 * Create a new coupon.
 	 *
@@ -31,7 +22,7 @@ class Coupon extends Generator {
 	 * @return \WC_Coupon|\WP_Error Coupon object with data populated.
 	 */
 	public static function generate( $save = true, $assoc_args = array() ) {
-		self::init_faker();
+		self::initialize();
 
 		$defaults = array(
 			'min' => 5,

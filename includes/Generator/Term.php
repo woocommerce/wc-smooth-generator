@@ -12,14 +12,6 @@ namespace WC\SmoothGenerator\Generator;
  */
 class Term extends Generator {
 	/**
-	 * Init faker library.
-	 */
-	protected static function init_faker() {
-		parent::init_faker();
-		self::$faker->addProvider( new \Bezhanov\Faker\Provider\Commerce( self::$faker ) );
-	}
-
-	/**
 	 * Create a new taxonomy term.
 	 *
 	 * @param bool   $save     Whether to save the new term to the database.
@@ -44,7 +36,7 @@ class Term extends Generator {
 			);
 		}
 
-		self::init_faker();
+		self::initialize();
 
 		if ( $taxonomy_obj->hierarchical ) {
 			$term_name = ucwords( self::$faker->department( 3 ) );

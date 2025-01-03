@@ -84,8 +84,6 @@ class CLI extends WP_CLI_Command {
 			}
 		}
 
-		Generator\Order::disable_emails();
-
 		$progress = \WP_CLI\Utils\make_progress_bar( 'Generating orders', $amount );
 
 		add_action(
@@ -133,8 +131,6 @@ class CLI extends WP_CLI_Command {
 		$time_start = microtime( true );
 
 		$progress = \WP_CLI\Utils\make_progress_bar( 'Generating customers', $amount );
-
-		Generator\Customer::disable_emails();
 
 		add_action(
 			'smoothgenerator_customer_generated',

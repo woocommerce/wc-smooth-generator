@@ -11,13 +11,25 @@ namespace WC\SmoothGenerator\Generator;
  * Data generator base class.
  */
 abstract class Generator {
-
+	/**
+	 * Maximum number of objects that can be generated in one batch.
+	 */
 	const MAX_BATCH_SIZE = 100;
 
+	/**
+	 * Dimension, in pixels, of generated images.
+	 */
 	const IMAGE_SIZE = 700;
 
 	/**
-	 * Holds the faker factory object.
+	 * Are we ready to generate objects?
+	 *
+	 * @var bool
+	 */
+	protected static $ready = false;
+
+	/**
+	 * Holds the Faker factory object.
 	 *
 	 * @var \Faker\Generator Factory object.
 	 */
@@ -57,11 +69,74 @@ abstract class Generator {
 	//abstract public static function batch( $amount, array $args = array() );
 
 	/**
-	 * Init faker library.
+	 * Get ready to generate objects.
+	 *
+	 * @return void
+	 */
+	protected static function initialize() {
+		if ( true !== self::$ready ) {
+			self::init_faker();
+			self::disable_emails();
+
+			// Set this to avoid notices as when you run via WP-CLI SERVER vars are not set, order emails uses this variable.
+			if ( ! isset( $_SERVER['SERVER_NAME'] ) ) {
+				$_SERVER['SERVER_NAME'] = 'localhost';
+			}
+		}
+
+		self::$ready = true;
+	}
+
+	/**
+	 * Create and store an instance of the Faker library.
 	 */
 	protected static function init_faker() {
 		if ( ! self::$faker ) {
 			self::$faker = \Faker\Factory::create( 'en_US' );
+			self::$faker->addProvider( new \Bezhanov\Faker\Provider\Commerce( self::$faker ) );
+		}
+	}
+
+	/**
+	 * Disable sending WooCommerce emails when generating objects.
+	 *
+	 * @return void
+	 */
+	public static function disable_emails() {
+		$email_actions = array(
+			// Customer emails.
+			'woocommerce_new_customer_note',
+			'woocommerce_created_customer',
+			// Order emails.
+			'woocommerce_order_status_pending_to_processing',
+			'woocommerce_order_status_pending_to_completed',
+			'woocommerce_order_status_processing_to_cancelled',
+			'woocommerce_order_status_pending_to_failed',
+			'woocommerce_order_status_pending_to_on-hold',
+			'woocommerce_order_status_failed_to_processing',
+			'woocommerce_order_status_failed_to_completed',
+			'woocommerce_order_status_failed_to_on-hold',
+			'woocommerce_order_status_cancelled_to_processing',
+			'woocommerce_order_status_cancelled_to_completed',
+			'woocommerce_order_status_cancelled_to_on-hold',
+			'woocommerce_order_status_on-hold_to_processing',
+			'woocommerce_order_status_on-hold_to_cancelled',
+			'woocommerce_order_status_on-hold_to_failed',
+			'woocommerce_order_status_completed',
+			'woocommerce_order_fully_refunded',
+			'woocommerce_order_partially_refunded',
+			// Product emails.
+			'woocommerce_low_stock',
+			'woocommerce_no_stock',
+			'woocommerce_product_on_backorder',
+		);
+
+		foreach ( $email_actions as $action ) {
+			remove_action( $action, array( 'WC_Emails', 'send_transactional_email' ) );
+		}
+
+		if ( ! has_action( 'woocommerce_allow_send_queued_transactional_email', '__return_false' ) ) {
+			add_action( 'woocommerce_allow_send_queued_transactional_email', '__return_false' );
 		}
 	}
 

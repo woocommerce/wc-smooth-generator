@@ -66,14 +66,6 @@ class Product extends Generator {
 	);
 
 	/**
-	 * Init faker library.
-	 */
-	protected static function init_faker() {
-		parent::init_faker();
-		self::$faker->addProvider( new \Bezhanov\Faker\Provider\Commerce( self::$faker ) );
-	}
-
-	/**
 	 * Return a new product.
 	 *
 	 * @param bool  $save Save the object before returning or not.
@@ -81,7 +73,7 @@ class Product extends Generator {
 	 * @return \WC_Product The product object consisting of random data.
 	 */
 	public static function generate( $save = true, $assoc_args = array() ) {
-		self::init_faker();
+		self::initialize();
 
 		$type = self::get_product_type( $assoc_args );
 		switch ( $type ) {
