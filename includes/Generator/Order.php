@@ -173,8 +173,6 @@ class Order extends Generator {
 			RandomRuntimeCache::set( 'customers', $user_ids );
 		}
 
-		Customer::disable_emails();
-
 		$customer = null;
 		$existing = (bool) wp_rand( 0, 1 );
 
