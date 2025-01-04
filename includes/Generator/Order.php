@@ -166,17 +166,22 @@ class Order extends Generator {
 	 * @return \WC_Customer Customer object with data populated.
 	 */
 	public static function get_customer() {
-		global $wpdb;
+		$customer = null;
 
 		if ( ! RandomRuntimeCache::exists( 'customers' ) ) {
+			global $wpdb;
 			$user_ids = $wpdb->get_col( "SELECT ID FROM {$wpdb->users} ORDER BY rand() LIMIT 100" );
 			RandomRuntimeCache::set( 'customers', $user_ids );
 		}
 
-		$customer = null;
-		$existing = (bool) wp_rand( 0, 1 );
+		$guest_chances = 1;
+		if ( RandomRuntimeCache::count( 'customers' ) < 10 ) {
+			// Chance that customer is guest increases with fewer user accounts.
+			$guest_chances = 10 - RandomRuntimeCache::count( 'customers' );
+		}
+		$guest = (bool) wp_rand( 0, $guest_chances );
 
-		if ( $existing ) {
+		if ( ! $guest ) {
 			RandomRuntimeCache::shuffle( 'customers' );
 			$customer_id = RandomRuntimeCache::get( 'customers', 1 )[0];
 			$customer    = new \WC_Customer( $customer_id );
