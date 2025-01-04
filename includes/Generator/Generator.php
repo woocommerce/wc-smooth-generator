@@ -123,6 +123,7 @@ abstract class Generator {
 			'woocommerce_order_status_on-hold_to_cancelled',
 			'woocommerce_order_status_on-hold_to_failed',
 			'woocommerce_order_status_completed',
+			'woocommerce_order_status_failed',
 			'woocommerce_order_fully_refunded',
 			'woocommerce_order_partially_refunded',
 			// Product emails.
