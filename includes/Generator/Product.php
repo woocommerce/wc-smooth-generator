@@ -141,7 +141,8 @@ class Product extends Generator {
 		}
 
 		// In case multiple batches are being run in one request, refresh the cache data.
-		RandomRuntimeCache::reset();
+		RandomRuntimeCache::clear( 'product_cat' );
+		RandomRuntimeCache::clear( 'product_tag' );
 
 		return $product_ids;
 	}

@@ -7,6 +7,8 @@
 
 namespace WC\SmoothGenerator\Generator;
 
+use WC\SmoothGenerator\Util\RandomRuntimeCache;
+
 /**
  * Order data generator.
  */
@@ -29,9 +31,6 @@ class Order extends Generator {
 
 		$order    = new \WC_Order();
 		$customer = self::get_customer();
-		if ( ! $customer instanceof \WC_Customer ) {
-			return false;
-		}
 		$products = self::get_random_products( 1, 10 );
 
 		foreach ( $products as $product ) {
@@ -154,6 +153,10 @@ class Order extends Generator {
 			$order_ids[] = $order->get_id();
 		}
 
+		// In case multiple batches are being run in one request, refresh the cache data.
+		RandomRuntimeCache::clear( 'customers' );
+		RandomRuntimeCache::clear( 'products' );
+
 		return $order_ids;
 	}
 
@@ -165,18 +168,25 @@ class Order extends Generator {
 	public static function get_customer() {
 		global $wpdb;
 
-		$guest    = (bool) wp_rand( 0, 1 );
-		$existing = (bool) wp_rand( 0, 1 );
-
-		if ( $existing ) {
-			$total_users = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->users}" );
-			$offset      = wp_rand( 0, $total_users );
-			$user_id     = (int) $wpdb->get_var( "SELECT ID FROM {$wpdb->users} ORDER BY rand() LIMIT $offset, 1" ); // phpcs:ignore
-			return new \WC_Customer( $user_id );
+		if ( ! RandomRuntimeCache::exists( 'customers' ) ) {
+			$user_ids = $wpdb->get_col( "SELECT ID FROM {$wpdb->users} ORDER BY rand() LIMIT 100" );
+			RandomRuntimeCache::set( 'customers', $user_ids );
 		}
 
 		Customer::disable_emails();
-		$customer = Customer::generate( ! $guest );
+
+		$customer = null;
+		$existing = (bool) wp_rand( 0, 1 );
+
+		if ( $existing ) {
+			RandomRuntimeCache::shuffle( 'customers' );
+			$customer_id = RandomRuntimeCache::get( 'customers', 1 )[0];
+			$customer    = new \WC_Customer( $customer_id );
+		}
+
+		if ( is_null( $customer ) ) {
+			$customer = Customer::generate( false );
+		}
 
 		return $customer;
 	}
@@ -272,31 +282,25 @@ class Order extends Generator {
 	 * @return array Random list of products.
 	 */
 	protected static function get_random_products( int $min_amount = 1, int $max_amount = 4 ) {
-		global $wpdb;
+		if ( ! RandomRuntimeCache::exists( 'products' ) ) {
+			$query = new \WC_Product_Query( array(
+				'limit'   => 100,
+				'return'  => 'ids',
+				'orderby' => 'rand',
+			) );
 
-		$products = array();
+			$product_ids = $query->get_products();
 
-		$num_existing_products = (int) $wpdb->get_var(
-			"SELECT COUNT( DISTINCT ID )
-			FROM {$wpdb->posts}
-			WHERE 1=1
-			AND post_type='product'
-			AND post_status='publish'"
-		);
-
-		$num_products_to_get = wp_rand( $min_amount, $max_amount );
-
-		if ( $num_products_to_get > $num_existing_products ) {
-			$num_products_to_get = $num_existing_products;
+			RandomRuntimeCache::set( 'products', $product_ids );
 		}
 
-		$query = new \WC_Product_Query( array(
-			'limit'   => $num_products_to_get,
-			'return'  => 'ids',
-			'orderby' => 'rand',
-		) );
+		RandomRuntimeCache::shuffle( 'products' );
 
-		foreach ( $query->get_products() as $product_id ) {
+		$amount      = wp_rand( $min_amount, $max_amount );
+		$product_ids = RandomRuntimeCache::get( 'products', $amount );
+		$products    = array();
+
+		foreach ( $product_ids as $product_id ) {
 			$product = wc_get_product( $product_id );
 
 			if ( $product->is_type( 'variable' ) ) {
