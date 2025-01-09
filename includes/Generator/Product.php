@@ -73,7 +73,7 @@ class Product extends Generator {
 	 * @return \WC_Product The product object consisting of random data.
 	 */
 	public static function generate( $save = true, $assoc_args = array() ) {
-		self::initialize();
+		parent::maybe_initialize_generators();
 
 		$type = self::get_product_type( $assoc_args );
 		switch ( $type ) {

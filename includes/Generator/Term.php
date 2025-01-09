@@ -36,7 +36,7 @@ class Term extends Generator {
 			);
 		}
 
-		self::initialize();
+		parent::maybe_initialize_generators();
 
 		if ( $taxonomy_obj->hierarchical ) {
 			$term_name = ucwords( self::$faker->department( 3 ) );

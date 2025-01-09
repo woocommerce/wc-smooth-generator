@@ -20,7 +20,7 @@ class Customer extends Generator {
 	 * @return \WC_Customer|\WP_Error Customer object with data populated.
 	 */
 	public static function generate( $save = true, array $assoc_args = array() ) {
-		self::initialize();
+		parent::maybe_initialize_generators();
 
 		$args = filter_var_array(
 			$assoc_args,

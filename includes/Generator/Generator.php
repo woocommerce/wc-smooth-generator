@@ -71,9 +71,11 @@ abstract class Generator {
 	/**
 	 * Get ready to generate objects.
 	 *
+	 * This can be run from any generator, but it applies to all generators.
+	 *
 	 * @return void
 	 */
-	protected static function initialize() {
+	protected static function maybe_initialize_generators() {
 		if ( true !== self::$ready ) {
 			self::init_faker();
 			self::disable_emails();
@@ -99,6 +101,9 @@ abstract class Generator {
 
 	/**
 	 * Disable sending WooCommerce emails when generating objects.
+	 *
+	 * This needs to run as late in the request as possible so that the callbacks we want to remove
+	 * have actually been added.
 	 *
 	 * @return void
 	 */

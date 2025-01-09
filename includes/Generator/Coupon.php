@@ -22,7 +22,7 @@ class Coupon extends Generator {
 	 * @return \WC_Coupon|\WP_Error Coupon object with data populated.
 	 */
 	public static function generate( $save = true, $assoc_args = array() ) {
-		self::initialize();
+		parent::maybe_initialize_generators();
 
 		$defaults = array(
 			'min' => 5,

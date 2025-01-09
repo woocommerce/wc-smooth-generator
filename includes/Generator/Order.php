@@ -20,7 +20,7 @@ class Order extends Generator {
 	 * @return \WC_Order|false Order object with data populated or false when failed.
 	 */
 	public static function generate( $save = true, $assoc_args = array() ) {
-		self::initialize();
+		parent::maybe_initialize_generators();
 
 		$order    = new \WC_Order();
 		$customer = self::get_customer();
