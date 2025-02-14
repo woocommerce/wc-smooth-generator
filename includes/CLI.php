@@ -255,6 +255,65 @@ class CLI extends WP_CLI_Command {
 
 		WP_CLI::success( $generated . ' terms generated in ' . $display_time );
 	}
+
+	/**
+	 * Generate subscriptions.
+	 *
+	 * @param array $args Arguments specified.
+	 * @param array $assoc_args Associative arguments specified.
+	 */
+	public static function subscriptions( $args, $assoc_args ) {
+		list( $amount ) = $args;
+		$amount = absint( $amount );
+
+		$time_start = microtime( true );
+
+		if ( ! class_exists( 'WC_Subscription' ) ) {
+			WP_CLI::error( 'WooCommerce Subscriptions is not active.' );
+			return;
+		}
+
+		if ( ! empty( $assoc_args['status'] ) ) {
+			$status = $assoc_args['status'];
+			if ( ! array_key_exists( 'wc-' . $status, wcs_get_subscription_statuses() ) ) {
+				WP_CLI::error( "The argument \"$status\" is not a valid subscription status." );
+				return;
+			}
+		}
+
+		$progress = \WP_CLI\Utils\make_progress_bar( 'Generating subscriptions', $amount );
+
+		add_action(
+			'smoothgenerator_subscription_generated',
+			function () use ( $progress ) {
+				$progress->tick();
+			}
+		);
+
+		$remaining_amount = $amount;
+		$generated        = 0;
+
+		while ( $remaining_amount > 0 ) {
+			$batch = min( $remaining_amount, Generator\Subscription::MAX_BATCH_SIZE );
+
+			$result = Generator\Subscription::batch( $batch, $assoc_args );
+
+			if ( is_wp_error( $result ) ) {
+				WP_CLI::error( $result );
+			}
+
+			$generated        += count( $result );
+			$remaining_amount -= $batch;
+		}
+
+		$progress->finish();
+
+		$time_end       = microtime( true );
+		$execution_time = round( ( $time_end - $time_start ), 2 );
+		$display_time   = $execution_time < 60 ? $execution_time . ' seconds' : human_time_diff( $time_start, $time_end );
+
+		WP_CLI::success( $generated . ' subscriptions generated in ' . $display_time );
+	}
 }
 
 WP_CLI::add_command( 'wc generate products', array( 'WC\SmoothGenerator\CLI', 'products' ), array(
@@ -418,4 +477,45 @@ WP_CLI::add_command( 'wc generate terms', array( 'WC\SmoothGenerator\CLI', 'term
 		),
 	),
 	'longdesc' => "## EXAMPLES\n\nwc generate terms product_tag 10\n\nwc generate terms product_cat 50 --max-depth=3",
+) );
+
+WP_CLI::add_command( 'wc generate subscriptions', array( 'WC\SmoothGenerator\CLI', 'subscriptions' ), array(
+	'shortdesc' => 'Generate subscriptions.',
+	'synopsis'  => array(
+		array(
+			'name'        => 'amount',
+			'type'        => 'positional',
+			'description' => 'The number of orders to generate.',
+			'optional'    => true,
+			'default'     => 10,
+		),
+		array(
+			'name'        => 'billing-period',
+			'type'        => 'assoc',
+			'description' => 'Specify a billing period for all the generated subscriptions. Otherwise defaults to a mix.',
+			'optional'    => true,
+			'options'     => array( 'day', 'week', 'month', 'year' ),
+		),
+		array(
+			'name'        => 'billing-interval',
+			'type'        => 'assoc',
+			'description' => 'Specify a billing interval (1-6) for all the generated subscriptions. Otherwise defaults to a mix.',
+			'optional'    => true,
+			'options'     => array( '1', '2', '3', '4', '5', '6' ),
+		),
+		array(
+			'name'        => 'status',
+			'type'        => 'assoc',
+			'description' => 'Specify one status for all the generated subscriptions. Otherwise defaults to a mix.',
+			'optional'    => true,
+			'options'     => array( 'active', 'on-hold', 'cancelled', 'pending-cancel', 'expired' ),
+		),
+		array(
+			'name'        => 'create-parent-order',
+			'type'        => 'flag',
+			'description' => 'Create a parent order for each generated subscription.',
+			'optional'    => true,
+		),
+	),
+	'longdesc'  => "## EXAMPLES\n\nwc generate subscriptions 10\n\nwc generate subscriptions 50 --billing-period=month --billing-interval=1 --status=active --create-parent-order",
 ) );
