@@ -11,3 +11,4 @@ phpcs.xml
 
 # PHP xdebug
 .vscode/launch.json
+.DS_Store
