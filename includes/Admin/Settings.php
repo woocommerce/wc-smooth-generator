@@ -122,6 +122,15 @@ class Settings {
 					min="1"
 					<?php disabled( $current_job instanceof AsyncJob ); ?>
 				/>
+				<!-- Start date -->
+				<label for="generate_orders_start_date_input" class="screen-reader-text">Start date</label>
+				<input
+					id="generate_orders_start_date_input"
+					type="date"
+					name="start_date"
+					value="<?php echo esc_attr( date( 'Y-m-d' ) ); ?>"
+					<?php disabled( $current_job instanceof AsyncJob ); ?>
+				/>
 				<?php
 				submit_button(
 					'Generate',
@@ -239,7 +248,8 @@ class Settings {
 		} else if ( ! empty( $_POST['generate_orders'] ) && ! empty( $_POST['num_orders_to_generate'] ) ) {
 			check_admin_referer( 'generate', 'smoothgenerator_nonce' );
 			$num_to_generate = absint( $_POST['num_orders_to_generate'] );
-			BatchProcessor::create_new_job( 'orders', $num_to_generate );
+			$start_date      = sanitize_text_field( $_POST['start_date'] );
+			BatchProcessor::create_new_job( 'orders', $num_to_generate, array( 'date-start' => $start_date ) );
 		} else if ( ! empty( $_POST['cancel_job'] ) ) {
 			check_admin_referer( 'generate', 'smoothgenerator_nonce' );
 			BatchProcessor::delete_current_job();
