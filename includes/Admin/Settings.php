@@ -133,6 +133,39 @@ class Settings {
 				?>
 			</p>
 
+			<h2>Advanced Options</h2>
+			<p>
+				<label>
+					<input
+						type="checkbox"
+						id="use_date_range"
+						name="use_date_range"
+						<?php disabled( $current_job instanceof AsyncJob ); ?>
+					/>
+					Specify date range for generation
+				</label>
+			</p>
+			<div id="date_range_inputs" style="display: none;">
+				<p>
+					<label for="generate_start_date_input">Start date</label>
+					<input
+						id="generate_start_date_input"
+						type="date"
+						name="start_date"
+						value="<?php echo esc_attr( date( 'Y-m-d' ) ); ?>"
+						<?php disabled( $current_job instanceof AsyncJob ); ?>
+					/>
+					<label for="generate_end_date_input">End date</label>
+					<input
+						id="generate_end_date_input"
+						type="date"
+						name="end_date"
+						value="<?php echo esc_attr( date( 'Y-m-d' ) ); ?>"
+						<?php disabled( $current_job instanceof AsyncJob ); ?>
+					/>
+				</p>
+			</div>
+
 			<?php
 			submit_button(
 				'Cancel current job',
@@ -146,6 +179,24 @@ class Settings {
 		<?php
 
 		self::heartbeat_script();
+		self::date_range_toggle_script();
+	}
+
+	/**
+	 * Script to toggle date range inputs visibility.
+	 *
+	 * @return void
+	 */
+	protected static function date_range_toggle_script() {
+		?>
+		<script>
+			( function( $ ) {
+				$( '#use_date_range' ).on( 'change', function() {
+					$( '#date_range_inputs' ).toggle( this.checked );
+				} );
+			} )( jQuery );
+		</script>
+		<?php
 	}
 
 	/**
@@ -159,7 +210,7 @@ class Settings {
 			( function( $ ) {
 				const $document = $( document );
 				const $progress = $( '#smoothgenerator-progress-bar' );
-				const $controls = $( '[id^="generate_"]' );
+				const $controls = $( '[id^="generate_"], #use_date_range, #date_range_inputs input' );
 				const $cancel   = $( '#cancel_job' );
 
 				$document.on( 'ready', function () {
@@ -232,14 +283,21 @@ class Settings {
 	 * Process the generation.
 	 */
 	public static function process_page_submit() {
+		$args = array();
+		
+		if ( ! empty( $_POST['use_date_range'] ) ) {
+			$args['date-start'] = sanitize_text_field( $_POST['start_date'] );
+			$args['date-end'] = sanitize_text_field( $_POST['end_date'] );
+		}
+
 		if ( ! empty( $_POST['generate_products'] ) && ! empty( $_POST['num_products_to_generate'] ) ) {
 			check_admin_referer( 'generate', 'smoothgenerator_nonce' );
 			$num_to_generate = absint( $_POST['num_products_to_generate'] );
-			BatchProcessor::create_new_job( 'products', $num_to_generate );
+			BatchProcessor::create_new_job( 'products', $num_to_generate, $args );
 		} else if ( ! empty( $_POST['generate_orders'] ) && ! empty( $_POST['num_orders_to_generate'] ) ) {
 			check_admin_referer( 'generate', 'smoothgenerator_nonce' );
 			$num_to_generate = absint( $_POST['num_orders_to_generate'] );
-			BatchProcessor::create_new_job( 'orders', $num_to_generate );
+			BatchProcessor::create_new_job( 'orders', $num_to_generate, $args );
 		} else if ( ! empty( $_POST['cancel_job'] ) ) {
 			check_admin_referer( 'generate', 'smoothgenerator_nonce' );
 			BatchProcessor::delete_current_job();
