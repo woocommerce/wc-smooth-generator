@@ -1,5 +1,11 @@
 *** Changelog ***
 
+2025-03-25 - version 1.2.2
+* Add - Add date range arguments to admin UI for generating data.
+* Avoid fatal errors that sporadically occurred while generating taxonomy terms.
+* De-couple taxonomy term generation from product generation.
+* Ensure transactional emails are disabled before generating test content.
+
 2024-12-05 - version 1.2.1
 * Add - Support for campaign order attribution data.
 * Fix - Remove unknown from get_random_device_type() output.
