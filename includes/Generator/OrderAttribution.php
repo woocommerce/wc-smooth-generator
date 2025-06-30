@@ -104,6 +104,8 @@ class OrderAttribution {
 					'https://woo.com/',
 					'https://facebook.com',
 					'https://twitter.com',
+					'https://chatgpt.com',
+					'https://claude.ai',
 				);
 				return $refferal[ array_rand( $refferal ) ];
 			case 'typein':
@@ -204,6 +206,8 @@ class OrderAttribution {
 					'woo.com',
 					'facebook.com',
 					'twitter.com',
+					'chatgpt.com',
+					'claude.ai',
 				);
 				return $refferal[ array_rand( $refferal ) ];
 			case 'social':
