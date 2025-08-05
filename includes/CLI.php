@@ -255,6 +255,34 @@ class CLI extends WP_CLI_Command {
 
 		WP_CLI::success( $generated . ' terms generated in ' . $display_time );
 	}
+
+	/**
+	* Generate WooCommerce product attributes.
+	*
+	* @param array $args       Positional arguments.
+	* @param array $assoc_args Associative arguments.
+	*/
+	public static function attributes( $args, $assoc_args ) {
+		list( $amount ) = $args;
+		$amount         = absint( $amount );
+		$time_start     = microtime( true );
+		$progress       = \WP_CLI\Utils\make_progress_bar( 'Generating attributes', $amount );
+
+		add_action(
+			'smoothgenerator_attribute_generated',
+			function() use ( $progress ) {
+				$progress->tick();
+			}
+		);
+
+		$generated = Generator\Attribute::batch( $amount, $assoc_args );
+		$progress->finish();
+
+		$time_end     = microtime( true );
+		$display_time = round( $time_end - $time_start, 2 ) . ' seconds';
+
+		WP_CLI::success( count( $generated ) . ' attributes generated in ' . $display_time );
+	}
 }
 
 WP_CLI::add_command( 'wc generate products', array( 'WC\SmoothGenerator\CLI', 'products' ), array(
@@ -280,6 +308,9 @@ WP_CLI::add_command( 'wc generate products', array( 'WC\SmoothGenerator\CLI', 'p
 			'description' => 'Only apply existing categories and tags to products, rather than generating new ones.',
 			'optional'    => true,
 		),
+		array('name' => 'num-attributes', 'type' => 'assoc', 'description' => 'Attributes per variable product (1-10).', 'optional' => true, 'default' => 3),
+		array('name' => 'max-terms', 'type' => 'assoc', 'description' => 'Max terms per attribute (1-50).', 'optional' => true, 'default' => 5),
+		array('name' => 'max-variations', 'type' => 'assoc', 'description' => 'Max variations per product (1-100).', 'optional' => true, 'default' => 0), // 0 = all
 	),
 	'longdesc'  => "## EXAMPLES\n\nwc generate products 10\n\nwc generate products 20 --type=variable --use-existing-terms",
 ) );
@@ -419,3 +450,28 @@ WP_CLI::add_command( 'wc generate terms', array( 'WC\SmoothGenerator\CLI', 'term
 	),
 	'longdesc' => "## EXAMPLES\n\nwc generate terms product_tag 10\n\nwc generate terms product_cat 50 --max-depth=3",
 ) );
+
+WP_CLI::add_command(
+	'wc generate attributes',
+	array( 'WC\SmoothGenerator\CLI', 'attributes' ),
+	array(
+		'shortdesc' => 'Generate global product attributes.',
+		'synopsis'  => array(
+			array(
+				'name'        => 'amount',
+				'type'        => 'positional',
+				'description' => 'Number of attributes.',
+				'optional'    => true,
+				'default'     => 10,
+			),
+			array(
+				'name'        => 'terms',
+				'type'        => 'assoc',
+				'description' => 'Terms per attribute (1-500).',
+				'optional'    => true,
+				'default'     => 50,
+			),
+		),
+		'longdesc'  => "## EXAMPLES\n\nwp wc generate attributes 36 --terms=200",
+	)
+);

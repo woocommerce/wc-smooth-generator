@@ -295,7 +295,10 @@ class Product extends Generator {
 		$product           = new \WC_Product_Variable();
 
 		$gallery    = self::maybe_get_gallery_image_ids();
-		$attributes = self::generate_attributes( self::$faker->numberBetween( 1, 3 ), 5 );
+
+		$num_attrs = isset( $assoc_args['num-attributes'] ) ? intval( $assoc_args['num-attributes'] ) : self::$faker->numberBetween( 1, 3 );
+		$max_terms = isset( $assoc_args['max-terms'] ) ? intval( $assoc_args['max-terms'] ) : 5;
+		$attributes = self::generate_attributes( $num_attrs, $max_terms );
 
 		$product->set_props( array(
 			'name'              => $name,
@@ -324,7 +327,14 @@ class Product extends Generator {
 
 		// Create variations, one for each attribute value combination.
 		$variation_attributes = wc_list_pluck( array_filter( $product->get_attributes(), 'wc_attributes_array_filter_variation' ), 'get_slugs' );
+
+		$max_variations = isset( $assoc_args['max-variations'] ) ? intval( $assoc_args['max-variations'] ) : 0;
 		$possible_attributes  = array_reverse( wc_array_cartesian( $variation_attributes ) );
+		if ( $max_variations > 0 && count( $possible_attributes ) > $max_variations ) {
+			shuffle( $possible_attributes );
+			$possible_attributes = array_slice( $possible_attributes, 0, $max_variations );
+		}
+
 		foreach ( $possible_attributes as $possible_attribute ) {
 			$price      = self::$faker->randomFloat( 2, 1, 1000 );
 			$is_on_sale = self::$faker->boolean( 30 );
