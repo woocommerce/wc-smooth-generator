@@ -140,6 +140,7 @@ class Product extends Generator {
 		// In case multiple batches are being run in one request, refresh the cache data.
 		RandomRuntimeCache::clear( 'product_cat' );
 		RandomRuntimeCache::clear( 'product_tag' );
+		RandomRuntimeCache::clear( 'product_brand' );
 
 		return $product_ids;
 	}
@@ -314,6 +315,7 @@ class Product extends Generator {
 			'image_id'          => self::get_image(),
 			'category_ids'      => self::get_term_ids( 'product_cat', self::$faker->numberBetween( 0, 3 ) ),
 			'tag_ids'           => self::get_term_ids( 'product_tag', self::$faker->numberBetween( 0, 5 ) ),
+			'brand_ids'         => self::get_term_ids( 'product_brand', 1),
 			'gallery_image_ids' => $gallery,
 			'reviews_allowed'   => self::$faker->boolean(),
 			'purchase_note'     => self::$faker->boolean() ? self::$faker->text() : '',
@@ -409,6 +411,7 @@ class Product extends Generator {
 			'downloadable'       => false,
 			'category_ids'       => self::get_term_ids( 'product_cat', self::$faker->numberBetween( 0, 3 ) ),
 			'tag_ids'            => self::get_term_ids( 'product_tag', self::$faker->numberBetween( 0, 5 ) ),
+			'brand_ids'         => self::get_term_ids( 'product_brand', 1),
 			'shipping_class_id'  => 0,
 			'image_id'           => $image_id,
 			'gallery_image_ids'  => $gallery,
@@ -431,14 +434,17 @@ class Product extends Generator {
 			$cats      = 5;
 			$cat_depth = 1;
 			$tags      = 10;
+			$brands    = 5;
 		} elseif ( $product_amount < 50 ) {
 			$cats      = 10;
 			$cat_depth = 2;
 			$tags      = 20;
+			$brands    = 10;
 		} else {
 			$cats      = 20;
 			$cat_depth = 3;
 			$tags      = 40;
+			$brands    = 10;
 		}
 
 		$existing_cats = count( self::get_term_ids( 'product_cat', $cats ) );
@@ -449,6 +455,11 @@ class Product extends Generator {
 		$existing_tags = count( self::get_term_ids( 'product_tag', $tags ) );
 		if ( $existing_tags < $tags ) {
 			Term::batch( $tags - $existing_tags, 'product_tag' );
+		}
+
+		$existing_brands = count( self::get_term_ids( 'product_brand', $brands ) );
+		if ( $existing_brands < $brands ) {
+			Term::batch( $brands - $existing_brands, 'product_brand' );
 		}
 	}
 
