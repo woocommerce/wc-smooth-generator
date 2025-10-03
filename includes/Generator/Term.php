@@ -39,7 +39,7 @@ class Term extends Generator {
 		parent::maybe_initialize_generators();
 
 		if ( $taxonomy_obj->hierarchical && 'product_brand' === $taxonomy ) {
-            $term_name = ucwords( self::$faker->department( 1 ) );
+			$term_name = ucwords( self::$faker->department( 1 ) );
 		} elseif ( $taxonomy_obj->hierarchical ) {
 			$term_name = ucwords( self::$faker->department( 3 ) );
 		} else {
