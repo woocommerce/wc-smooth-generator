@@ -315,7 +315,7 @@ class Product extends Generator {
 			'image_id'          => self::get_image(),
 			'category_ids'      => self::get_term_ids( 'product_cat', self::$faker->numberBetween( 0, 3 ) ),
 			'tag_ids'           => self::get_term_ids( 'product_tag', self::$faker->numberBetween( 0, 5 ) ),
-			'brand_ids'         => self::get_term_ids( 'product_brand', 1),
+			'brand_ids'         => self::get_term_ids( 'product_brand', 1 ),
 			'gallery_image_ids' => $gallery,
 			'reviews_allowed'   => self::$faker->boolean(),
 			'purchase_note'     => self::$faker->boolean() ? self::$faker->text() : '',
