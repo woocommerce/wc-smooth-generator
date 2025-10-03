@@ -411,7 +411,7 @@ class Product extends Generator {
 			'downloadable'       => false,
 			'category_ids'       => self::get_term_ids( 'product_cat', self::$faker->numberBetween( 0, 3 ) ),
 			'tag_ids'            => self::get_term_ids( 'product_tag', self::$faker->numberBetween( 0, 5 ) ),
-			'brand_ids'         => self::get_term_ids( 'product_brand', 1),
+			'brand_ids'         => self::get_term_ids( 'product_brand', 1 ),
 			'shipping_class_id'  => 0,
 			'image_id'           => $image_id,
 			'gallery_image_ids'  => $gallery,
