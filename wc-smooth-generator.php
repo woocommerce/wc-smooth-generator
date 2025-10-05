@@ -57,3 +57,20 @@ add_action( 'before_woocommerce_init', function() {
 		\Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility( 'custom_order_tables', __FILE__, true );
 	}
 } );
+
+/**
+ * Show action links on the plugin screen.
+ *
+ * @param mixed $links Plugin Action links.
+ *
+ * @return array
+ */
+function wc_smooth_generator_plugin_action_links( $links ) {
+	$action_links = array(
+		'settings' => '<a href="' . admin_url( 'tools.php?page=smoothgenerator' ) . '" aria-label="View WooCommerce Smooth Generator settings">Settings</a>',
+	);
+
+	return array_merge( $action_links, $links );
+}
+
+add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), 'wc_smooth_generator_plugin_action_links' );
