@@ -61,7 +61,7 @@ add_action( 'before_woocommerce_init', function() {
 /**
  * Show action links on the plugin screen.
  *
- * @param mixed $links Plugin Action links.
+ * @param array $links Plugin Action links.
  *
  * @return array
  */
