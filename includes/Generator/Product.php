@@ -337,7 +337,7 @@ class Product extends Generator {
 				'attributes'        => $possible_attribute,
 				'regular_price'     => $price,
 				'sale_price'        => $sale_price,
-				'cogs_value'        => round($price * (1 - self::$faker->numberBetween(15, 60) / 100), 2),
+				'cogs_value'        => round( $price * ( 1 - self::$faker->numberBetween( 15, 60 ) / 100 ), 2 ),
 				'date_on_sale_from' => '',
 				'date_on_sale_to'   => self::$faker->iso8601( date( 'c', strtotime( '+1 month' ) ) ),
 				'tax_status'        => 'taxable',
