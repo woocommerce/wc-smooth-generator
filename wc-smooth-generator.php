@@ -67,7 +67,7 @@ add_action( 'before_woocommerce_init', function() {
  */
 function wc_smooth_generator_plugin_action_links( $links ) {
 	$action_links = array(
-		'settings' => '<a href="' . admin_url( 'tools.php?page=smoothgenerator' ) . '" aria-label="View WooCommerce Smooth Generator settings">Settings</a>',
+		'settings' => '<a href="' . esc_url( admin_url( 'tools.php?page=smoothgenerator' ) ) . '" aria-label="' . esc_attr__( 'View WooCommerce Smooth Generator settings', 'wc-smooth-generator' ) . '">' . esc_html__( 'Settings', 'wc-smooth-generator' ) . '</a>',
 	);
 
 	return array_merge( $action_links, $links );
