@@ -378,27 +378,110 @@ class Order extends Generator {
 			return null;
 		}
 
-		$order_total = $order->get_total();
-
 		// 50% chance of full refund, 50% chance of partial refund
 		$is_full_refund = (bool) wp_rand( 0, 1 );
 
+		$line_items = array();
+
 		if ( $is_full_refund ) {
-			// Full refund
-			$refund_amount = $order_total;
+			// Full refund - include all line items and fees
+			foreach ( $order->get_items( array( 'line_item', 'fee' ) ) as $item_id => $item ) {
+				$line_items[ $item_id ] = array(
+					'qty'          => $item->get_quantity(),
+					'refund_total' => $item->get_total() * -1,
+					'refund_tax'   => array_map(
+						function( $tax ) {
+							return $tax * -1;
+						},
+						$item->get_taxes()['total']
+					),
+				);
+			}
 		} else {
-			// Partial refund (between 20% and 80% of order total)
-			$refund_percentage = self::$faker->numberBetween( 20, 80 ) / 100;
-			$refund_amount     = round( $order_total * $refund_percentage, 2 );
+			// Partial refund - randomly select items or partial quantities
+			$items = $order->get_items( array( 'line_item', 'fee' ) );
+
+			// Decide whether to refund full items or partial quantities
+			$refund_full_items = (bool) wp_rand( 0, 1 );
+
+			if ( $refund_full_items && count( $items ) > 1 ) {
+				// Refund a random subset of items completely
+				$items_array  = array_values( $items );
+				$num_to_refund = wp_rand( 1, count( $items_array ) - 1 );
+				$items_to_refund = array_rand( $items_array, $num_to_refund );
+
+				// array_rand returns int if count is 1, array otherwise
+				if ( ! is_array( $items_to_refund ) ) {
+					$items_to_refund = array( $items_to_refund );
+				}
+
+				foreach ( $items_to_refund as $index ) {
+					$item    = $items_array[ $index ];
+					$item_id = $item->get_id();
+
+					$line_items[ $item_id ] = array(
+						'qty'          => $item->get_quantity(),
+						'refund_total' => $item->get_total() * -1,
+						'refund_tax'   => array_map(
+							function( $tax ) {
+								return $tax * -1;
+							},
+							$item->get_taxes()['total']
+						),
+					);
+				}
+			} else {
+				// Refund partial quantities of items
+				foreach ( $items as $item_id => $item ) {
+					$quantity = $item->get_quantity();
+
+					// Only refund line items with quantity > 1
+					if ( 'line_item' === $item->get_type() && $quantity > 1 ) {
+						// Refund between 1 and quantity-1 items
+						$refund_qty = wp_rand( 1, $quantity - 1 );
+						$refund_amount = ( $item->get_total() / $quantity ) * $refund_qty;
+
+						$line_items[ $item_id ] = array(
+							'qty'          => $refund_qty,
+							'refund_total' => $refund_amount * -1,
+							'refund_tax'   => array_map(
+								function( $tax ) use ( $quantity, $refund_qty ) {
+									return ( $tax / $quantity ) * $refund_qty * -1;
+								},
+								$item->get_taxes()['total']
+							),
+						);
+						break; // Only refund one item partially
+					}
+				}
+
+				// If no items were added (all quantities were 1), refund one complete item
+				if ( empty( $line_items ) && count( $items ) > 0 ) {
+					$items_array = array_values( $items );
+					$item        = $items_array[ array_rand( $items_array ) ];
+					$item_id     = $item->get_id();
+
+					$line_items[ $item_id ] = array(
+						'qty'          => $item->get_quantity(),
+						'refund_total' => $item->get_total() * -1,
+						'refund_tax'   => array_map(
+							function( $tax ) {
+								return $tax * -1;
+							},
+							$item->get_taxes()['total']
+						),
+					);
+				}
+			}
 		}
 
 		// Create the refund
 		$refund = wc_create_refund(
 			array(
 				'order_id'   => $order->get_id(),
-				'amount'     => $refund_amount,
+				'amount'     => null, // Let WooCommerce calculate the amount from line items
 				'reason'     => $is_full_refund ? 'Full refund' : 'Partial refund',
-				'line_items' => array(),
+				'line_items' => $line_items,
 			)
 		);
 
