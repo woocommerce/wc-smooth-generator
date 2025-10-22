@@ -386,15 +386,19 @@ class Order extends Generator {
 		if ( $is_full_refund ) {
 			// Full refund - include all line items and fees
 			foreach ( $order->get_items( array( 'line_item', 'fee' ) ) as $item_id => $item ) {
+				$taxes      = $item->get_taxes();
+				$refund_tax = array();
+
+				if ( ! empty( $taxes['total'] ) ) {
+					foreach ( $taxes['total'] as $tax_id => $tax_amount ) {
+						$refund_tax[ $tax_id ] = $tax_amount * -1;
+					}
+				}
+
 				$line_items[ $item_id ] = array(
 					'qty'          => $item->get_quantity(),
 					'refund_total' => $item->get_total() * -1,
-					'refund_tax'   => array_map(
-						function( $tax ) {
-							return $tax * -1;
-						},
-						$item->get_taxes()['total']
-					),
+					'refund_tax'   => $refund_tax,
 				);
 			}
 		} else {
@@ -416,18 +420,21 @@ class Order extends Generator {
 				}
 
 				foreach ( $items_to_refund as $index ) {
-					$item    = $items_array[ $index ];
-					$item_id = $item->get_id();
+					$item       = $items_array[ $index ];
+					$item_id    = $item->get_id();
+					$taxes      = $item->get_taxes();
+					$refund_tax = array();
+
+					if ( ! empty( $taxes['total'] ) ) {
+						foreach ( $taxes['total'] as $tax_id => $tax_amount ) {
+							$refund_tax[ $tax_id ] = $tax_amount * -1;
+						}
+					}
 
 					$line_items[ $item_id ] = array(
 						'qty'          => $item->get_quantity(),
 						'refund_total' => $item->get_total() * -1,
-						'refund_tax'   => array_map(
-							function( $tax ) {
-								return $tax * -1;
-							},
-							$item->get_taxes()['total']
-						),
+						'refund_tax'   => $refund_tax,
 					);
 				}
 			} else {
@@ -438,18 +445,21 @@ class Order extends Generator {
 					// Only refund line items with quantity > 1
 					if ( 'line_item' === $item->get_type() && $quantity > 1 ) {
 						// Refund between 1 and quantity-1 items
-						$refund_qty = wp_rand( 1, $quantity - 1 );
+						$refund_qty    = wp_rand( 1, $quantity - 1 );
 						$refund_amount = ( $item->get_total() / $quantity ) * $refund_qty;
+						$taxes         = $item->get_taxes();
+						$refund_tax    = array();
+
+						if ( ! empty( $taxes['total'] ) ) {
+							foreach ( $taxes['total'] as $tax_id => $tax_amount ) {
+								$refund_tax[ $tax_id ] = ( $tax_amount / $quantity ) * $refund_qty * -1;
+							}
+						}
 
 						$line_items[ $item_id ] = array(
 							'qty'          => $refund_qty,
 							'refund_total' => $refund_amount * -1,
-							'refund_tax'   => array_map(
-								function( $tax ) use ( $quantity, $refund_qty ) {
-									return ( $tax / $quantity ) * $refund_qty * -1;
-								},
-								$item->get_taxes()['total']
-							),
+							'refund_tax'   => $refund_tax,
 						);
 						break; // Only refund one item partially
 					}
@@ -460,16 +470,19 @@ class Order extends Generator {
 					$items_array = array_values( $items );
 					$item        = $items_array[ array_rand( $items_array ) ];
 					$item_id     = $item->get_id();
+					$taxes       = $item->get_taxes();
+					$refund_tax  = array();
+
+					if ( ! empty( $taxes['total'] ) ) {
+						foreach ( $taxes['total'] as $tax_id => $tax_amount ) {
+							$refund_tax[ $tax_id ] = $tax_amount * -1;
+						}
+					}
 
 					$line_items[ $item_id ] = array(
 						'qty'          => $item->get_quantity(),
 						'refund_total' => $item->get_total() * -1,
-						'refund_tax'   => array_map(
-							function( $tax ) {
-								return $tax * -1;
-							},
-							$item->get_taxes()['total']
-						),
+						'refund_tax'   => $refund_tax,
 					);
 				}
 			}
