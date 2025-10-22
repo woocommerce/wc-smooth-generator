@@ -133,9 +133,24 @@ class Order extends Generator {
 			// Handle --refund-ratio parameter for completed orders
 			if ( ! empty( $assoc_args['refund-ratio'] ) && 'completed' === $status ) {
 				$refund_ratio = floatval( $assoc_args['refund-ratio'] );
-				// Apply refund based on ratio
-				if ( $refund_ratio > 0 && ( $refund_ratio >= 1.0 || ( mt_rand() / mt_getrandmax() ) < $refund_ratio ) ) {
-					self::create_refund( $order );
+				$should_refund = false;
+
+				if ( $refund_ratio >= 1.0 ) {
+					// Always refund if ratio is 1.0 or higher
+					$should_refund = true;
+				} elseif ( $refund_ratio > 0 ) {
+					// Use random chance for ratios between 0 and 1
+					$random = mt_rand() / mt_getrandmax();
+					$should_refund = $random < $refund_ratio;
+				}
+
+				if ( $should_refund ) {
+					$is_partial = self::create_refund( $order );
+
+					// 25% of partial refunds get a second refund
+					if ( $is_partial && wp_rand( 1, 100 ) <= 25 ) {
+						self::create_refund( $order );
+					}
 				}
 			}
 		}
@@ -371,11 +386,11 @@ class Order extends Generator {
 	 * Create a refund for an order (either full or partial).
 	 *
 	 * @param \WC_Order $order The order to refund.
-	 * @return \WC_Order_Refund|null The refund object or null on failure.
+	 * @return bool True if partial refund, false if full refund or null on failure.
 	 */
 	protected static function create_refund( $order ) {
 		if ( ! $order instanceof \WC_Order ) {
-			return null;
+			return false;
 		}
 
 		// 50% chance of full refund, 50% chance of partial refund
@@ -488,11 +503,18 @@ class Order extends Generator {
 			}
 		}
 
-		// Calculate the total refund amount from line items
+		// Calculate the total refund amount from line items and count items
 		$refund_amount = 0;
+		$total_items   = 0;
+		$total_qty     = 0;
+
 		foreach ( $line_items as $item_id => $item_data ) {
 			// Add item total (already negative)
 			$refund_amount += abs( $item_data['refund_total'] );
+
+			// Count items and quantities
+			$total_items++;
+			$total_qty += $item_data['qty'];
 
 			// Add tax amounts (already negative)
 			if ( ! empty( $item_data['refund_tax'] ) ) {
@@ -502,18 +524,29 @@ class Order extends Generator {
 			}
 		}
 
+		// Create refund reason
+		if ( $is_full_refund ) {
+			$reason = 'Full refund';
+		} else {
+			$reason = sprintf(
+				'Partial refund - %d %s',
+				$total_items,
+				$total_items === 1 ? 'item' : 'items'
+			);
+		}
+
 		// Create the refund
 		$refund = wc_create_refund(
 			array(
 				'order_id'   => $order->get_id(),
 				'amount'     => $refund_amount,
-				'reason'     => $is_full_refund ? 'Full refund' : 'Partial refund',
+				'reason'     => $reason,
 				'line_items' => $line_items,
 			)
 		);
 
 		if ( is_wp_error( $refund ) ) {
-			return null;
+			return false;
 		}
 
 		// Update order status to refunded if it's a full refund
@@ -522,6 +555,6 @@ class Order extends Generator {
 			$order->save();
 		}
 
-		return $refund;
+		return ! $is_full_refund;
 	}
 }
