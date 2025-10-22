@@ -129,6 +129,15 @@ class Order extends Generator {
 
 		if ( $save ) {
 			$order->save();
+
+			// Handle --refund-ratio parameter for completed orders
+			if ( ! empty( $assoc_args['refund-ratio'] ) && 'completed' === $status ) {
+				$refund_ratio = floatval( $assoc_args['refund-ratio'] );
+				// Apply refund based on ratio
+				if ( $refund_ratio > 0 && ( $refund_ratio >= 1.0 || ( mt_rand() / mt_getrandmax() ) < $refund_ratio ) ) {
+					self::create_refund( $order );
+				}
+			}
 		}
 
 		/**
@@ -356,5 +365,53 @@ class Order extends Generator {
 		}
 
 		return null;
+	}
+
+	/**
+	 * Create a refund for an order (either full or partial).
+	 *
+	 * @param \WC_Order $order The order to refund.
+	 * @return \WC_Order_Refund|null The refund object or null on failure.
+	 */
+	protected static function create_refund( $order ) {
+		if ( ! $order instanceof \WC_Order ) {
+			return null;
+		}
+
+		$order_total = $order->get_total();
+
+		// 50% chance of full refund, 50% chance of partial refund
+		$is_full_refund = (bool) wp_rand( 0, 1 );
+
+		if ( $is_full_refund ) {
+			// Full refund
+			$refund_amount = $order_total;
+		} else {
+			// Partial refund (between 20% and 80% of order total)
+			$refund_percentage = self::$faker->numberBetween( 20, 80 ) / 100;
+			$refund_amount     = round( $order_total * $refund_percentage, 2 );
+		}
+
+		// Create the refund
+		$refund = wc_create_refund(
+			array(
+				'order_id'   => $order->get_id(),
+				'amount'     => $refund_amount,
+				'reason'     => $is_full_refund ? 'Full refund' : 'Partial refund',
+				'line_items' => array(),
+			)
+		);
+
+		if ( is_wp_error( $refund ) ) {
+			return null;
+		}
+
+		// Update order status to refunded if it's a full refund
+		if ( $is_full_refund ) {
+			$order->set_status( 'refunded' );
+			$order->save();
+		}
+
+		return $refund;
 	}
 }

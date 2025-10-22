@@ -326,6 +326,12 @@ WP_CLI::add_command( 'wc generate orders', array( 'WC\SmoothGenerator\CLI', 'ord
 			'optional'    => true,
 		),
 		array(
+			'name'        => 'refund-ratio',
+			'type'        => 'assoc',
+			'description' => 'Decimal ratio (0.0-1.0) of completed orders that should be refunded (wholly or partially).',
+			'optional'    => true,
+		),
+		array(
 			'name'        => 'skip-order-attribution',
 			'type'        => 'flag',
 			'description' => 'Skip adding order attribution meta to the generated orders.',
