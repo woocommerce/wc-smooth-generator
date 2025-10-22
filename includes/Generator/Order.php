@@ -488,11 +488,25 @@ class Order extends Generator {
 			}
 		}
 
+		// Calculate the total refund amount from line items
+		$refund_amount = 0;
+		foreach ( $line_items as $item_id => $item_data ) {
+			// Add item total (already negative)
+			$refund_amount += abs( $item_data['refund_total'] );
+
+			// Add tax amounts (already negative)
+			if ( ! empty( $item_data['refund_tax'] ) ) {
+				foreach ( $item_data['refund_tax'] as $tax_amount ) {
+					$refund_amount += abs( $tax_amount );
+				}
+			}
+		}
+
 		// Create the refund
 		$refund = wc_create_refund(
 			array(
 				'order_id'   => $order->get_id(),
-				'amount'     => null, // Let WooCommerce calculate the amount from line items
+				'amount'     => $refund_amount,
 				'reason'     => $is_full_refund ? 'Full refund' : 'Partial refund',
 				'line_items' => $line_items,
 			)
