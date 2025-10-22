@@ -89,10 +89,25 @@ class Order extends Generator {
 
 		$order->set_date_created( $date );
 
+		// Handle legacy --coupons flag
 		$include_coupon = ! empty( $assoc_args['coupons'] );
+
+		// Handle --coupon-ratio parameter
+		if ( ! empty( $assoc_args['coupon-ratio'] ) ) {
+			$coupon_ratio = floatval( $assoc_args['coupon-ratio'] );
+			// Apply coupon based on ratio
+			if ( $coupon_ratio > 0 && ( $coupon_ratio >= 1.0 || ( mt_rand() / mt_getrandmax() ) < $coupon_ratio ) ) {
+				$include_coupon = true;
+			} else {
+				$include_coupon = false;
+			}
+		}
+
 		if ( $include_coupon ) {
-			$coupon = Coupon::generate( true );
-			$order->apply_coupon( $coupon );
+			$coupon = self::get_or_create_coupon();
+			if ( $coupon ) {
+				$order->apply_coupon( $coupon );
+			}
 		}
 
 		// Orders created before 2024-01-09	represents orders created before the attribution feature was added.
@@ -274,5 +289,72 @@ class Order extends Generator {
 		}
 
 		return $products;
+	}
+
+	/**
+	 * Get a random existing coupon or create coupons if none exist.
+	 * If no coupons exist, creates 6 coupons: 3 fixed value and 3 percentage.
+	 *
+	 * @return \WC_Coupon|null Coupon object or null if none available.
+	 */
+	protected static function get_or_create_coupon() {
+		global $wpdb;
+
+		// Check if any coupons exist
+		$coupon_count = (int) $wpdb->get_var(
+			"SELECT COUNT(*)
+			FROM {$wpdb->posts}
+			WHERE post_type = 'shop_coupon'
+			AND post_status = 'publish'"
+		);
+
+		// If no coupons exist, create 6 (3 fixed, 3 percentage)
+		if ( $coupon_count === 0 ) {
+			// Create 3 fixed value coupons
+			for ( $i = 0; $i < 3; $i++ ) {
+				$coupon = new \WC_Coupon();
+				$amount = self::$faker->numberBetween( 5, 50 );
+				$code   = 'fixed' . $amount . '-' . self::$faker->lexify( '???' );
+
+				$coupon->set_code( $code );
+				$coupon->set_discount_type( 'fixed_cart' );
+				$coupon->set_amount( $amount );
+				$coupon->save();
+			}
+
+			// Create 3 percentage coupons
+			for ( $i = 0; $i < 3; $i++ ) {
+				$coupon = new \WC_Coupon();
+				$amount = self::$faker->numberBetween( 5, 25 );
+				$code   = 'percent' . $amount . '-' . self::$faker->lexify( '???' );
+
+				$coupon->set_code( $code );
+				$coupon->set_discount_type( 'percent' );
+				$coupon->set_amount( $amount );
+				$coupon->save();
+			}
+
+			$coupon_count = 6;
+		}
+
+		// Get a random coupon
+		$offset    = wp_rand( 0, $coupon_count - 1 );
+		$coupon_id = (int) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT ID
+				FROM {$wpdb->posts}
+				WHERE post_type = 'shop_coupon'
+				AND post_status = 'publish'
+				ORDER BY ID
+				LIMIT %d, 1",
+				$offset
+			)
+		);
+
+		if ( $coupon_id ) {
+			return new \WC_Coupon( $coupon_id );
+		}
+
+		return null;
 	}
 }

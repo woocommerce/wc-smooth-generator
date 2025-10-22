@@ -320,6 +320,12 @@ WP_CLI::add_command( 'wc generate orders', array( 'WC\SmoothGenerator\CLI', 'ord
 			'optional'    => true,
 		),
 		array(
+			'name'        => 'coupon-ratio',
+			'type'        => 'assoc',
+			'description' => 'Decimal ratio (0.0-1.0) of orders that should have coupons applied. If no coupons exist, 6 will be created (3 fixed value, 3 percentage).',
+			'optional'    => true,
+		),
+		array(
 			'name'        => 'skip-order-attribution',
 			'type'        => 'flag',
 			'description' => 'Skip adding order attribution meta to the generated orders.',
