@@ -529,9 +529,11 @@ class Order extends Generator {
 			$reason = 'Full refund';
 		} else {
 			$reason = sprintf(
-				'Partial refund - %d %s',
+				'Partial refund - %d %s, %d %s',
 				$total_items,
-				$total_items === 1 ? 'item' : 'items'
+				$total_items === 1 ? 'product' : 'products',
+				$total_qty,
+				$total_qty === 1 ? 'item' : 'items'
 			);
 		}
 
