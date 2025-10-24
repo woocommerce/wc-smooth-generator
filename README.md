@@ -37,7 +37,7 @@ Generate orders with a specific status.
 Apply coupons to a percentage of generated orders (0.0-1.0). If no coupons exist, 6 will be created automatically (3 fixed cart, 3 percentage).
 - `wp wc generate orders <nr of orders> --coupon-ratio=0.5`
 
-Refund a percentage of completed orders (0.0-1.0). Refunds can be full or partial, and 25% of partial refunds will receive a second partial refund.
+Refund a percentage of completed orders (0.0-1.0). Refunds will be split evenly between partial and full, and 25% of partial refunds will receive a second partial refund.
 - `wp wc generate orders <nr of orders> --status=completed --refund-ratio=0.3`
 
 #### Order Attribution

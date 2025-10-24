@@ -360,7 +360,7 @@ class Order extends Generator {
 			$force_partial = true;
 		}
 
-		// 50% chance of full refund, 50% chance of partial refund (unless forced)
+		// Refunds will be split evenly between partial and full (unless forced)
 		$is_full_refund = $force_partial ? false : (bool) wp_rand( 0, 1 );
 
 		$line_items = array();
