@@ -316,7 +316,7 @@ WP_CLI::add_command( 'wc generate orders', array( 'WC\SmoothGenerator\CLI', 'ord
 		array(
 			'name'        => 'coupons',
 			'type'        => 'flag',
-			'description' => 'Create and apply a coupon to each generated order.',
+			'description' => 'Create and apply a coupon to each generated order. Equivalent to --coupon-ratio=1.0.',
 			'optional'    => true,
 		),
 		array(

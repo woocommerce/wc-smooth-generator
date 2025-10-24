@@ -34,7 +34,7 @@ Generate orders with random dates between `--date-start` and `--date-end`.
 Generate orders with a specific status.
 - `wp wc generate orders <nr of orders> --status=completed`
 
-Apply coupons to a percentage of generated orders (0.0-1.0). If no coupons exist, 6 will be created automatically (3 fixed cart, 3 percentage).
+Apply coupons to a percentage of generated orders (0.0-1.0). If no coupons exist, 6 will be created automatically (3 fixed cart, 3 percentage). Note: `--coupons` flag is equivalent to `--coupon-ratio=1.0`.
 - `wp wc generate orders <nr of orders> --coupon-ratio=0.5`
 
 Refund a percentage of completed orders (0.0-1.0). Refunds will be split evenly between partial and full, and 25% of partial refunds will receive a second partial refund.
