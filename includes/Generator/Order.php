@@ -384,6 +384,21 @@ class Order extends Generator {
 			$force_partial = true;
 		}
 
+		// Calculate already refunded quantities per item
+		$refunded_qty_by_item = array();
+		foreach ( $existing_refunds as $existing_refund ) {
+			foreach ( $existing_refund->get_items( array( 'line_item', 'fee' ) ) as $refund_item ) {
+				$item_id = $refund_item->get_meta( '_refunded_item_id' );
+				if ( ! $item_id ) {
+					continue;
+				}
+				if ( ! isset( $refunded_qty_by_item[ $item_id ] ) ) {
+					$refunded_qty_by_item[ $item_id ] = 0;
+				}
+				$refunded_qty_by_item[ $item_id ] += abs( $refund_item->get_quantity() );
+			}
+		}
+
 		// Refunds will be split evenly between partial and full (unless forced)
 		$is_full_refund = $force_partial ? false : (bool) wp_rand( 0, 1 );
 
@@ -392,18 +407,34 @@ class Order extends Generator {
 		if ( $is_full_refund ) {
 			// Full refund - include all line items and fees
 			foreach ( $order->get_items( array( 'line_item', 'fee' ) ) as $item_id => $item ) {
+				// Calculate remaining quantity after previous refunds
+				$original_qty = $item->get_quantity();
+				$refunded_qty = isset( $refunded_qty_by_item[ $item_id ] ) ? $refunded_qty_by_item[ $item_id ] : 0;
+				$remaining_qty = $original_qty - $refunded_qty;
+
+				// Skip if nothing left to refund
+				if ( $remaining_qty <= 0 ) {
+					continue;
+				}
+
 				$taxes      = $item->get_taxes();
 				$refund_tax = array();
 
 				if ( ! empty( $taxes['total'] ) ) {
 					foreach ( $taxes['total'] as $tax_id => $tax_amount ) {
-						$refund_tax[ $tax_id ] = $tax_amount * -1;
+						// Prorate tax based on remaining quantity
+						$tax_per_unit = $tax_amount / $original_qty;
+						$refund_tax[ $tax_id ] = ( $tax_per_unit * $remaining_qty ) * -1;
 					}
 				}
 
+				// Prorate the refund total based on remaining quantity
+				$total_per_unit = $item->get_total() / $original_qty;
+				$refund_total = $total_per_unit * $remaining_qty;
+
 				$line_items[ $item_id ] = array(
-					'qty'          => $item->get_quantity(),
-					'refund_total' => $item->get_total() * -1,
+					'qty'          => $remaining_qty,
+					'refund_total' => $refund_total * -1,
 					'refund_tax'   => $refund_tax,
 				);
 			}
@@ -428,37 +459,62 @@ class Order extends Generator {
 				foreach ( $items_to_refund as $index ) {
 					$item       = $items_array[ $index ];
 					$item_id    = $item->get_id();
+
+					// Calculate remaining quantity after previous refunds
+					$original_qty = $item->get_quantity();
+					$refunded_qty = isset( $refunded_qty_by_item[ $item_id ] ) ? $refunded_qty_by_item[ $item_id ] : 0;
+					$remaining_qty = $original_qty - $refunded_qty;
+
+					// Skip if nothing left to refund
+					if ( $remaining_qty <= 0 ) {
+						continue;
+					}
+
 					$taxes      = $item->get_taxes();
 					$refund_tax = array();
 
 					if ( ! empty( $taxes['total'] ) ) {
 						foreach ( $taxes['total'] as $tax_id => $tax_amount ) {
-							$refund_tax[ $tax_id ] = $tax_amount * -1;
+							// Prorate tax based on remaining quantity
+							$tax_per_unit = $tax_amount / $original_qty;
+							$refund_tax[ $tax_id ] = ( $tax_per_unit * $remaining_qty ) * -1;
 						}
 					}
 
+					// Prorate the refund total based on remaining quantity
+					$total_per_unit = $item->get_total() / $original_qty;
+					$refund_total = $total_per_unit * $remaining_qty;
+
 					$line_items[ $item_id ] = array(
-						'qty'          => $item->get_quantity(),
-						'refund_total' => $item->get_total() * -1,
+						'qty'          => $remaining_qty,
+						'refund_total' => $refund_total * -1,
 						'refund_tax'   => $refund_tax,
 					);
 				}
 			} else {
 				// Refund partial quantities of items
 				foreach ( $items as $item_id => $item ) {
-					$quantity = $item->get_quantity();
+					// Calculate remaining quantity after previous refunds
+					$original_qty = $item->get_quantity();
+					$refunded_qty = isset( $refunded_qty_by_item[ $item_id ] ) ? $refunded_qty_by_item[ $item_id ] : 0;
+					$remaining_qty = $original_qty - $refunded_qty;
 
-					// Only refund line items with quantity > 1
-					if ( 'line_item' === $item->get_type() && $quantity > 1 ) {
-						// Refund between 1 and quantity-1 items
-						$refund_qty    = wp_rand( 1, $quantity - 1 );
-						$refund_amount = ( $item->get_total() / $quantity ) * $refund_qty;
+					// Skip if nothing left to refund or if only 1 remaining
+					if ( $remaining_qty <= 1 ) {
+						continue;
+					}
+
+					// Only refund line items with remaining quantity > 1
+					if ( 'line_item' === $item->get_type() ) {
+						// Refund between 1 and remaining_qty-1 items
+						$refund_qty    = wp_rand( 1, $remaining_qty - 1 );
+						$refund_amount = ( $item->get_total() / $original_qty ) * $refund_qty;
 						$taxes         = $item->get_taxes();
 						$refund_tax    = array();
 
 						if ( ! empty( $taxes['total'] ) ) {
 							foreach ( $taxes['total'] as $tax_id => $tax_amount ) {
-								$refund_tax[ $tax_id ] = ( $tax_amount / $quantity ) * $refund_qty * -1;
+								$refund_tax[ $tax_id ] = ( $tax_amount / $original_qty ) * $refund_qty * -1;
 							}
 						}
 
@@ -471,25 +527,47 @@ class Order extends Generator {
 					}
 				}
 
-				// If no items were added (all quantities were 1), refund one complete item
+				// If no items were added, refund one complete remaining item
 				if ( empty( $line_items ) && count( $items ) > 0 ) {
+					// Find an item with remaining quantity
 					$items_array = array_values( $items );
-					$item        = $items_array[ array_rand( $items_array ) ];
-					$item_id     = $item->get_id();
-					$taxes       = $item->get_taxes();
-					$refund_tax  = array();
+					shuffle( $items_array );
 
-					if ( ! empty( $taxes['total'] ) ) {
-						foreach ( $taxes['total'] as $tax_id => $tax_amount ) {
-							$refund_tax[ $tax_id ] = $tax_amount * -1;
+					foreach ( $items_array as $item ) {
+						$item_id = $item->get_id();
+
+						// Calculate remaining quantity after previous refunds
+						$original_qty = $item->get_quantity();
+						$refunded_qty = isset( $refunded_qty_by_item[ $item_id ] ) ? $refunded_qty_by_item[ $item_id ] : 0;
+						$remaining_qty = $original_qty - $refunded_qty;
+
+						// Skip if nothing left to refund
+						if ( $remaining_qty <= 0 ) {
+							continue;
 						}
-					}
 
-					$line_items[ $item_id ] = array(
-						'qty'          => $item->get_quantity(),
-						'refund_total' => $item->get_total() * -1,
-						'refund_tax'   => $refund_tax,
-					);
+						$taxes      = $item->get_taxes();
+						$refund_tax = array();
+
+						if ( ! empty( $taxes['total'] ) ) {
+							foreach ( $taxes['total'] as $tax_id => $tax_amount ) {
+								// Prorate tax based on remaining quantity
+								$tax_per_unit = $tax_amount / $original_qty;
+								$refund_tax[ $tax_id ] = ( $tax_per_unit * $remaining_qty ) * -1;
+							}
+						}
+
+						// Prorate the refund total based on remaining quantity
+						$total_per_unit = $item->get_total() / $original_qty;
+						$refund_total = $total_per_unit * $remaining_qty;
+
+						$line_items[ $item_id ] = array(
+							'qty'          => $remaining_qty,
+							'refund_total' => $refund_total * -1,
+							'refund_tax'   => $refund_tax,
+						);
+						break; // Only refund one item
+					}
 				}
 			}
 		}
