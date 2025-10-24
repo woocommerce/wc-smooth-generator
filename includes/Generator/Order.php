@@ -98,7 +98,7 @@ class Order extends Generator {
 		$include_coupon = ! empty( $assoc_args['coupons'] );
 
 		// Handle --coupon-ratio parameter
-		if ( ! empty( $assoc_args['coupon-ratio'] ) ) {
+		if ( isset( $assoc_args['coupon-ratio'] ) ) {
 			$coupon_ratio = floatval( $assoc_args['coupon-ratio'] );
 
 			// Validate ratio is between 0.0 and 1.0
@@ -146,7 +146,7 @@ class Order extends Generator {
 			$order->save();
 
 			// Handle --refund-ratio parameter for completed orders
-			if ( ! empty( $assoc_args['refund-ratio'] ) && 'completed' === $status ) {
+			if ( isset( $assoc_args['refund-ratio'] ) && 'completed' === $status ) {
 				$refund_ratio = floatval( $assoc_args['refund-ratio'] );
 
 				// Validate ratio is between 0.0 and 1.0
@@ -412,8 +412,8 @@ class Order extends Generator {
 				$refunded_qty = isset( $refunded_qty_by_item[ $item_id ] ) ? $refunded_qty_by_item[ $item_id ] : 0;
 				$remaining_qty = $original_qty - $refunded_qty;
 
-				// Skip if nothing left to refund
-				if ( $remaining_qty <= 0 ) {
+				// Skip if nothing left to refund or invalid quantity
+				if ( $remaining_qty <= 0 || $original_qty <= 0 ) {
 					continue;
 				}
 
@@ -465,8 +465,8 @@ class Order extends Generator {
 					$refunded_qty = isset( $refunded_qty_by_item[ $item_id ] ) ? $refunded_qty_by_item[ $item_id ] : 0;
 					$remaining_qty = $original_qty - $refunded_qty;
 
-					// Skip if nothing left to refund
-					if ( $remaining_qty <= 0 ) {
+					// Skip if nothing left to refund or invalid quantity
+					if ( $remaining_qty <= 0 || $original_qty <= 0 ) {
 						continue;
 					}
 
@@ -499,8 +499,8 @@ class Order extends Generator {
 					$refunded_qty = isset( $refunded_qty_by_item[ $item_id ] ) ? $refunded_qty_by_item[ $item_id ] : 0;
 					$remaining_qty = $original_qty - $refunded_qty;
 
-					// Skip if nothing left to refund or if only 1 remaining
-					if ( $remaining_qty <= 1 ) {
+					// Skip if nothing left to refund, if only 1 remaining, or invalid quantity
+					if ( $remaining_qty <= 1 || $original_qty <= 0 ) {
 						continue;
 					}
 
@@ -541,8 +541,8 @@ class Order extends Generator {
 						$refunded_qty = isset( $refunded_qty_by_item[ $item_id ] ) ? $refunded_qty_by_item[ $item_id ] : 0;
 						$remaining_qty = $original_qty - $refunded_qty;
 
-						// Skip if nothing left to refund
-						if ( $remaining_qty <= 0 ) {
+						// Skip if nothing left to refund or invalid quantity
+						if ( $remaining_qty <= 0 || $original_qty <= 0 ) {
 							continue;
 						}
 
@@ -615,7 +615,6 @@ class Order extends Generator {
 			while ( $refund_amount >= $max_partial_refund && count( $line_items ) > 1 ) {
 				// Remove a random item from the refund
 				$item_id_to_remove = array_rand( $line_items );
-				$removed_item = $line_items[ $item_id_to_remove ];
 				unset( $line_items[ $item_id_to_remove ] );
 
 				// Recalculate refund amount and counts
