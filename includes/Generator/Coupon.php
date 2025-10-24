@@ -148,20 +148,27 @@ class Coupon extends Generator {
 	/**
 	 * Get a random existing coupon.
 	 *
+	 * @param array|null $cached_coupon_ids Optional array of coupon IDs to use instead of querying.
 	 * @return \WC_Coupon|false Coupon object or false if none available.
 	 */
-	public static function get_random() {
-		// Note: Using posts_per_page=-1 loads all coupons into memory for random selection.
-		// For stores with thousands of coupons, consider using direct SQL with RAND() for better performance.
-		// This approach was chosen for consistency with WordPress APIs and to avoid raw SQL queries.
-		$coupon_ids = get_posts(
-			array(
-				'post_type'      => 'shop_coupon',
-				'post_status'    => 'publish',
-				'posts_per_page' => -1,
-				'fields'         => 'ids',
-			)
-		);
+	public static function get_random( $cached_coupon_ids = null ) {
+		// Use cached IDs if provided (batch mode optimization)
+		if ( null !== $cached_coupon_ids && ! empty( $cached_coupon_ids ) ) {
+			$coupon_ids = $cached_coupon_ids;
+		} else {
+			// Fallback to querying for coupon IDs
+			// Note: Using posts_per_page=-1 loads all coupons into memory for random selection.
+			// For stores with thousands of coupons, consider using direct SQL with RAND() for better performance.
+			// This approach was chosen for consistency with WordPress APIs and to avoid raw SQL queries.
+			$coupon_ids = get_posts(
+				array(
+					'post_type'      => 'shop_coupon',
+					'post_status'    => 'publish',
+					'posts_per_page' => -1,
+					'fields'         => 'ids',
+				)
+			);
+		}
 
 		if ( empty( $coupon_ids ) ) {
 			return false;

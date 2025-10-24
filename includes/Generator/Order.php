@@ -18,6 +18,27 @@ class Order extends Generator {
 	const SECOND_REFUND_PROBABILITY = 25;
 
 	/**
+	 * Cached product IDs for batch operations.
+	 *
+	 * @var array|null
+	 */
+	protected static $batch_product_ids = null;
+
+	/**
+	 * Cached coupon IDs for batch operations.
+	 *
+	 * @var array|null
+	 */
+	protected static $batch_coupon_ids = null;
+
+	/**
+	 * Cached customer IDs for batch operations.
+	 *
+	 * @var array|null
+	 */
+	protected static $batch_customer_ids = null;
+
+	/**
 	 * Return a new order.
 	 *
 	 * @param bool  $save Save the object before returning or not.
@@ -202,12 +223,18 @@ class Order extends Generator {
 			return $amount;
 		}
 
+		// Initialize batch cache to avoid repeated queries
+		self::init_batch_cache( $args );
+
 		$order_ids = array();
 
 		for ( $i = 1; $i <= $amount; $i ++ ) {
 			$order       = self::generate( true, $args );
 			$order_ids[] = $order->get_id();
 		}
+
+		// Clear batch cache after generation
+		self::clear_batch_cache();
 
 		return $order_ids;
 	}
@@ -224,9 +251,15 @@ class Order extends Generator {
 		$existing = (bool) wp_rand( 0, 1 );
 
 		if ( $existing ) {
-			$total_users = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->users}" );
-			$offset      = wp_rand( 0, $total_users );
-			$user_id     = (int) $wpdb->get_var( "SELECT ID FROM {$wpdb->users} ORDER BY rand() LIMIT $offset, 1" ); // phpcs:ignore
+			// Use cached customer IDs if available (batch mode)
+			if ( null !== self::$batch_customer_ids && ! empty( self::$batch_customer_ids ) ) {
+				$user_id = self::$batch_customer_ids[ array_rand( self::$batch_customer_ids ) ];
+			} else {
+				// Fallback to direct query for single order generation
+				$total_users = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->users}" );
+				$offset      = wp_rand( 0, $total_users );
+				$user_id     = (int) $wpdb->get_var( "SELECT ID FROM {$wpdb->users} ORDER BY rand() LIMIT $offset, 1" ); // phpcs:ignore
+			}
 			return new \WC_Customer( $user_id );
 		}
 
@@ -298,27 +331,51 @@ class Order extends Generator {
 
 		$products = array();
 
-		$num_existing_products = (int) $wpdb->get_var(
-			"SELECT COUNT( DISTINCT ID )
-			FROM {$wpdb->posts}
-			WHERE 1=1
-			AND post_type='product'
-			AND post_status='publish'"
-		);
+		// Use cached product IDs if available (batch mode)
+		if ( null !== self::$batch_product_ids && ! empty( self::$batch_product_ids ) ) {
+			$num_existing_products = count( self::$batch_product_ids );
+			$num_products_to_get   = wp_rand( $min_amount, $max_amount );
 
-		$num_products_to_get = wp_rand( $min_amount, $max_amount );
+			if ( $num_products_to_get > $num_existing_products ) {
+				$num_products_to_get = $num_existing_products;
+			}
 
-		if ( $num_products_to_get > $num_existing_products ) {
-			$num_products_to_get = $num_existing_products;
+			// Get random product IDs from cache
+			$random_keys = array_rand( self::$batch_product_ids, $num_products_to_get );
+			if ( ! is_array( $random_keys ) ) {
+				$random_keys = array( $random_keys );
+			}
+
+			$product_ids = array();
+			foreach ( $random_keys as $key ) {
+				$product_ids[] = self::$batch_product_ids[ $key ];
+			}
+		} else {
+			// Fallback to direct query for single order generation
+			$num_existing_products = (int) $wpdb->get_var(
+				"SELECT COUNT( DISTINCT ID )
+				FROM {$wpdb->posts}
+				WHERE 1=1
+				AND post_type='product'
+				AND post_status='publish'"
+			);
+
+			$num_products_to_get = wp_rand( $min_amount, $max_amount );
+
+			if ( $num_products_to_get > $num_existing_products ) {
+				$num_products_to_get = $num_existing_products;
+			}
+
+			$query = new \WC_Product_Query( array(
+				'limit'   => $num_products_to_get,
+				'return'  => 'ids',
+				'orderby' => 'rand',
+			) );
+
+			$product_ids = $query->get_products();
 		}
 
-		$query = new \WC_Product_Query( array(
-			'limit'   => $num_products_to_get,
-			'return'  => 'ids',
-			'orderby' => 'rand',
-		) );
-
-		foreach ( $query->get_products() as $product_id ) {
+		foreach ( $product_ids as $product_id ) {
 			$product = wc_get_product( $product_id );
 
 			if ( $product->is_type( 'variable' ) ) {
@@ -343,8 +400,8 @@ class Order extends Generator {
 	 * @return \WC_Coupon|false Coupon object or false if none available.
 	 */
 	protected static function get_or_create_coupon() {
-		// Try to get a random existing coupon
-		$coupon = Coupon::get_random();
+		// Try to get a random existing coupon (pass cached IDs if available)
+		$coupon = Coupon::get_random( self::$batch_coupon_ids );
 
 		// If no coupons exist, create 6 (3 fixed, 3 percentage)
 		if ( false === $coupon ) {
@@ -359,8 +416,13 @@ class Order extends Generator {
 				return false;
 			}
 
+			// Update batch cache with newly created coupon IDs
+			if ( null !== self::$batch_coupon_ids ) {
+				self::$batch_coupon_ids = array_merge( self::$batch_coupon_ids, $fixed_result, $percent_result );
+			}
+
 			// Now get a random coupon from the ones we just created
-			$coupon = Coupon::get_random();
+			$coupon = Coupon::get_random( self::$batch_coupon_ids );
 		}
 
 		return $coupon;
@@ -720,5 +782,47 @@ class Order extends Generator {
 		}
 
 		return $refund;
+	}
+
+	/**
+	 * Initialize batch cache by pre-loading IDs for products, coupons, and customers.
+	 * This significantly improves performance when generating multiple orders by avoiding
+	 * repeated database queries.
+	 *
+	 * @param array $args Arguments passed to batch generation (used to determine what to cache).
+	 * @return void
+	 */
+	protected static function init_batch_cache( $args ) {
+		global $wpdb;
+
+		// Load all product IDs once
+		self::$batch_product_ids = $wpdb->get_col(
+			"SELECT ID FROM {$wpdb->posts}
+			WHERE post_type='product'
+			AND post_status='publish'"
+		);
+
+		// Load coupon IDs if coupon ratio is set
+		if ( isset( $args['coupon-ratio'] ) || isset( $args['coupons'] ) ) {
+			self::$batch_coupon_ids = $wpdb->get_col(
+				"SELECT ID FROM {$wpdb->posts}
+				WHERE post_type='shop_coupon'
+				AND post_status='publish'"
+			);
+		}
+
+		// Load customer IDs
+		self::$batch_customer_ids = $wpdb->get_col( "SELECT ID FROM {$wpdb->users}" );
+	}
+
+	/**
+	 * Clear batch cache after batch generation is complete.
+	 *
+	 * @return void
+	 */
+	protected static function clear_batch_cache() {
+		self::$batch_product_ids  = null;
+		self::$batch_coupon_ids   = null;
+		self::$batch_customer_ids = null;
 	}
 }
