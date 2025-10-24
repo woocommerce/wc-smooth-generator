@@ -321,61 +321,37 @@ class Order extends Generator {
 	 * Get a random existing coupon or create coupons if none exist.
 	 * If no coupons exist, creates 6 coupons: 3 fixed value and 3 percentage.
 	 *
-	 * @return \WC_Coupon|null Coupon object or null if none available.
+	 * @return \WC_Coupon|false Coupon object or false if none available.
 	 */
 	protected static function get_or_create_coupon() {
-		global $wpdb;
-
-		// Check if any coupons exist
-		$coupon_count = (int) $wpdb->get_var(
-			"SELECT COUNT(*)
-			FROM {$wpdb->posts}
-			WHERE post_type = 'shop_coupon'
-			AND post_status = 'publish'"
-		);
+		// Try to get a random existing coupon
+		$coupon = Coupon::get_random();
 
 		// If no coupons exist, create 6 (3 fixed, 3 percentage)
-		if ( $coupon_count === 0 ) {
+		if ( false === $coupon ) {
 			// Create 3 fixed cart coupons
 			for ( $i = 0; $i < 3; $i++ ) {
-				$coupon = Coupon::generate( false, array( 'min' => 5, 'max' => 50 ) );
-				if ( ! is_wp_error( $coupon ) ) {
-					$coupon->set_discount_type( 'fixed_cart' );
-					$coupon->save();
+				$new_coupon = Coupon::generate( false, array( 'min' => 5, 'max' => 50 ) );
+				if ( ! is_wp_error( $new_coupon ) ) {
+					$new_coupon->set_discount_type( 'fixed_cart' );
+					$new_coupon->save();
 				}
 			}
 
 			// Create 3 percentage coupons
 			for ( $i = 0; $i < 3; $i++ ) {
-				$coupon = Coupon::generate( false, array( 'min' => 5, 'max' => 25 ) );
-				if ( ! is_wp_error( $coupon ) ) {
-					$coupon->set_discount_type( 'percent' );
-					$coupon->save();
+				$new_coupon = Coupon::generate( false, array( 'min' => 5, 'max' => 25 ) );
+				if ( ! is_wp_error( $new_coupon ) ) {
+					$new_coupon->set_discount_type( 'percent' );
+					$new_coupon->save();
 				}
 			}
 
-			$coupon_count = 6;
+			// Now get a random coupon from the ones we just created
+			$coupon = Coupon::get_random();
 		}
 
-		// Get a random coupon
-		$offset    = wp_rand( 0, $coupon_count - 1 );
-		$coupon_id = (int) $wpdb->get_var(
-			$wpdb->prepare(
-				"SELECT ID
-				FROM {$wpdb->posts}
-				WHERE post_type = 'shop_coupon'
-				AND post_status = 'publish'
-				ORDER BY ID
-				LIMIT %d, 1",
-				$offset
-			)
-		);
-
-		if ( $coupon_id ) {
-			return new \WC_Coupon( $coupon_id );
-		}
-
-		return null;
+		return $coupon;
 	}
 
 	/**

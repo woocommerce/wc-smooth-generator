@@ -125,5 +125,46 @@ class Coupon extends Generator {
 
 		return $coupon_ids;
 	}
+
+	/**
+	 * Get a random existing coupon.
+	 *
+	 * @return \WC_Coupon|false Coupon object or false if none available.
+	 */
+	public static function get_random() {
+		global $wpdb;
+
+		// Check if any coupons exist
+		$coupon_count = (int) $wpdb->get_var(
+			"SELECT COUNT(*)
+			FROM {$wpdb->posts}
+			WHERE post_type = 'shop_coupon'
+			AND post_status = 'publish'"
+		);
+
+		if ( $coupon_count === 0 ) {
+			return false;
+		}
+
+		// Get a random coupon
+		$offset    = wp_rand( 0, $coupon_count - 1 );
+		$coupon_id = (int) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT ID
+				FROM {$wpdb->posts}
+				WHERE post_type = 'shop_coupon'
+				AND post_status = 'publish'
+				ORDER BY ID
+				LIMIT %d, 1",
+				$offset
+			)
+		);
+
+		if ( $coupon_id ) {
+			return new \WC_Coupon( $coupon_id );
+		}
+
+		return false;
+	}
 }
 
