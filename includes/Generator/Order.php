@@ -432,13 +432,13 @@ class Order extends Generator {
 			// Decide whether to refund full items or partial quantities
 			$refund_full_items = (bool) wp_rand( 0, 1 );
 
-			if ( $refund_full_items && count( $items ) > 1 ) {
-				// Refund a random subset of items completely
+			if ( $refund_full_items && count( $items ) > 2 ) {
+				// Refund a random subset of items completely (requires at least 3 items)
 				$items_array  = array_values( $items );
 				$num_to_refund = wp_rand( 1, count( $items_array ) - 1 );
 				$items_to_refund = array_rand( $items_array, $num_to_refund );
 
-				// array_rand returns int if count is 1, array otherwise
+				// Ensure $items_to_refund is always an array for consistent iteration
 				if ( ! is_array( $items_to_refund ) ) {
 					$items_to_refund = array( $items_to_refund );
 				}
