@@ -17,7 +17,7 @@
   },
   "require-dev": {
     "woocommerce/woocommerce-sniffs": "*",
-    "sirbrillig/phpcs-changed": "^2.10.2"
+    "sirbrillig/phpcs-changed": "^2.11.8"
   },
   "autoload": {
     "psr-4": {"WC\\SmoothGenerator\\": "includes/"}
