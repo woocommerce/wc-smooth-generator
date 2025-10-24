@@ -336,28 +336,22 @@ class Order extends Generator {
 
 		// If no coupons exist, create 6 (3 fixed, 3 percentage)
 		if ( $coupon_count === 0 ) {
-			// Create 3 fixed value coupons
+			// Create 3 fixed cart coupons
 			for ( $i = 0; $i < 3; $i++ ) {
-				$coupon = new \WC_Coupon();
-				$amount = self::$faker->numberBetween( 5, 50 );
-				$code   = 'fixed' . $amount . '-' . self::$faker->lexify( '???' );
-
-				$coupon->set_code( $code );
-				$coupon->set_discount_type( 'fixed_cart' );
-				$coupon->set_amount( $amount );
-				$coupon->save();
+				$coupon = Coupon::generate( false, array( 'min' => 5, 'max' => 50 ) );
+				if ( ! is_wp_error( $coupon ) ) {
+					$coupon->set_discount_type( 'fixed_cart' );
+					$coupon->save();
+				}
 			}
 
 			// Create 3 percentage coupons
 			for ( $i = 0; $i < 3; $i++ ) {
-				$coupon = new \WC_Coupon();
-				$amount = self::$faker->numberBetween( 5, 25 );
-				$code   = 'percent' . $amount . '-' . self::$faker->lexify( '???' );
-
-				$coupon->set_code( $code );
-				$coupon->set_discount_type( 'percent' );
-				$coupon->set_amount( $amount );
-				$coupon->save();
+				$coupon = Coupon::generate( false, array( 'min' => 5, 'max' => 25 ) );
+				if ( ! is_wp_error( $coupon ) ) {
+					$coupon->set_discount_type( 'percent' );
+					$coupon->save();
+				}
 			}
 
 			$coupon_count = 6;
