@@ -521,13 +521,26 @@ class Order extends Generator {
 			}
 		}
 
+		// Round refund amount to 2 decimal places for currency precision
+		$refund_amount = round( $refund_amount, 2 );
+
+		// Calculate maximum refundable amount (order total minus already refunded)
+		$max_refund = $order->get_total() - $order->get_total_refunded();
+		$max_refund = round( $max_refund, 2 );
+
+		// Cap refund amount to maximum available (prevents rounding errors from exceeding order total)
+		if ( $refund_amount > $max_refund ) {
+			$refund_amount = $max_refund;
+		}
+
 		// Validate refund amount is greater than 0
 		if ( $refund_amount <= 0 ) {
 			error_log( sprintf(
-				'Refund skipped for order %d: Invalid refund amount (%s). Order total: %s',
+				'Refund skipped for order %d: Invalid refund amount (%s). Order total: %s, Already refunded: %s',
 				$order->get_id(),
 				$refund_amount,
-				$order->get_total()
+				$order->get_total(),
+				$order->get_total_refunded()
 			) );
 			return false;
 		}
@@ -556,10 +569,12 @@ class Order extends Generator {
 		);
 		if ( is_wp_error( $refund ) ) {
 			error_log( sprintf(
-				"Refund creation failed for order %d:\nError: %s\nAmount: %s\nReason: %s\nLine Items: %s",
+				"Refund creation failed for order %d:\nError: %s\nCalculated Amount: %s\nOrder Total: %s\nOrder Refunded Total: %s\nReason: %s\nLine Items: %s",
 				$order->get_id(),
 				$refund->get_error_message(),
 				$refund_amount,
+				$order->get_total(),
+				$order->get_total_refunded(),
 				$reason,
 				print_r( $line_items, true )
 			) );
