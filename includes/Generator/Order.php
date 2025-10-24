@@ -521,8 +521,45 @@ class Order extends Generator {
 			}
 		}
 
+		// For full refunds, use the order's actual remaining total to avoid rounding discrepancies
+		if ( $is_full_refund ) {
+			$refund_amount = $order->get_total() - $order->get_total_refunded();
+		}
+
 		// Round refund amount to 2 decimal places for currency precision
 		$refund_amount = round( $refund_amount, 2 );
+
+		// For partial refunds, ensure refund is < 50% of order total by removing items if needed
+		if ( ! $is_full_refund ) {
+			$max_partial_refund = $order->get_total() * 0.5;
+
+			// If refund exceeds 50%, remove items until it's under 50%
+			while ( $refund_amount >= $max_partial_refund && count( $line_items ) > 1 ) {
+				// Remove a random item from the refund
+				$item_id_to_remove = array_rand( $line_items );
+				$removed_item = $line_items[ $item_id_to_remove ];
+				unset( $line_items[ $item_id_to_remove ] );
+
+				// Recalculate refund amount and counts
+				$refund_amount = 0;
+				$total_items = 0;
+				$total_qty = 0;
+
+				foreach ( $line_items as $item_id => $item_data ) {
+					$refund_amount += abs( $item_data['refund_total'] );
+					$total_items++;
+					$total_qty += $item_data['qty'];
+
+					if ( ! empty( $item_data['refund_tax'] ) ) {
+						foreach ( $item_data['refund_tax'] as $tax_amount ) {
+							$refund_amount += abs( $tax_amount );
+						}
+					}
+				}
+
+				$refund_amount = round( $refund_amount, 2 );
+			}
+		}
 
 		// Calculate maximum refundable amount (order total minus already refunded)
 		$max_refund = $order->get_total() - $order->get_total_refunded();
