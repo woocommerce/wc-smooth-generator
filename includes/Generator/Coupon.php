@@ -25,12 +25,15 @@ class Coupon extends Generator {
 		parent::maybe_initialize_generators();
 
 		$defaults = array(
-			'min' => 5,
-			'max' => 100,
+			'min'           => 5,
+			'max'           => 100,
+			'discount_type' => '',
 		);
 
+		$args = wp_parse_args( $assoc_args, $defaults );
+
 		list( 'min' => $min, 'max' => $max ) = filter_var_array(
-			wp_parse_args( $assoc_args, $defaults ),
+			$args,
 			array(
 				'min' => array(
 					'filter'  => FILTER_VALIDATE_INT,
@@ -68,6 +71,20 @@ class Coupon extends Generator {
 			);
 		}
 
+		// Validate discount_type if provided
+		$discount_type = ! empty( $args['discount_type'] ) ? $args['discount_type'] : '';
+		if ( ! empty( $discount_type ) && ! in_array( $discount_type, array( 'fixed_cart', 'percent' ), true ) ) {
+			return new \WP_Error(
+				'smoothgenerator_coupon_invalid_discount_type',
+				'The discount_type must be either "fixed_cart" or "percent".'
+			);
+		}
+
+		// If no discount type specified, randomly choose one for backwards compatibility
+		if ( empty( $discount_type ) ) {
+			$discount_type = wp_rand( 0, 1 ) === 0 ? 'fixed_cart' : 'percent';
+		}
+
 		$code        = substr( self::$faker->promotionCode( 1 ), 0, -1 ); // Omit the random digit.
 		$amount      = self::$faker->numberBetween( $min, $max );
 		$coupon_code = sprintf(
@@ -78,8 +95,9 @@ class Coupon extends Generator {
 
 		$coupon = new \WC_Coupon( $coupon_code );
 		$coupon->set_props( array(
-			'code'   => $coupon_code,
-			'amount' => $amount,
+			'code'          => $coupon_code,
+			'amount'        => $amount,
+			'discount_type' => $discount_type,
 		) );
 
 		if ( $save ) {
