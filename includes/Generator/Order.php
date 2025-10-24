@@ -107,7 +107,9 @@ class Order extends Generator {
 			}
 
 			// Apply coupon based on ratio
-			if ( $coupon_ratio > 0 && ( $coupon_ratio >= 1.0 || ( (float) wp_rand() / (float) getrandmax() ) < $coupon_ratio ) ) {
+			if ( $coupon_ratio >= 1.0 ) {
+				$include_coupon = true;
+			} elseif ( $coupon_ratio > 0 && wp_rand( 1, 100 ) <= ( $coupon_ratio * 100 ) ) {
 				$include_coupon = true;
 			} else {
 				$include_coupon = false;
@@ -157,10 +159,9 @@ class Order extends Generator {
 				if ( $refund_ratio >= 1.0 ) {
 					// Always refund if ratio is 1.0 or higher
 					$should_refund = true;
-				} elseif ( $refund_ratio > 0 ) {
+				} elseif ( $refund_ratio > 0 && wp_rand( 1, 100 ) <= ( $refund_ratio * 100 ) ) {
 					// Use random chance for ratios between 0 and 1
-					$random = (float) wp_rand() / (float) getrandmax();
-					$should_refund = $random < $refund_ratio;
+					$should_refund = true;
 				}
 
 				if ( $should_refund ) {
