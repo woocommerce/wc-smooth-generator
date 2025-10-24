@@ -329,23 +329,11 @@ class Order extends Generator {
 
 		// If no coupons exist, create 6 (3 fixed, 3 percentage)
 		if ( false === $coupon ) {
-			// Create 3 fixed cart coupons
-			for ( $i = 0; $i < 3; $i++ ) {
-				$new_coupon = Coupon::generate( false, array( 'min' => 5, 'max' => 50 ) );
-				if ( ! is_wp_error( $new_coupon ) ) {
-					$new_coupon->set_discount_type( 'fixed_cart' );
-					$new_coupon->save();
-				}
-			}
+			// Create 3 fixed cart coupons ($5-$50)
+			Coupon::batch( 3, array( 'min' => 5, 'max' => 50, 'discount_type' => 'fixed_cart' ) );
 
-			// Create 3 percentage coupons
-			for ( $i = 0; $i < 3; $i++ ) {
-				$new_coupon = Coupon::generate( false, array( 'min' => 5, 'max' => 25 ) );
-				if ( ! is_wp_error( $new_coupon ) ) {
-					$new_coupon->set_discount_type( 'percent' );
-					$new_coupon->save();
-				}
-			}
+			// Create 3 percentage coupons (5%-25%)
+			Coupon::batch( 3, array( 'min' => 5, 'max' => 25, 'discount_type' => 'percent' ) );
 
 			// Now get a random coupon from the ones we just created
 			$coupon = Coupon::get_random();
