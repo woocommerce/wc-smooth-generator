@@ -374,6 +374,7 @@ class Order extends Generator {
 	 */
 	protected static function create_refund( $order, $force_partial = false ) {
 		if ( ! $order instanceof \WC_Order ) {
+			error_log( "Error: Order is not an instance of \WC_Order: " . print_r( $order, true ) );
 			return false;
 		}
 
@@ -493,8 +494,9 @@ class Order extends Generator {
 			}
 		}
 
-		// If no line items to refund, return false
+		// Ensure we have items to refund - if not, log and return false
 		if ( empty( $line_items ) ) {
+			error_log( sprintf( 'Refund skipped for order %d: No line items to refund. Order has %d items.', $order->get_id(), count( $order->get_items( array( 'line_item', 'fee' ) ) ) ) );
 			return false;
 		}
 
@@ -541,8 +543,15 @@ class Order extends Generator {
 				'line_items' => $line_items,
 			)
 		);
-
 		if ( is_wp_error( $refund ) ) {
+			error_log( sprintf(
+				"Refund creation failed for order %d:\nError: %s\nAmount: %s\nReason: %s\nLine Items: %s",
+				$order->get_id(),
+				$refund->get_error_message(),
+				$refund_amount,
+				$reason,
+				print_r( $line_items, true )
+			) );
 			return false;
 		}
 
