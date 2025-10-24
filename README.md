@@ -58,7 +58,7 @@ Generate coupons with a minimum discount amount.
 Generate coupons with a maximum discount amount.
 - `wp wc generate coupons <nr of coupons> --max=50`
 
-Generate coupons with a specific discount type. Options are `fixed_cart` or `percent`. If not specified, a random type will be chosen.
+Generate coupons with a specific discount type. Options are `fixed_cart` or `percent`. If not specified, defaults to WooCommerce default (fixed_cart).
 - `wp wc generate coupons <nr of coupons> --discount_type=percent --min=5 --max=25`
 
 ### Customers

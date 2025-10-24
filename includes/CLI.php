@@ -396,7 +396,7 @@ WP_CLI::add_command( 'wc generate coupons', array( 'WC\SmoothGenerator\CLI', 'co
 		array(
 			'name'        => 'discount_type',
 			'type'        => 'assoc',
-			'description' => 'The type of discount for the coupon. If not specified, a random type will be chosen.',
+			'description' => 'The type of discount for the coupon. If not specified, defaults to WooCommerce default (fixed_cart).',
 			'optional'    => true,
 			'options'     => array( 'fixed_cart', 'percent' ),
 		),

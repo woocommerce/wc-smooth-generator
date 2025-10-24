@@ -80,11 +80,6 @@ class Coupon extends Generator {
 			);
 		}
 
-		// If no discount type specified, randomly choose one for backwards compatibility
-		if ( empty( $discount_type ) ) {
-			$discount_type = wp_rand( 0, 1 ) === 0 ? 'fixed_cart' : 'percent';
-		}
-
 		$code        = substr( self::$faker->promotionCode( 1 ), 0, -1 ); // Omit the random digit.
 		$amount      = self::$faker->numberBetween( $min, $max );
 		$coupon_code = sprintf(
@@ -93,12 +88,18 @@ class Coupon extends Generator {
 			$amount
 		);
 
+		$props = array(
+			'code'   => $coupon_code,
+			'amount' => $amount,
+		);
+
+		// Only set discount_type if explicitly provided
+		if ( ! empty( $discount_type ) ) {
+			$props['discount_type'] = $discount_type;
+		}
+
 		$coupon = new \WC_Coupon( $coupon_code );
-		$coupon->set_props( array(
-			'code'          => $coupon_code,
-			'amount'        => $amount,
-			'discount_type' => $discount_type,
-		) );
+		$coupon->set_props( $props );
 
 		if ( $save ) {
 			$data_store = WC_Data_Store::load( 'coupon' );
