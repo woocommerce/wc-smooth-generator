@@ -147,9 +147,9 @@ class Order extends Generator {
 				if ( $should_refund ) {
 					$is_partial = self::create_refund( $order );
 
-					// 25% of partial refunds get a second refund
+					// 25% of partial refunds get a second refund (always partial)
 					if ( $is_partial && wp_rand( 1, 100 ) <= 25 ) {
-						self::create_refund( $order );
+						self::create_refund( $order, true );
 					}
 				}
 			}
@@ -386,15 +386,22 @@ class Order extends Generator {
 	 * Create a refund for an order (either full or partial).
 	 *
 	 * @param \WC_Order $order The order to refund.
+	 * @param bool      $force_partial Force partial refund only.
 	 * @return bool True if partial refund, false if full refund or null on failure.
 	 */
-	protected static function create_refund( $order ) {
+	protected static function create_refund( $order, $force_partial = false ) {
 		if ( ! $order instanceof \WC_Order ) {
 			return false;
 		}
 
-		// 50% chance of full refund, 50% chance of partial refund
-		$is_full_refund = (bool) wp_rand( 0, 1 );
+		// Check if order already has refunds
+		$existing_refunds = $order->get_refunds();
+		if ( ! empty( $existing_refunds ) ) {
+			$force_partial = true;
+		}
+
+		// 50% chance of full refund, 50% chance of partial refund (unless forced)
+		$is_full_refund = $force_partial ? false : (bool) wp_rand( 0, 1 );
 
 		$line_items = array();
 
