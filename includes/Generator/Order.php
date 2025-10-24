@@ -521,6 +521,17 @@ class Order extends Generator {
 			}
 		}
 
+		// Validate refund amount is greater than 0
+		if ( $refund_amount <= 0 ) {
+			error_log( sprintf(
+				'Refund skipped for order %d: Invalid refund amount (%s). Order total: %s',
+				$order->get_id(),
+				$refund_amount,
+				$order->get_total()
+			) );
+			return false;
+		}
+
 		// Create refund reason
 		if ( $is_full_refund ) {
 			$reason = 'Full refund';
