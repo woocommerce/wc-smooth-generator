@@ -107,6 +107,8 @@ class Order extends Generator {
 			$coupon = self::get_or_create_coupon();
 			if ( $coupon ) {
 				$order->apply_coupon( $coupon );
+				// Recalculate totals after applying coupon
+				$order->calculate_totals( true );
 			}
 		}
 
