@@ -389,7 +389,7 @@ class Order extends Generator {
 	 *
 	 * @param \WC_Order $order The order to refund.
 	 * @param bool      $force_partial Force partial refund only.
-	 * @return bool True if partial refund, false if full refund or null on failure.
+	 * @return bool True if partial refund, false if full refund or on failure.
 	 */
 	protected static function create_refund( $order, $force_partial = false ) {
 		if ( ! $order instanceof \WC_Order ) {
