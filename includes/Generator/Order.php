@@ -165,11 +165,12 @@ class Order extends Generator {
 				}
 
 				if ( $should_refund ) {
-					$is_partial = self::create_refund( $order );
+					// Create first refund with date within 2 months of completion
+					$first_refund = self::create_refund( $order );
 
 					// Some partial refunds get a second refund (always partial)
-					if ( $is_partial && wp_rand( 1, 100 ) <= self::SECOND_REFUND_PROBABILITY ) {
-						self::create_refund( $order, true );
+					if ( $first_refund && wp_rand( 1, 100 ) <= self::SECOND_REFUND_PROBABILITY ) {
+						self::create_refund( $order, true, $first_refund );
 					}
 				}
 			}
@@ -368,11 +369,12 @@ class Order extends Generator {
 	/**
 	 * Create a refund for an order (either full or partial).
 	 *
-	 * @param \WC_Order $order The order to refund.
-	 * @param bool      $force_partial Force partial refund only.
-	 * @return bool True if partial refund, false if full refund or on failure.
+	 * @param \WC_Order      $order The order to refund.
+	 * @param bool           $force_partial Force partial refund only.
+	 * @param \WC_Order_Refund|null $previous_refund Previous refund to base date on (for second refunds).
+	 * @return \WC_Order_Refund|false Refund object on success, false on failure.
 	 */
-	protected static function create_refund( $order, $force_partial = false ) {
+	protected static function create_refund( $order, $force_partial = false, $previous_refund = null ) {
 		if ( ! $order instanceof \WC_Order ) {
 			error_log( "Error: Order is not an instance of \WC_Order: " . print_r( $order, true ) );
 			return false;
@@ -672,6 +674,21 @@ class Order extends Generator {
 			);
 		}
 
+		// Calculate refund date
+		if ( $previous_refund ) {
+			// Second refund: within 1 month of first refund
+			$base_date = $previous_refund->get_date_created();
+			$max_days = 30; // 1 month
+		} else {
+			// First refund: within 2 months of order completion
+			$base_date = $order->get_date_completed();
+			$max_days = 60; // 2 months
+		}
+
+		// Generate random date within the allowed timeframe
+		$random_days = wp_rand( 0, $max_days );
+		$refund_date = date( 'Y-m-d H:i:s', strtotime( $base_date->date( 'Y-m-d H:i:s' ) ) + ( $random_days * DAY_IN_SECONDS ) );
+
 		// Create the refund
 		$refund = wc_create_refund(
 			array(
@@ -679,6 +696,7 @@ class Order extends Generator {
 				'amount'     => $refund_amount,
 				'reason'     => $reason,
 				'line_items' => $line_items,
+				'date_created' => $refund_date,
 			)
 		);
 		if ( is_wp_error( $refund ) ) {
@@ -701,6 +719,6 @@ class Order extends Generator {
 			$order->save();
 		}
 
-		return ! $is_full_refund;
+		return $refund;
 	}
 }
