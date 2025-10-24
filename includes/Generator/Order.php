@@ -518,7 +518,7 @@ class Order extends Generator {
 		$total_qty     = 0;
 
 		foreach ( $line_items as $item_id => $item_data ) {
-			// Add item total (already negative)
+			// Add item total: refund amounts are stored as negative, convert to positive for total calculation
 			$refund_amount += abs( $item_data['refund_total'] );
 
 			// Count items and quantities
