@@ -13,6 +13,11 @@ namespace WC\SmoothGenerator\Generator;
 class Order extends Generator {
 
 	/**
+	 * Probability (percentage) that a partial refund will receive a second refund.
+	 */
+	const SECOND_REFUND_PROBABILITY = 25;
+
+	/**
 	 * Return a new order.
 	 *
 	 * @param bool  $save Save the object before returning or not.
@@ -95,8 +100,14 @@ class Order extends Generator {
 		// Handle --coupon-ratio parameter
 		if ( ! empty( $assoc_args['coupon-ratio'] ) ) {
 			$coupon_ratio = floatval( $assoc_args['coupon-ratio'] );
+
+			// Validate ratio is between 0.0 and 1.0
+			if ( $coupon_ratio < 0.0 || $coupon_ratio > 1.0 ) {
+				$coupon_ratio = max( 0.0, min( 1.0, $coupon_ratio ) );
+			}
+
 			// Apply coupon based on ratio
-			if ( $coupon_ratio > 0 && ( $coupon_ratio >= 1.0 || ( mt_rand() / mt_getrandmax() ) < $coupon_ratio ) ) {
+			if ( $coupon_ratio > 0 && ( $coupon_ratio >= 1.0 || ( (float) wp_rand() / (float) getrandmax() ) < $coupon_ratio ) ) {
 				$include_coupon = true;
 			} else {
 				$include_coupon = false;
@@ -112,7 +123,7 @@ class Order extends Generator {
 			}
 		}
 
-		// Orders created before 2024-01-09	represents orders created before the attribution feature was added.
+		// Orders created before 2024-01-09 represents orders created before the attribution feature was added.
 		if ( ! ( strtotime( $date ) < strtotime( '2024-01-09' ) ) ) {
 			OrderAttribution::add_order_attribution_meta( $order, $assoc_args );
 		}
@@ -135,6 +146,12 @@ class Order extends Generator {
 			// Handle --refund-ratio parameter for completed orders
 			if ( ! empty( $assoc_args['refund-ratio'] ) && 'completed' === $status ) {
 				$refund_ratio = floatval( $assoc_args['refund-ratio'] );
+
+				// Validate ratio is between 0.0 and 1.0
+				if ( $refund_ratio < 0.0 || $refund_ratio > 1.0 ) {
+					$refund_ratio = max( 0.0, min( 1.0, $refund_ratio ) );
+				}
+
 				$should_refund = false;
 
 				if ( $refund_ratio >= 1.0 ) {
@@ -142,15 +159,15 @@ class Order extends Generator {
 					$should_refund = true;
 				} elseif ( $refund_ratio > 0 ) {
 					// Use random chance for ratios between 0 and 1
-					$random = mt_rand() / mt_getrandmax();
+					$random = (float) wp_rand() / (float) getrandmax();
 					$should_refund = $random < $refund_ratio;
 				}
 
 				if ( $should_refund ) {
 					$is_partial = self::create_refund( $order );
 
-					// 25% of partial refunds get a second refund (always partial)
-					if ( $is_partial && wp_rand( 1, 100 ) <= 25 ) {
+					// Some partial refunds get a second refund (always partial)
+					if ( $is_partial && wp_rand( 1, 100 ) <= self::SECOND_REFUND_PROBABILITY ) {
 						self::create_refund( $order, true );
 					}
 				}
@@ -330,10 +347,15 @@ class Order extends Generator {
 		// If no coupons exist, create 6 (3 fixed, 3 percentage)
 		if ( false === $coupon ) {
 			// Create 3 fixed cart coupons ($5-$50)
-			Coupon::batch( 3, array( 'min' => 5, 'max' => 50, 'discount_type' => 'fixed_cart' ) );
+			$fixed_result = Coupon::batch( 3, array( 'min' => 5, 'max' => 50, 'discount_type' => 'fixed_cart' ) );
 
 			// Create 3 percentage coupons (5%-25%)
-			Coupon::batch( 3, array( 'min' => 5, 'max' => 25, 'discount_type' => 'percent' ) );
+			$percent_result = Coupon::batch( 3, array( 'min' => 5, 'max' => 25, 'discount_type' => 'percent' ) );
+
+			// If coupon creation failed, return false
+			if ( is_wp_error( $fixed_result ) || is_wp_error( $percent_result ) ) {
+				return false;
+			}
 
 			// Now get a random coupon from the ones we just created
 			$coupon = Coupon::get_random();
