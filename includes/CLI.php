@@ -393,8 +393,15 @@ WP_CLI::add_command( 'wc generate coupons', array( 'WC\SmoothGenerator\CLI', 'co
 			'optional'    => true,
 			'default'     => 100,
 		),
+		array(
+			'name'        => 'discount_type',
+			'type'        => 'assoc',
+			'description' => 'The type of discount for the coupon. If not specified, a random type will be chosen.',
+			'optional'    => true,
+			'options'     => array( 'fixed_cart', 'percent' ),
+		),
 	),
-	'longdesc'  => "## EXAMPLES\n\nwc generate coupons 10\n\nwc generate coupons 50 --min=1 --max=50",
+	'longdesc'  => "## EXAMPLES\n\nwc generate coupons 10\n\nwc generate coupons 50 --min=1 --max=50\n\nwc generate coupons 20 --discount_type=percent --min=5 --max=25",
 ) );
 
 WP_CLI::add_command( 'wc generate terms', array( 'WC\SmoothGenerator\CLI', 'terms' ), array(
