@@ -493,6 +493,11 @@ class Order extends Generator {
 			}
 		}
 
+		// If no line items to refund, return false
+		if ( empty( $line_items ) ) {
+			return false;
+		}
+
 		// Calculate the total refund amount from line items and count items
 		$refund_amount = 0;
 		$total_items   = 0;
