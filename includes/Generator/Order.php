@@ -18,6 +18,22 @@ class Order extends Generator {
 	const SECOND_REFUND_PROBABILITY = 25;
 
 	/**
+	 * Maximum ratio of order total that can be refunded in a partial refund.
+	 * Ensures partial refunds don't exceed 50% of order total.
+	 */
+	const MAX_PARTIAL_REFUND_RATIO = 0.5;
+
+	/**
+	 * Maximum days after order completion for first refund (2 months).
+	 */
+	const FIRST_REFUND_MAX_DAYS = 60;
+
+	/**
+	 * Maximum days after first refund for second refund (1 month).
+	 */
+	const SECOND_REFUND_MAX_DAYS = 30;
+
+	/**
 	 * Return a new order.
 	 *
 	 * @param bool  $save Save the object before returning or not.
@@ -348,6 +364,10 @@ class Order extends Generator {
 
 		// If no coupons exist, create 6 (3 fixed, 3 percentage)
 		if ( false === $coupon ) {
+			if ( class_exists( 'WP_CLI' ) ) {
+				\WP_CLI::log( 'No coupons found. Creating 6 coupons (3 fixed cart $5-$50, 3 percentage 5%-25%)...' );
+			}
+
 			// Create 3 fixed cart coupons ($5-$50)
 			$fixed_result = Coupon::batch( 3, array( 'min' => 5, 'max' => 50, 'discount_type' => 'fixed_cart' ) );
 
@@ -386,270 +406,59 @@ class Order extends Generator {
 			$force_partial = true;
 		}
 
-		// Calculate already refunded quantities per item
-		$refunded_qty_by_item = array();
-		foreach ( $existing_refunds as $existing_refund ) {
-			foreach ( $existing_refund->get_items( array( 'line_item', 'fee' ) ) as $refund_item ) {
-				$item_id = $refund_item->get_meta( '_refunded_item_id' );
-				if ( ! $item_id ) {
-					continue;
-				}
-				if ( ! isset( $refunded_qty_by_item[ $item_id ] ) ) {
-					$refunded_qty_by_item[ $item_id ] = 0;
-				}
-				$refunded_qty_by_item[ $item_id ] += abs( $refund_item->get_quantity() );
-			}
-		}
+		// Calculate already refunded quantities
+		$refunded_qty_by_item = self::calculate_refunded_quantities( $existing_refunds );
 
-		// Refunds will be split evenly between partial and full (unless forced)
+		// Determine refund type (full or partial)
 		$is_full_refund = $force_partial ? false : (bool) wp_rand( 0, 1 );
 
-		$line_items = array();
+		// Build refund line items
+		$line_items = $is_full_refund
+			? self::build_full_refund_items( $order, $refunded_qty_by_item )
+			: self::build_partial_refund_items( $order, $refunded_qty_by_item );
 
-		if ( $is_full_refund ) {
-			// Full refund - include all line items and fees
-			foreach ( $order->get_items( array( 'line_item', 'fee' ) ) as $item_id => $item ) {
-				// Calculate remaining quantity after previous refunds
-				$original_qty = $item->get_quantity();
-				$refunded_qty = isset( $refunded_qty_by_item[ $item_id ] ) ? $refunded_qty_by_item[ $item_id ] : 0;
-				$remaining_qty = $original_qty - $refunded_qty;
-
-				// Skip if nothing left to refund or invalid quantity
-				if ( $remaining_qty <= 0 || $original_qty <= 0 ) {
-					continue;
-				}
-
-				$taxes      = $item->get_taxes();
-				$refund_tax = array();
-
-				if ( ! empty( $taxes['total'] ) ) {
-					foreach ( $taxes['total'] as $tax_id => $tax_amount ) {
-						// Prorate tax based on remaining quantity
-						$tax_per_unit = $tax_amount / $original_qty;
-						$refund_tax[ $tax_id ] = ( $tax_per_unit * $remaining_qty ) * -1;
-					}
-				}
-
-				// Prorate the refund total based on remaining quantity
-				$total_per_unit = $item->get_total() / $original_qty;
-				$refund_total = $total_per_unit * $remaining_qty;
-
-				$line_items[ $item_id ] = array(
-					'qty'          => $remaining_qty,
-					'refund_total' => $refund_total * -1,
-					'refund_tax'   => $refund_tax,
-				);
-			}
-		} else {
-			// Partial refund - randomly select items or partial quantities
-			$items = $order->get_items( array( 'line_item', 'fee' ) );
-
-			// Decide whether to refund full items or partial quantities
-			$refund_full_items = (bool) wp_rand( 0, 1 );
-
-			if ( $refund_full_items && count( $items ) > 2 ) {
-				// Refund a random subset of items completely (requires at least 3 items)
-				$items_array  = array_values( $items );
-				$num_to_refund = wp_rand( 1, count( $items_array ) - 1 );
-				$items_to_refund = array_rand( $items_array, $num_to_refund );
-
-				// Ensure $items_to_refund is always an array for consistent iteration
-				if ( ! is_array( $items_to_refund ) ) {
-					$items_to_refund = array( $items_to_refund );
-				}
-
-				foreach ( $items_to_refund as $index ) {
-					$item       = $items_array[ $index ];
-					$item_id    = $item->get_id();
-
-					// Calculate remaining quantity after previous refunds
-					$original_qty = $item->get_quantity();
-					$refunded_qty = isset( $refunded_qty_by_item[ $item_id ] ) ? $refunded_qty_by_item[ $item_id ] : 0;
-					$remaining_qty = $original_qty - $refunded_qty;
-
-					// Skip if nothing left to refund or invalid quantity
-					if ( $remaining_qty <= 0 || $original_qty <= 0 ) {
-						continue;
-					}
-
-					$taxes      = $item->get_taxes();
-					$refund_tax = array();
-
-					if ( ! empty( $taxes['total'] ) ) {
-						foreach ( $taxes['total'] as $tax_id => $tax_amount ) {
-							// Prorate tax based on remaining quantity
-							$tax_per_unit = $tax_amount / $original_qty;
-							$refund_tax[ $tax_id ] = ( $tax_per_unit * $remaining_qty ) * -1;
-						}
-					}
-
-					// Prorate the refund total based on remaining quantity
-					$total_per_unit = $item->get_total() / $original_qty;
-					$refund_total = $total_per_unit * $remaining_qty;
-
-					$line_items[ $item_id ] = array(
-						'qty'          => $remaining_qty,
-						'refund_total' => $refund_total * -1,
-						'refund_tax'   => $refund_tax,
-					);
-				}
-			} else {
-				// Refund partial quantities of items
-				foreach ( $items as $item_id => $item ) {
-					// Calculate remaining quantity after previous refunds
-					$original_qty = $item->get_quantity();
-					$refunded_qty = isset( $refunded_qty_by_item[ $item_id ] ) ? $refunded_qty_by_item[ $item_id ] : 0;
-					$remaining_qty = $original_qty - $refunded_qty;
-
-					// Skip if nothing left to refund, if only 1 remaining, or invalid quantity
-					if ( $remaining_qty <= 1 || $original_qty <= 0 ) {
-						continue;
-					}
-
-					// Only refund line items with remaining quantity > 1
-					if ( 'line_item' === $item->get_type() ) {
-						// Refund between 1 and remaining_qty-1 items
-						$refund_qty    = wp_rand( 1, $remaining_qty - 1 );
-						$refund_amount = ( $item->get_total() / $original_qty ) * $refund_qty;
-						$taxes         = $item->get_taxes();
-						$refund_tax    = array();
-
-						if ( ! empty( $taxes['total'] ) ) {
-							foreach ( $taxes['total'] as $tax_id => $tax_amount ) {
-								$refund_tax[ $tax_id ] = ( $tax_amount / $original_qty ) * $refund_qty * -1;
-							}
-						}
-
-						$line_items[ $item_id ] = array(
-							'qty'          => $refund_qty,
-							'refund_total' => $refund_amount * -1,
-							'refund_tax'   => $refund_tax,
-						);
-						break; // Only refund one item partially
-					}
-				}
-
-				// If no items were added, refund one complete remaining item
-				if ( empty( $line_items ) && count( $items ) > 0 ) {
-					// Find an item with remaining quantity
-					$items_array = array_values( $items );
-					shuffle( $items_array );
-
-					foreach ( $items_array as $item ) {
-						$item_id = $item->get_id();
-
-						// Calculate remaining quantity after previous refunds
-						$original_qty = $item->get_quantity();
-						$refunded_qty = isset( $refunded_qty_by_item[ $item_id ] ) ? $refunded_qty_by_item[ $item_id ] : 0;
-						$remaining_qty = $original_qty - $refunded_qty;
-
-						// Skip if nothing left to refund or invalid quantity
-						if ( $remaining_qty <= 0 || $original_qty <= 0 ) {
-							continue;
-						}
-
-						$taxes      = $item->get_taxes();
-						$refund_tax = array();
-
-						if ( ! empty( $taxes['total'] ) ) {
-							foreach ( $taxes['total'] as $tax_id => $tax_amount ) {
-								// Prorate tax based on remaining quantity
-								$tax_per_unit = $tax_amount / $original_qty;
-								$refund_tax[ $tax_id ] = ( $tax_per_unit * $remaining_qty ) * -1;
-							}
-						}
-
-						// Prorate the refund total based on remaining quantity
-						$total_per_unit = $item->get_total() / $original_qty;
-						$refund_total = $total_per_unit * $remaining_qty;
-
-						$line_items[ $item_id ] = array(
-							'qty'          => $remaining_qty,
-							'refund_total' => $refund_total * -1,
-							'refund_tax'   => $refund_tax,
-						);
-						break; // Only refund one item
-					}
-				}
-			}
-		}
-
-		// Ensure we have items to refund - if not, log and return false
+		// Ensure we have items to refund
 		if ( empty( $line_items ) ) {
-			error_log( sprintf( 'Refund skipped for order %d: No line items to refund. Order has %d items.', $order->get_id(), count( $order->get_items( array( 'line_item', 'fee' ) ) ) ) );
+			error_log( sprintf(
+				'Refund skipped for order %d: No line items to refund. Order has %d items.',
+				$order->get_id(),
+				count( $order->get_items( array( 'line_item', 'fee' ) ) )
+			) );
 			return false;
 		}
 
-		// Calculate the total refund amount from line items and count items
-		$refund_amount = 0;
-		$total_items   = 0;
-		$total_qty     = 0;
+		// Calculate refund totals
+		$totals = self::calculate_refund_totals( $line_items );
+		$refund_amount = $totals['amount'];
+		$total_items = $totals['total_items'];
+		$total_qty = $totals['total_qty'];
 
-		foreach ( $line_items as $item_id => $item_data ) {
-			// Add item total: refund amounts are stored as negative, convert to positive for total calculation
-			$refund_amount += abs( $item_data['refund_total'] );
-
-			// Count items and quantities
-			$total_items++;
-			$total_qty += $item_data['qty'];
-
-			// Add tax amounts (already negative)
-			if ( ! empty( $item_data['refund_tax'] ) ) {
-				foreach ( $item_data['refund_tax'] as $tax_amount ) {
-					$refund_amount += abs( $tax_amount );
-				}
-			}
-		}
-
-		// For full refunds, use the order's actual remaining total to avoid rounding discrepancies
+		// For full refunds, use order's actual remaining total to avoid rounding discrepancies
 		if ( $is_full_refund ) {
-			$refund_amount = $order->get_total() - $order->get_total_refunded();
+			$refund_amount = round( $order->get_total() - $order->get_total_refunded(), 2 );
 		}
 
-		// Round refund amount to 2 decimal places for currency precision
-		$refund_amount = round( $refund_amount, 2 );
-
-		// For partial refunds, ensure refund is < 50% of order total by removing items if needed
+		// For partial refunds, ensure refund is < 50% of order total
 		if ( ! $is_full_refund ) {
-			$max_partial_refund = $order->get_total() * 0.5;
+			$max_partial_refund = $order->get_total() * self::MAX_PARTIAL_REFUND_RATIO;
 
-			// If refund exceeds 50%, remove items until it's under 50%
+			// Remove items until refund is under threshold
 			while ( $refund_amount >= $max_partial_refund && count( $line_items ) > 1 ) {
-				// Remove a random item from the refund
-				$item_id_to_remove = array_rand( $line_items );
-				unset( $line_items[ $item_id_to_remove ] );
-
-				// Recalculate refund amount and counts
-				$refund_amount = 0;
-				$total_items = 0;
-				$total_qty = 0;
-
-				foreach ( $line_items as $item_id => $item_data ) {
-					$refund_amount += abs( $item_data['refund_total'] );
-					$total_items++;
-					$total_qty += $item_data['qty'];
-
-					if ( ! empty( $item_data['refund_tax'] ) ) {
-						foreach ( $item_data['refund_tax'] as $tax_amount ) {
-							$refund_amount += abs( $tax_amount );
-						}
-					}
-				}
-
-				$refund_amount = round( $refund_amount, 2 );
+				unset( $line_items[ array_rand( $line_items ) ] );
+				$totals = self::calculate_refund_totals( $line_items );
+				$refund_amount = $totals['amount'];
+				$total_items = $totals['total_items'];
+				$total_qty = $totals['total_qty'];
 			}
 		}
 
-		// Calculate maximum refundable amount (order total minus already refunded)
-		$max_refund = $order->get_total() - $order->get_total_refunded();
-		$max_refund = round( $max_refund, 2 );
-
-		// Cap refund amount to maximum available (prevents rounding errors from exceeding order total)
+		// Cap refund amount to maximum available
+		$max_refund = round( $order->get_total() - $order->get_total_refunded(), 2 );
 		if ( $refund_amount > $max_refund ) {
 			$refund_amount = $max_refund;
 		}
 
-		// Validate refund amount is greater than 0
+		// Validate refund amount
 		if ( $refund_amount <= 0 ) {
 			error_log( sprintf(
 				'Refund skipped for order %d: Invalid refund amount (%s). Order total: %s, Already refunded: %s',
@@ -662,43 +471,30 @@ class Order extends Generator {
 		}
 
 		// Create refund reason
-		if ( $is_full_refund ) {
-			$reason = 'Full refund';
-		} else {
-			$reason = sprintf(
+		$reason = $is_full_refund
+			? 'Full refund'
+			: sprintf(
 				'Partial refund - %d %s, %d %s',
 				$total_items,
 				$total_items === 1 ? 'product' : 'products',
 				$total_qty,
 				$total_qty === 1 ? 'item' : 'items'
 			);
-		}
 
 		// Calculate refund date
-		if ( $previous_refund ) {
-			// Second refund: within 1 month of first refund
-			$base_date = $previous_refund->get_date_created();
-			$max_days = 30; // 1 month
-		} else {
-			// First refund: within 2 months of order completion
-			$base_date = $order->get_date_completed();
-			$max_days = 60; // 2 months
-		}
-
-		// Generate random date within the allowed timeframe
-		$random_days = wp_rand( 0, $max_days );
-		$refund_date = date( 'Y-m-d H:i:s', strtotime( $base_date->date( 'Y-m-d H:i:s' ) ) + ( $random_days * DAY_IN_SECONDS ) );
+		$refund_date = self::calculate_refund_date( $order, $previous_refund );
 
 		// Create the refund
 		$refund = wc_create_refund(
 			array(
-				'order_id'   => $order->get_id(),
-				'amount'     => $refund_amount,
-				'reason'     => $reason,
-				'line_items' => $line_items,
+				'order_id'     => $order->get_id(),
+				'amount'       => $refund_amount,
+				'reason'       => $reason,
+				'line_items'   => $line_items,
 				'date_created' => $refund_date,
 			)
 		);
+
 		if ( is_wp_error( $refund ) ) {
 			error_log( sprintf(
 				"Refund creation failed for order %d:\nError: %s\nCalculated Amount: %s\nOrder Total: %s\nOrder Refunded Total: %s\nReason: %s\nLine Items: %s",
@@ -720,5 +516,225 @@ class Order extends Generator {
 		}
 
 		return $refund;
+	}
+
+	/**
+	 * Calculate already refunded quantities per item from existing refunds.
+	 *
+	 * @param array $existing_refunds Array of existing refund objects.
+	 * @return array Associative array of item_id => refunded_quantity.
+	 */
+	protected static function calculate_refunded_quantities( $existing_refunds ) {
+		$refunded_qty_by_item = array();
+
+		foreach ( $existing_refunds as $existing_refund ) {
+			foreach ( $existing_refund->get_items( array( 'line_item', 'fee' ) ) as $refund_item ) {
+				$item_id = $refund_item->get_meta( '_refunded_item_id' );
+				if ( ! $item_id ) {
+					continue;
+				}
+				if ( ! isset( $refunded_qty_by_item[ $item_id ] ) ) {
+					$refunded_qty_by_item[ $item_id ] = 0;
+				}
+				$refunded_qty_by_item[ $item_id ] += abs( $refund_item->get_quantity() );
+			}
+		}
+
+		return $refunded_qty_by_item;
+	}
+
+	/**
+	 * Build a refund line item with proper tax and total calculations.
+	 *
+	 * @param \WC_Order_Item $item Order item to refund.
+	 * @param int            $refund_qty Quantity to refund.
+	 * @param int            $original_qty Original quantity of the item.
+	 * @return array Refund line item data.
+	 */
+	protected static function build_refund_line_item( $item, $refund_qty, $original_qty ) {
+		$taxes      = $item->get_taxes();
+		$refund_tax = array();
+
+		// Prorate tax based on refund quantity
+		if ( ! empty( $taxes['total'] ) && $original_qty > 0 ) {
+			foreach ( $taxes['total'] as $tax_id => $tax_amount ) {
+				$tax_per_unit = $tax_amount / $original_qty;
+				$refund_tax[ $tax_id ] = ( $tax_per_unit * $refund_qty ) * -1;
+			}
+		}
+
+		// Prorate the refund total based on refund quantity
+		$total_per_unit = $original_qty > 0 ? $item->get_total() / $original_qty : 0;
+		$refund_total = $total_per_unit * $refund_qty;
+
+		return array(
+			'qty'          => $refund_qty,
+			'refund_total' => $refund_total * -1,
+			'refund_tax'   => $refund_tax,
+		);
+	}
+
+	/**
+	 * Build line items for a full refund.
+	 *
+	 * @param \WC_Order $order Order to refund.
+	 * @param array     $refunded_qty_by_item Already refunded quantities.
+	 * @return array Refund line items.
+	 */
+	protected static function build_full_refund_items( $order, $refunded_qty_by_item ) {
+		$line_items = array();
+
+		foreach ( $order->get_items( array( 'line_item', 'fee' ) ) as $item_id => $item ) {
+			$original_qty = $item->get_quantity();
+			$refunded_qty = isset( $refunded_qty_by_item[ $item_id ] ) ? $refunded_qty_by_item[ $item_id ] : 0;
+			$remaining_qty = $original_qty - $refunded_qty;
+
+			// Skip if nothing left to refund or invalid quantity
+			if ( $remaining_qty <= 0 || $original_qty <= 0 ) {
+				continue;
+			}
+
+			$line_items[ $item_id ] = self::build_refund_line_item( $item, $remaining_qty, $original_qty );
+		}
+
+		return $line_items;
+	}
+
+	/**
+	 * Build line items for a partial refund.
+	 *
+	 * @param \WC_Order $order Order to refund.
+	 * @param array     $refunded_qty_by_item Already refunded quantities.
+	 * @return array Refund line items.
+	 */
+	protected static function build_partial_refund_items( $order, $refunded_qty_by_item ) {
+		$items = $order->get_items( array( 'line_item', 'fee' ) );
+		$line_items = array();
+
+		// Decide whether to refund full items or partial quantities
+		$refund_full_items = (bool) wp_rand( 0, 1 );
+
+		if ( $refund_full_items && count( $items ) > 2 ) {
+			// Refund a random subset of items completely (requires at least 3 items)
+			$items_array  = array_values( $items );
+			$num_to_refund = wp_rand( 1, count( $items_array ) - 1 );
+			$items_to_refund = array_rand( $items_array, $num_to_refund );
+
+			// Ensure $items_to_refund is always an array for consistent iteration
+			if ( ! is_array( $items_to_refund ) ) {
+				$items_to_refund = array( $items_to_refund );
+			}
+
+			foreach ( $items_to_refund as $index ) {
+				$item = $items_array[ $index ];
+				$item_id = $item->get_id();
+				$original_qty = $item->get_quantity();
+				$refunded_qty = isset( $refunded_qty_by_item[ $item_id ] ) ? $refunded_qty_by_item[ $item_id ] : 0;
+				$remaining_qty = $original_qty - $refunded_qty;
+
+				// Skip if nothing left to refund or invalid quantity
+				if ( $remaining_qty <= 0 || $original_qty <= 0 ) {
+					continue;
+				}
+
+				$line_items[ $item_id ] = self::build_refund_line_item( $item, $remaining_qty, $original_qty );
+			}
+		} else {
+			// Refund partial quantities of items
+			foreach ( $items as $item_id => $item ) {
+				$original_qty = $item->get_quantity();
+				$refunded_qty = isset( $refunded_qty_by_item[ $item_id ] ) ? $refunded_qty_by_item[ $item_id ] : 0;
+				$remaining_qty = $original_qty - $refunded_qty;
+
+				// Skip if nothing left to refund, if only 1 remaining, or invalid quantity
+				if ( $remaining_qty <= 1 || $original_qty <= 0 ) {
+					continue;
+				}
+
+				// Only refund line items with remaining quantity > 1
+				if ( 'line_item' === $item->get_type() ) {
+					$refund_qty = wp_rand( 1, $remaining_qty - 1 );
+					$line_items[ $item_id ] = self::build_refund_line_item( $item, $refund_qty, $original_qty );
+					break; // Only refund one item partially
+				}
+			}
+
+			// If no items were added, refund one complete remaining item
+			if ( empty( $line_items ) && count( $items ) > 0 ) {
+				$items_array = array_values( $items );
+				shuffle( $items_array );
+
+				foreach ( $items_array as $item ) {
+					$item_id = $item->get_id();
+					$original_qty = $item->get_quantity();
+					$refunded_qty = isset( $refunded_qty_by_item[ $item_id ] ) ? $refunded_qty_by_item[ $item_id ] : 0;
+					$remaining_qty = $original_qty - $refunded_qty;
+
+					// Skip if nothing left to refund or invalid quantity
+					if ( $remaining_qty <= 0 || $original_qty <= 0 ) {
+						continue;
+					}
+
+					$line_items[ $item_id ] = self::build_refund_line_item( $item, $remaining_qty, $original_qty );
+					break; // Only refund one item
+				}
+			}
+		}
+
+		return $line_items;
+	}
+
+	/**
+	 * Calculate total refund amount and item counts from line items.
+	 *
+	 * @param array $line_items Refund line items.
+	 * @return array Array containing 'amount', 'total_items', and 'total_qty'.
+	 */
+	protected static function calculate_refund_totals( $line_items ) {
+		$refund_amount = 0;
+		$total_items   = 0;
+		$total_qty     = 0;
+
+		foreach ( $line_items as $item_data ) {
+			// Add item total: refund amounts are stored as negative, convert to positive for total calculation
+			$refund_amount += abs( $item_data['refund_total'] );
+			$total_items++;
+			$total_qty += $item_data['qty'];
+
+			// Add tax amounts
+			if ( ! empty( $item_data['refund_tax'] ) ) {
+				foreach ( $item_data['refund_tax'] as $tax_amount ) {
+					$refund_amount += abs( $tax_amount );
+				}
+			}
+		}
+
+		return array(
+			'amount'      => round( $refund_amount, 2 ),
+			'total_items' => $total_items,
+			'total_qty'   => $total_qty,
+		);
+	}
+
+	/**
+	 * Calculate a realistic refund date based on order completion or previous refund.
+	 *
+	 * @param \WC_Order             $order Order being refunded.
+	 * @param \WC_Order_Refund|null $previous_refund Previous refund (for second refunds).
+	 * @return string Refund date in 'Y-m-d H:i:s' format.
+	 */
+	protected static function calculate_refund_date( $order, $previous_refund = null ) {
+		if ( $previous_refund ) {
+			// Second refund: within 1 month of first refund
+			$base_date = $previous_refund->get_date_created();
+			$max_days = self::SECOND_REFUND_MAX_DAYS;
+		} else {
+			// First refund: within 2 months of order completion
+			$base_date = $order->get_date_completed();
+			$max_days = self::FIRST_REFUND_MAX_DAYS;
+		}
+
+		$random_days = wp_rand( 0, $max_days );
+		return date( 'Y-m-d H:i:s', strtotime( $base_date->date( 'Y-m-d H:i:s' ) ) + ( $random_days * DAY_IN_SECONDS ) );
 	}
 }
