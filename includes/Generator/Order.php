@@ -241,13 +241,13 @@ class Order extends Generator {
 
 				// Process refund based on type
 				if ( self::REFUND_TYPE_FULL === $refund_type ) {
-					self::create_refund( $order );
+					self::create_refund( $order, false, null, true ); // Explicitly full
 				} elseif ( self::REFUND_TYPE_PARTIAL === $refund_type ) {
-					self::create_refund( $order, true );
+					self::create_refund( $order, true, null, false ); // Explicitly partial
 				} elseif ( self::REFUND_TYPE_MULTI === $refund_type ) {
-					$first_refund = self::create_refund( $order, true );
-					if ( $first_refund && is_object( $first_refund ) ) {
-						self::create_refund( $order, true, $first_refund );
+					$first_refund = self::create_refund( $order, true, null, false ); // Explicitly partial
+					if ( $first_refund && is_object( $first_refund )  ) {
+						self::create_refund( $order, true, $first_refund, false ); // Explicitly partial
 					}
 				}
 			}
@@ -493,11 +493,12 @@ class Order extends Generator {
 	 * Create a refund for an order (either full or partial).
 	 *
 	 * @param \WC_Order      $order The order to refund.
-	 * @param bool           $force_partial Force partial refund only.
+	 * @param bool           $force_partial Force partial refund only (legacy parameter).
 	 * @param \WC_Order_Refund|null $previous_refund Previous refund to base date on (for second refunds).
+	 * @param bool|null      $force_full Explicitly force full refund (overrides random logic).
 	 * @return \WC_Order_Refund|false Refund object on success, false on failure.
 	 */
-	protected static function create_refund( $order, $force_partial = false, $previous_refund = null ) {
+	protected static function create_refund( $order, $force_partial = false, $previous_refund = null, $force_full = null ) {
 		if ( ! $order instanceof \WC_Order ) {
 			error_log( "Error: Order is not an instance of \WC_Order: " . print_r( $order, true ) );
 			return false;
@@ -507,13 +508,20 @@ class Order extends Generator {
 		$existing_refunds = $order->get_refunds();
 		if ( ! empty( $existing_refunds ) ) {
 			$force_partial = true;
+			$force_full = false; // Can't do full refund if already has refunds
 		}
 
 		// Calculate already refunded quantities
 		$refunded_qty_by_item = self::calculate_refunded_quantities( $existing_refunds );
 
 		// Determine refund type (full or partial)
-		$is_full_refund = $force_partial ? false : (bool) wp_rand( 0, 1 );
+		if ( null !== $force_full ) {
+			// Explicit full/partial specified (batch mode with exact ratios)
+			$is_full_refund = $force_full;
+		} else {
+			// Legacy random logic (single order generation or old code)
+			$is_full_refund = $force_partial ? false : (bool) wp_rand( 0, 1 );
+		}
 
 		// Build refund line items
 		$line_items = $is_full_refund
