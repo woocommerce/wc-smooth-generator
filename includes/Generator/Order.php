@@ -34,6 +34,14 @@ class Order extends Generator {
 	const SECOND_REFUND_MAX_DAYS = 30;
 
 	/**
+	 * Refund type constants for memory-efficient batch operations.
+	 */
+	const REFUND_TYPE_NONE = 0;
+	const REFUND_TYPE_FULL = 1;
+	const REFUND_TYPE_PARTIAL = 2;
+	const REFUND_TYPE_MULTI = 3;
+
+	/**
 	 * Pre-generated coupon flags for exact ratio distribution in batch mode.
 	 * Each element is a boolean: true = apply coupon, false = skip.
 	 *
@@ -43,7 +51,7 @@ class Order extends Generator {
 
 	/**
 	 * Pre-generated refund flags for exact ratio distribution in batch mode.
-	 * Each element is a string: 'none', 'full', 'partial', or 'multi'.
+	 * Each element is an integer constant: REFUND_TYPE_NONE, REFUND_TYPE_FULL, etc.
 	 *
 	 * @var array|null
 	 */
@@ -202,7 +210,7 @@ class Order extends Generator {
 
 			// Handle --refund-ratio parameter for completed orders
 			if ( isset( $assoc_args['refund-ratio'] ) && 'completed' === $status ) {
-				$refund_type = 'none';
+				$refund_type = self::REFUND_TYPE_NONE;
 
 				// Use exact ratio flag if in batch mode
 				if ( null !== self::$batch_refund_flags && ! empty( self::$batch_refund_flags ) ) {
@@ -218,25 +226,25 @@ class Order extends Generator {
 
 					if ( $refund_ratio >= 1.0 ) {
 						// Always refund if ratio is 1.0 or higher
-						$refund_type = 'full';
+						$refund_type = self::REFUND_TYPE_FULL;
 					} elseif ( $refund_ratio > 0 && wp_rand( 1, 100 ) <= ( $refund_ratio * 100 ) ) {
 						// Use random chance for ratios between 0 and 1
 						// Split evenly between full and partial
-						$refund_type = (bool) wp_rand( 0, 1 ) ? 'full' : 'partial';
+						$refund_type = (bool) wp_rand( 0, 1 ) ? self::REFUND_TYPE_FULL : self::REFUND_TYPE_PARTIAL;
 
 						// 25% chance for multi-partial
-						if ( 'partial' === $refund_type && wp_rand( 1, 100 ) <= self::SECOND_REFUND_PROBABILITY ) {
-							$refund_type = 'multi';
+						if ( self::REFUND_TYPE_PARTIAL === $refund_type && wp_rand( 1, 100 ) <= self::SECOND_REFUND_PROBABILITY ) {
+							$refund_type = self::REFUND_TYPE_MULTI;
 						}
 					}
 				}
 
 				// Process refund based on type
-				if ( 'full' === $refund_type ) {
+				if ( self::REFUND_TYPE_FULL === $refund_type ) {
 					self::create_refund( $order );
-				} elseif ( 'partial' === $refund_type ) {
+				} elseif ( self::REFUND_TYPE_PARTIAL === $refund_type ) {
 					self::create_refund( $order, true );
-				} elseif ( 'multi' === $refund_type ) {
+				} elseif ( self::REFUND_TYPE_MULTI === $refund_type ) {
 					$first_refund = self::create_refund( $order, true );
 					if ( $first_refund && is_object( $first_refund ) ) {
 						self::create_refund( $order, true, $first_refund );
@@ -873,12 +881,12 @@ class Order extends Generator {
 			$num_multi = $total_refunds - $num_full - $num_partial; // Remainder goes to multi
 			$num_none = $count - $total_refunds;
 
-			// Create array with exact counts
+			// Create array with exact counts using integer constants for memory efficiency
 			self::$batch_refund_flags = array_merge(
-				array_fill( 0, $num_full, 'full' ),
-				array_fill( 0, $num_partial, 'partial' ),
-				array_fill( 0, $num_multi, 'multi' ),
-				array_fill( 0, $num_none, 'none' )
+				array_fill( 0, $num_full, self::REFUND_TYPE_FULL ),
+				array_fill( 0, $num_partial, self::REFUND_TYPE_PARTIAL ),
+				array_fill( 0, $num_multi, self::REFUND_TYPE_MULTI ),
+				array_fill( 0, $num_none, self::REFUND_TYPE_NONE )
 			);
 
 			// Shuffle for randomness
