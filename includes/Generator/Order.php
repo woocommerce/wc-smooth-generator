@@ -34,6 +34,22 @@ class Order extends Generator {
 	const SECOND_REFUND_MAX_DAYS = 30;
 
 	/**
+	 * Pre-generated coupon flags for exact ratio distribution in batch mode.
+	 * Each element is a boolean: true = apply coupon, false = skip.
+	 *
+	 * @var array|null
+	 */
+	protected static $batch_coupon_flags = null;
+
+	/**
+	 * Pre-generated refund flags for exact ratio distribution in batch mode.
+	 * Each element is a string: 'none', 'full', 'partial', or 'multi'.
+	 *
+	 * @var array|null
+	 */
+	protected static $batch_refund_flags = null;
+
+	/**
 	 * Return a new order.
 	 *
 	 * @param bool  $save Save the object before returning or not.
@@ -121,20 +137,26 @@ class Order extends Generator {
 
 		// Handle --coupon-ratio parameter
 		if ( isset( $assoc_args['coupon-ratio'] ) ) {
-			$coupon_ratio = floatval( $assoc_args['coupon-ratio'] );
-
-			// Validate ratio is between 0.0 and 1.0
-			if ( $coupon_ratio < 0.0 || $coupon_ratio > 1.0 ) {
-				$coupon_ratio = max( 0.0, min( 1.0, $coupon_ratio ) );
-			}
-
-			// Apply coupon based on ratio
-			if ( $coupon_ratio >= 1.0 ) {
-				$include_coupon = true;
-			} elseif ( $coupon_ratio > 0 && wp_rand( 1, 100 ) <= ( $coupon_ratio * 100 ) ) {
-				$include_coupon = true;
+			// Use exact ratio flag if in batch mode
+			if ( null !== self::$batch_coupon_flags && ! empty( self::$batch_coupon_flags ) ) {
+				$include_coupon = array_shift( self::$batch_coupon_flags );
 			} else {
-				$include_coupon = false;
+				// Fall back to probabilistic approach for single order generation
+				$coupon_ratio = floatval( $assoc_args['coupon-ratio'] );
+
+				// Validate ratio is between 0.0 and 1.0
+				if ( $coupon_ratio < 0.0 || $coupon_ratio > 1.0 ) {
+					$coupon_ratio = max( 0.0, min( 1.0, $coupon_ratio ) );
+				}
+
+				// Apply coupon based on ratio
+				if ( $coupon_ratio >= 1.0 ) {
+					$include_coupon = true;
+				} elseif ( $coupon_ratio > 0 && wp_rand( 1, 100 ) <= ( $coupon_ratio * 100 ) ) {
+					$include_coupon = true;
+				} else {
+					$include_coupon = false;
+				}
 			}
 		}
 
@@ -180,29 +202,43 @@ class Order extends Generator {
 
 			// Handle --refund-ratio parameter for completed orders
 			if ( isset( $assoc_args['refund-ratio'] ) && 'completed' === $status ) {
-				$refund_ratio = floatval( $assoc_args['refund-ratio'] );
+				$refund_type = 'none';
 
-				// Validate ratio is between 0.0 and 1.0
-				if ( $refund_ratio < 0.0 || $refund_ratio > 1.0 ) {
-					$refund_ratio = max( 0.0, min( 1.0, $refund_ratio ) );
+				// Use exact ratio flag if in batch mode
+				if ( null !== self::$batch_refund_flags && ! empty( self::$batch_refund_flags ) ) {
+					$refund_type = array_shift( self::$batch_refund_flags );
+				} else {
+					// Fall back to probabilistic approach for single order generation
+					$refund_ratio = floatval( $assoc_args['refund-ratio'] );
+
+					// Validate ratio is between 0.0 and 1.0
+					if ( $refund_ratio < 0.0 || $refund_ratio > 1.0 ) {
+						$refund_ratio = max( 0.0, min( 1.0, $refund_ratio ) );
+					}
+
+					if ( $refund_ratio >= 1.0 ) {
+						// Always refund if ratio is 1.0 or higher
+						$refund_type = 'full';
+					} elseif ( $refund_ratio > 0 && wp_rand( 1, 100 ) <= ( $refund_ratio * 100 ) ) {
+						// Use random chance for ratios between 0 and 1
+						// Split evenly between full and partial
+						$refund_type = (bool) wp_rand( 0, 1 ) ? 'full' : 'partial';
+
+						// 25% chance for multi-partial
+						if ( 'partial' === $refund_type && wp_rand( 1, 100 ) <= self::SECOND_REFUND_PROBABILITY ) {
+							$refund_type = 'multi';
+						}
+					}
 				}
 
-				$should_refund = false;
-
-				if ( $refund_ratio >= 1.0 ) {
-					// Always refund if ratio is 1.0 or higher
-					$should_refund = true;
-				} elseif ( $refund_ratio > 0 && wp_rand( 1, 100 ) <= ( $refund_ratio * 100 ) ) {
-					// Use random chance for ratios between 0 and 1
-					$should_refund = true;
-				}
-
-				if ( $should_refund ) {
-					// Create first refund with date within 2 months of completion
-					$first_refund = self::create_refund( $order );
-
-					// Some partial refunds get a second refund (always partial)
-					if ( $first_refund && is_object( $first_refund ) && wp_rand( 1, 100 ) <= self::SECOND_REFUND_PROBABILITY ) {
+				// Process refund based on type
+				if ( 'full' === $refund_type ) {
+					self::create_refund( $order );
+				} elseif ( 'partial' === $refund_type ) {
+					self::create_refund( $order, true );
+				} elseif ( 'multi' === $refund_type ) {
+					$first_refund = self::create_refund( $order, true );
+					if ( $first_refund && is_object( $first_refund ) ) {
 						self::create_refund( $order, true, $first_refund );
 					}
 				}
@@ -236,6 +272,9 @@ class Order extends Generator {
 			return $amount;
 		}
 
+		// Initialize exact ratio flags for deterministic distribution
+		self::init_ratio_flags( $amount, $args );
+
 		$order_ids = array();
 
 		for ( $i = 1; $i <= $amount; $i ++ ) {
@@ -246,6 +285,9 @@ class Order extends Generator {
 			}
 			$order_ids[] = $order->get_id();
 		}
+
+		// Clear ratio flags after batch generation
+		self::clear_ratio_flags();
 
 		return $order_ids;
 	}
@@ -789,5 +831,68 @@ class Order extends Generator {
 
 		$random_days = wp_rand( 0, $max_days );
 		return date( 'Y-m-d H:i:s', strtotime( $base_date->date( 'Y-m-d H:i:s' ) ) + ( $random_days * DAY_IN_SECONDS ) );
+	}
+
+	/**
+	 * Initialize exact ratio flags for batch generation.
+	 * Creates pre-generated arrays for exact distribution of coupons and refunds.
+	 *
+	 * @param int   $count Number of orders to generate.
+	 * @param array $args  Arguments containing ratio parameters.
+	 * @return void
+	 */
+	protected static function init_ratio_flags( $count, $args ) {
+		// Initialize coupon flags if coupon-ratio is set
+		if ( isset( $args['coupon-ratio'] ) ) {
+			$coupon_ratio = floatval( $args['coupon-ratio'] );
+			$coupon_ratio = max( 0.0, min( 1.0, $coupon_ratio ) );
+
+			$num_with_coupons = (int) round( $count * $coupon_ratio );
+			$num_without = $count - $num_with_coupons;
+
+			// Create array with exact counts
+			self::$batch_coupon_flags = array_merge(
+				array_fill( 0, $num_with_coupons, true ),
+				array_fill( 0, $num_without, false )
+			);
+
+			// Shuffle for randomness
+			shuffle( self::$batch_coupon_flags );
+		}
+
+		// Initialize refund flags if refund-ratio is set
+		if ( isset( $args['refund-ratio'] ) && isset( $args['status'] ) && 'completed' === $args['status'] ) {
+			$refund_ratio = floatval( $args['refund-ratio'] );
+			$refund_ratio = max( 0.0, min( 1.0, $refund_ratio ) );
+
+			$total_refunds = (int) round( $count * $refund_ratio );
+
+			// Split refunds: 50% full, 25% single partial, 25% multi-partial
+			$num_full = (int) round( $total_refunds * 0.5 );
+			$num_partial = (int) round( $total_refunds * 0.25 );
+			$num_multi = $total_refunds - $num_full - $num_partial; // Remainder goes to multi
+			$num_none = $count - $total_refunds;
+
+			// Create array with exact counts
+			self::$batch_refund_flags = array_merge(
+				array_fill( 0, $num_full, 'full' ),
+				array_fill( 0, $num_partial, 'partial' ),
+				array_fill( 0, $num_multi, 'multi' ),
+				array_fill( 0, $num_none, 'none' )
+			);
+
+			// Shuffle for randomness
+			shuffle( self::$batch_refund_flags );
+		}
+	}
+
+	/**
+	 * Clear ratio flags after batch generation is complete.
+	 *
+	 * @return void
+	 */
+	protected static function clear_ratio_flags() {
+		self::$batch_coupon_flags = null;
+		self::$batch_refund_flags = null;
 	}
 }
