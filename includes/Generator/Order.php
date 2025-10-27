@@ -340,6 +340,11 @@ class Order extends Generator {
 				$num_products_to_get = $num_existing_products;
 			}
 
+			// Safety check: ensure we have products to select
+			if ( $num_products_to_get <= 0 ) {
+				return $products;
+			}
+
 			// Get random product IDs from cache
 			$random_keys = array_rand( self::$batch_product_ids, $num_products_to_get );
 			if ( ! is_array( $random_keys ) ) {
