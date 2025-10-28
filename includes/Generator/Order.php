@@ -46,9 +46,15 @@ class Order extends Generator {
 		$order    = new \WC_Order();
 		$customer = self::get_customer();
 		if ( ! $customer instanceof \WC_Customer ) {
+			error_log( 'Order generation failed: Could not generate or retrieve customer' );
 			return false;
 		}
 		$products = self::get_random_products( 1, 10 );
+
+		if ( empty( $products ) ) {
+			error_log( 'Order generation failed: No products available to add to order' );
+			return false;
+		}
 
 		foreach ( $products as $product ) {
 			$quantity = self::$faker->numberBetween( 1, 10 );
@@ -135,15 +141,22 @@ class Order extends Generator {
 		if ( $include_coupon ) {
 			$coupon = self::get_or_create_coupon();
 			if ( $coupon ) {
-				$order->apply_coupon( $coupon );
-				// Recalculate totals after applying coupon
-				$order->calculate_totals( true );
+				$apply_result = $order->apply_coupon( $coupon );
+				if ( is_wp_error( $apply_result ) ) {
+					error_log( 'Coupon application failed: ' . $apply_result->get_error_message() . ' (Coupon: ' . $coupon->get_code() . ')' );
+				} else {
+					// Recalculate totals after applying coupon
+					$order->calculate_totals( true );
+				}
 			}
 		}
 
 		// Orders created before 2024-01-09 represents orders created before the attribution feature was added.
 		if ( ! ( strtotime( $date ) < strtotime( '2024-01-09' ) ) ) {
-			OrderAttribution::add_order_attribution_meta( $order, $assoc_args );
+			$attribution_result = OrderAttribution::add_order_attribution_meta( $order, $assoc_args );
+			if ( $attribution_result && is_wp_error( $attribution_result ) ) {
+				error_log( 'Order attribution meta addition failed: ' . $attribution_result->get_error_message() );
+			}
 		}
 
 		// Set paid and completed dates based on order status.
@@ -159,7 +172,11 @@ class Order extends Generator {
 		}
 
 		if ( $save ) {
-			$order->save();
+			$save_result = $order->save();
+			if ( is_wp_error( $save_result ) ) {
+				error_log( 'Order save failed: ' . $save_result->get_error_message() );
+				return false;
+			}
 
 			// Handle --refund-ratio parameter for completed orders
 			if ( isset( $assoc_args['refund-ratio'] ) && 'completed' === $status ) {
@@ -185,7 +202,7 @@ class Order extends Generator {
 					$first_refund = self::create_refund( $order );
 
 					// Some partial refunds get a second refund (always partial)
-					if ( $first_refund && wp_rand( 1, 100 ) <= self::SECOND_REFUND_PROBABILITY ) {
+					if ( $first_refund && is_object( $first_refund ) && wp_rand( 1, 100 ) <= self::SECOND_REFUND_PROBABILITY ) {
 						self::create_refund( $order, true, $first_refund );
 					}
 				}
@@ -215,13 +232,18 @@ class Order extends Generator {
 	public static function batch( $amount, array $args = array() ) {
 		$amount = self::validate_batch_amount( $amount );
 		if ( is_wp_error( $amount ) ) {
+			error_log( 'Batch generation failed: ' . $amount->get_error_message() );
 			return $amount;
 		}
 
 		$order_ids = array();
 
 		for ( $i = 1; $i <= $amount; $i ++ ) {
-			$order       = self::generate( true, $args );
+			$order = self::generate( true, $args );
+			if ( ! $order ) {
+				error_log( "Batch generation failed: Order {$i} of {$amount} could not be generated" );
+				continue;
+			}
 			$order_ids[] = $order->get_id();
 		}
 
@@ -247,6 +269,10 @@ class Order extends Generator {
 		}
 
 		$customer = Customer::generate( ! $guest );
+
+		if ( ! $customer instanceof \WC_Customer ) {
+			error_log( 'Customer generation failed: Customer::generate() returned invalid result' );
+		}
 
 		return $customer;
 	}
@@ -322,6 +348,11 @@ class Order extends Generator {
 			AND post_status='publish'"
 		);
 
+		if ( $num_existing_products === 0 ) {
+			error_log( 'No published products found in database' );
+			return array();
+		}
+
 		$num_products_to_get = wp_rand( $min_amount, $max_amount );
 
 		if ( $num_products_to_get > $num_existing_products ) {
@@ -334,8 +365,19 @@ class Order extends Generator {
 			'orderby' => 'rand',
 		) );
 
-		foreach ( $query->get_products() as $product_id ) {
+		$product_ids = $query->get_products();
+		if ( empty( $product_ids ) ) {
+			error_log( 'WC_Product_Query returned no product IDs' );
+			return array();
+		}
+
+		foreach ( $product_ids as $product_id ) {
 			$product = wc_get_product( $product_id );
+
+			if ( ! $product ) {
+				error_log( "Failed to retrieve product with ID: {$product_id}" );
+				continue;
+			}
 
 			if ( $product->is_type( 'variable' ) ) {
 				$available_variations = $product->get_available_variations();
@@ -343,9 +385,12 @@ class Order extends Generator {
 					continue;
 				}
 				$index      = self::$faker->numberBetween( 0, count( $available_variations ) - 1 );
-				$products[] = new \WC_Product_Variation( $available_variations[ $index ]['variation_id'] );
+				$variation = new \WC_Product_Variation( $available_variations[ $index ]['variation_id'] );
+				if ( $variation && $variation->exists() ) {
+					$products[] = $variation;
+				}
 			} else {
-				$products[] = new \WC_Product( $product_id );
+				$products[] = $product;
 			}
 		}
 
@@ -374,10 +419,18 @@ class Order extends Generator {
 			// Create 3 percentage coupons (5%-25%)
 			$percent_result = Coupon::batch( 3, array( 'min' => 5, 'max' => 25, 'discount_type' => 'percent' ) );
 
-			// If coupon creation failed, return false
-			if ( is_wp_error( $fixed_result ) || is_wp_error( $percent_result ) ) {
-				return false;
+		// If coupon creation failed, return false
+		if ( is_wp_error( $fixed_result ) || is_wp_error( $percent_result ) ) {
+			$error_message = 'Coupon creation failed: ';
+			if ( is_wp_error( $fixed_result ) ) {
+				$error_message .= 'Fixed coupons error: ' . $fixed_result->get_error_message() . ' ';
 			}
+			if ( is_wp_error( $percent_result ) ) {
+				$error_message .= 'Percentage coupons error: ' . $percent_result->get_error_message();
+			}
+			error_log( $error_message );
+			return false;
+		}
 
 			// Now get a random coupon from the ones we just created
 			$coupon = Coupon::get_random();
