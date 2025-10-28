@@ -151,7 +151,7 @@ class Coupon extends Generator {
 	 * @return \WC_Coupon|false Coupon object or false if none available.
 	 */
 	public static function get_random() {
-		// Note: Using posts_per_page=-1 loads all coupons into memory for random selection.
+		// Note: Using posts_per_page=-1 loads all coupon IDs into memory for random selection.
 		// For stores with thousands of coupons, consider using direct SQL with RAND() for better performance.
 		// This approach was chosen for consistency with WordPress APIs and to avoid raw SQL queries.
 		$coupon_ids = get_posts(
