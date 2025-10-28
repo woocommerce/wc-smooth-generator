@@ -322,13 +322,13 @@ WP_CLI::add_command( 'wc generate orders', array( 'WC\SmoothGenerator\CLI', 'ord
 		array(
 			'name'        => 'coupon-ratio',
 			'type'        => 'assoc',
-			'description' => 'Decimal ratio (0.0-1.0) of orders that should have coupons applied. If no coupons exist, 6 will be created (3 fixed value, 3 percentage).',
+			'description' => 'Decimal ratio (0.0-1.0) of orders that should have coupons applied. If no coupons exist, 6 will be created (3 fixed value, 3 percentage). Note: Decimal values are converted to percentages using integer rounding (e.g., 0.505 becomes 50%).',
 			'optional'    => true,
 		),
 		array(
 			'name'        => 'refund-ratio',
 			'type'        => 'assoc',
-			'description' => 'Decimal ratio (0.0-1.0) of completed orders that should be refunded (wholly or partially).',
+			'description' => 'Decimal ratio (0.0-1.0) of completed orders that should be refunded (wholly or partially). Note: Decimal values are converted to percentages using integer rounding (e.g., 0.505 becomes 50%).',
 			'optional'    => true,
 		),
 		array(
