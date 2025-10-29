@@ -790,7 +790,7 @@ class Order extends Generator {
 				// If there's no time window, use base timestamp + 1 hour (or now if that's in future)
 				$refund_timestamp = min( $base_timestamp + HOUR_IN_SECONDS, $now );
 			} else {
-				$refund_timestamp = wp_rand( $base_timestamp + 1, $max_timestamp );
+				$refund_timestamp = wp_rand( $base_timestamp + 1, max( $base_timestamp + 1, $max_timestamp ) );
 			}
 		} else {
 			// First refund: within 2 months of order completion, but never in the future
