@@ -798,9 +798,12 @@ class Order extends Generator {
 			$max_timestamp = min( $completion_timestamp + ( self::FIRST_REFUND_MAX_DAYS * DAY_IN_SECONDS ), $now );
 
 			// Ensure we have a valid time window
-			if ( $max_timestamp <= $completion_timestamp ) {
+			if ( $max_timestamp < $completion_timestamp ) {
 				// Order completed in the future somehow, use current time
 				$refund_timestamp = $now;
+			} elseif ( $max_timestamp == $completion_timestamp ) {
+				// No time window, use completion timestamp
+				$refund_timestamp = $completion_timestamp;
 			} else {
 				$refund_timestamp = wp_rand( $completion_timestamp, $max_timestamp );
 			}
