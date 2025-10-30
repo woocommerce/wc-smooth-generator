@@ -337,7 +337,7 @@ class Product extends Generator {
 				'regular_price'     => $price,
 				'sale_price'        => $sale_price,
 				'date_on_sale_from' => '',
-				'date_on_sale_to' 	=> $is_on_sale ? self::$faker->dateTimeBetween('now', '+1 month')->format(DATE_ATOM) : '',
+				'date_on_sale_to'   => $is_on_sale ? self::$faker->dateTimeBetween( 'now', '+1 month' )->format( DATE_ATOM ) : '',
 				'tax_status'        => 'taxable',
 				'tax_class'         => '',
 				'manage_stock'      => $will_manage_stock,
