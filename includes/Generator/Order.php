@@ -176,9 +176,31 @@ class Order extends Generator {
 		// Handle --coupon-ratio parameter
 		if ( isset( $assoc_args['coupon-ratio'] ) ) {
 			// Use exact ratio flag if in batch mode
-			if ( null !== self::$batch_coupon_flags && isset( self::$batch_coupon_flags[ self::$batch_coupon_index ] ) ) {
-				$include_coupon = self::$batch_coupon_flags[ self::$batch_coupon_index ];
-				self::$batch_coupon_index++;
+			if ( null !== self::$batch_coupon_flags ) {
+				// Validate index is within bounds
+				if ( self::$batch_coupon_index < count( self::$batch_coupon_flags ) ) {
+					$include_coupon = self::$batch_coupon_flags[ self::$batch_coupon_index ];
+					self::$batch_coupon_index++;
+				} else {
+					// Index exceeded array bounds - log error and fall back to probabilistic
+					error_log(
+						sprintf(
+							'Coupon batch index (%d) exceeded array size (%d). Falling back to probabilistic mode. This may indicate generate() was called more times than expected.',
+							self::$batch_coupon_index,
+							count( self::$batch_coupon_flags )
+						)
+					);
+					// Fall back to probabilistic - continue to else block
+					$coupon_ratio = floatval( $assoc_args['coupon-ratio'] );
+					$coupon_ratio = max( 0.0, min( 1.0, $coupon_ratio ) );
+					if ( $coupon_ratio >= 1.0 ) {
+						$include_coupon = true;
+					} elseif ( $coupon_ratio > 0 && wp_rand( 1, 100 ) <= ( $coupon_ratio * 100 ) ) {
+						$include_coupon = true;
+					} else {
+						$include_coupon = false;
+					}
+				}
 			} else {
 				// Fall back to probabilistic approach for single order generation
 				$coupon_ratio = floatval( $assoc_args['coupon-ratio'] );
@@ -244,9 +266,32 @@ class Order extends Generator {
 				$refund_type = self::REFUND_TYPE_NONE;
 
 				// Use exact ratio flag if in batch mode
-				if ( null !== self::$batch_refund_flags && isset( self::$batch_refund_flags[ self::$batch_refund_index ] ) ) {
-					$refund_type = self::$batch_refund_flags[ self::$batch_refund_index ];
-					self::$batch_refund_index++;
+				if ( null !== self::$batch_refund_flags ) {
+					// Validate index is within bounds
+					if ( self::$batch_refund_index < count( self::$batch_refund_flags ) ) {
+						$refund_type = self::$batch_refund_flags[ self::$batch_refund_index ];
+						self::$batch_refund_index++;
+					} else {
+						// Index exceeded array bounds - log error and fall back to probabilistic
+						error_log(
+							sprintf(
+								'Refund batch index (%d) exceeded array size (%d). Falling back to probabilistic mode. This may indicate generate() was called more times than expected.',
+								self::$batch_refund_index,
+								count( self::$batch_refund_flags )
+							)
+						);
+						// Fall back to probabilistic
+						$refund_ratio = floatval( $assoc_args['refund-ratio'] );
+						$refund_ratio = max( 0.0, min( 1.0, $refund_ratio ) );
+						if ( $refund_ratio >= 1.0 ) {
+							$refund_type = self::REFUND_TYPE_FULL;
+						} elseif ( $refund_ratio > 0 && wp_rand( 1, 100 ) <= ( $refund_ratio * 100 ) ) {
+							$refund_type = wp_rand( 0, 1 ) ? self::REFUND_TYPE_FULL : self::REFUND_TYPE_PARTIAL;
+							if ( self::REFUND_TYPE_PARTIAL === $refund_type && wp_rand( 1, 100 ) <= self::SECOND_REFUND_PROBABILITY ) {
+								$refund_type = self::REFUND_TYPE_MULTI;
+							}
+						}
+					}
 				} else {
 					// Fall back to probabilistic approach for single order generation
 					$refund_ratio = floatval( $assoc_args['refund-ratio'] );
