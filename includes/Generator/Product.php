@@ -301,8 +301,9 @@ class Product extends Generator {
 			'name'              => $name,
 			'featured'          => self::$faker->boolean( 10 ),
 			'sku'               => sanitize_title( $name ) . '-' . self::$faker->ean8,
+			'global_unique_id'   => self::$faker->randomElement( [ self::$faker->ean13, self::$faker->isbn10 ] ),
 			'attributes'        => $attributes,
-			'tax_status'        => 'taxable',
+			'tax_status'        => self::$faker->randomElement( [ 'taxable', 'shipping', 'none' ] ),
 			'tax_class'         => '',
 			'manage_stock'      => $will_manage_stock,
 			'stock_quantity'    => $will_manage_stock ? self::$faker->numberBetween( -100, 100 ) : null,
@@ -354,6 +355,12 @@ class Product extends Generator {
 				'downloadable'      => false,
 				'image_id'          => self::get_image(),
 			) );
+
+			// Set COGS if the feature is enabled.
+			if ( wc_get_container()->get( 'Automattic\WooCommerce\Internal\CostOfGoodsSold\CostOfGoodsSoldController' )->feature_is_enabled() ) {
+				$variation->set_props( array( 'cogs_value' => round( $price * ( 1 - self::$faker->numberBetween( 15, 60 ) / 100 ), 2 ) ) );
+			}
+			
 			$variation->save();
 		}
 		$data_store = $product->get_data_store();
@@ -389,6 +396,7 @@ class Product extends Generator {
 			'description'        => self::$faker->paragraphs( self::$faker->numberBetween( 1, 5 ), true ),
 			'short_description'  => self::$faker->text(),
 			'sku'                => sanitize_title( $name ) . '-' . self::$faker->ean8,
+			'global_unique_id'   => self::$faker->randomElement( [ self::$faker->ean13, self::$faker->isbn10 ] ),
 			'regular_price'      => $price,
 			'sale_price'         => $sale_price,
 			'date_on_sale_from'  => $date_on_sale_from,
@@ -419,6 +427,11 @@ class Product extends Generator {
 			'image_id'           => $image_id,
 			'gallery_image_ids'  => $gallery,
 		) );
+
+		// Set COGS if the feature is enabled.
+		if ( wc_get_container()->get( 'Automattic\WooCommerce\Internal\CostOfGoodsSold\CostOfGoodsSoldController' )->feature_is_enabled() ) {
+			$product->set_props( array( 'cogs_value' => round( $price * ( 1 - self::$faker->numberBetween( 15, 60 ) / 100 ), 2 ) ) );
+		}
 
 		return $product;
 	}
