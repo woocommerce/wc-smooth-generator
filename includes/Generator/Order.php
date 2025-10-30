@@ -60,12 +60,26 @@ class Order extends Generator {
 	protected static $batch_coupon_flags = null;
 
 	/**
+	 * Current index in the batch_coupon_flags array.
+	 *
+	 * @var int
+	 */
+	protected static $batch_coupon_index = 0;
+
+	/**
 	 * Pre-generated refund flags for exact ratio distribution in batch mode.
 	 * Each element is an integer constant: REFUND_TYPE_NONE, REFUND_TYPE_FULL, etc.
 	 *
 	 * @var array|null
 	 */
 	protected static $batch_refund_flags = null;
+
+	/**
+	 * Current index in the batch_refund_flags array.
+	 *
+	 * @var int
+	 */
+	protected static $batch_refund_index = 0;
 
 	/**
 	 * Return a new order.
@@ -156,8 +170,9 @@ class Order extends Generator {
 		// Handle --coupon-ratio parameter
 		if ( isset( $assoc_args['coupon-ratio'] ) ) {
 			// Use exact ratio flag if in batch mode
-			if ( null !== self::$batch_coupon_flags && ! empty( self::$batch_coupon_flags ) ) {
-				$include_coupon = array_shift( self::$batch_coupon_flags );
+			if ( null !== self::$batch_coupon_flags && isset( self::$batch_coupon_flags[ self::$batch_coupon_index ] ) ) {
+				$include_coupon = self::$batch_coupon_flags[ self::$batch_coupon_index ];
+				self::$batch_coupon_index++;
 			} else {
 				// Fall back to probabilistic approach for single order generation
 				$coupon_ratio = floatval( $assoc_args['coupon-ratio'] );
@@ -223,8 +238,9 @@ class Order extends Generator {
 				$refund_type = self::REFUND_TYPE_NONE;
 
 				// Use exact ratio flag if in batch mode
-				if ( null !== self::$batch_refund_flags && ! empty( self::$batch_refund_flags ) ) {
-					$refund_type = array_shift( self::$batch_refund_flags );
+				if ( null !== self::$batch_refund_flags && isset( self::$batch_refund_flags[ self::$batch_refund_index ] ) ) {
+					$refund_type = self::$batch_refund_flags[ self::$batch_refund_index ];
+					self::$batch_refund_index++;
 				} else {
 					// Fall back to probabilistic approach for single order generation
 					$refund_ratio = floatval( $assoc_args['refund-ratio'] );
@@ -868,6 +884,10 @@ class Order extends Generator {
 	 * @return void
 	 */
 	protected static function init_ratio_flags( $count, $args ) {
+		// Reset indices to 0 for new batch
+		self::$batch_coupon_index = 0;
+		self::$batch_refund_index = 0;
+
 		// Initialize coupon flags if coupon-ratio is set
 		if ( isset( $args['coupon-ratio'] ) ) {
 			$coupon_ratio = floatval( $args['coupon-ratio'] );
@@ -919,6 +939,8 @@ class Order extends Generator {
 	 */
 	protected static function clear_ratio_flags() {
 		self::$batch_coupon_flags = null;
+		self::$batch_coupon_index = 0;
 		self::$batch_refund_flags = null;
+		self::$batch_refund_index = 0;
 	}
 }
