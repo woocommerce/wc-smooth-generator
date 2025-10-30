@@ -52,6 +52,12 @@ class Order extends Generator {
 	const REFUND_DISTRIBUTION_PARTIAL_RATIO = 0.25;
 
 	/**
+	 * Maximum batch size for exact ratio distribution using pre-generated arrays.
+	 * Above this threshold, falls back to probabilistic approach to manage memory usage.
+	 */
+	const EXACT_RATIO_BATCH_THRESHOLD = 10000;
+
+	/**
 	 * Pre-generated coupon flags for exact ratio distribution in batch mode.
 	 * Each element is a boolean: true = apply coupon, false = skip.
 	 *
