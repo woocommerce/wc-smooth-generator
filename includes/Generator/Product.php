@@ -352,6 +352,12 @@ class Product extends Generator {
 				'downloadable'      => false,
 				'image_id'          => self::get_image(),
 			) );
+
+			// Set COGS if the feature is enabled.
+			if ( wc_get_container()->get( 'Automattic\WooCommerce\Internal\CostOfGoodsSold\CostOfGoodsSoldController' )->feature_is_enabled() ) {
+				$variation->set_props( array( 'cogs_value' => round( $price * ( 1 - self::$faker->numberBetween( 15, 60 ) / 100 ), 2 ) ) );
+			}
+			
 			$variation->save();
 		}
 		$data_store = $product->get_data_store();
@@ -415,6 +421,11 @@ class Product extends Generator {
 			'image_id'           => $image_id,
 			'gallery_image_ids'  => $gallery,
 		) );
+
+		// Set COGS if the feature is enabled.
+		if ( wc_get_container()->get( 'Automattic\WooCommerce\Internal\CostOfGoodsSold\CostOfGoodsSoldController' )->feature_is_enabled() ) {
+			$product->set_props( array( 'cogs_value' => round( $price * ( 1 - self::$faker->numberBetween( 15, 60 ) / 100 ), 2 ) ) );
+		}
 
 		return $product;
 	}
