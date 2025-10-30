@@ -246,7 +246,7 @@ class Order extends Generator {
 					self::create_refund( $order, true, null, false ); // Explicitly partial
 				} elseif ( self::REFUND_TYPE_MULTI === $refund_type ) {
 					$first_refund = self::create_refund( $order, true, null, false ); // Explicitly partial
-					if ( $first_refund && is_object( $first_refund )  ) {
+					if ( $first_refund && is_object( $first_refund ) ) {
 						self::create_refund( $order, true, $first_refund, false ); // Explicitly partial
 					}
 				}
