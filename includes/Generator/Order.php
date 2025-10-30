@@ -42,6 +42,16 @@ class Order extends Generator {
 	const REFUND_TYPE_MULTI = 3;
 
 	/**
+	 * Refund distribution ratios for batch generation with exact ratios.
+	 * When generating refunds in batch mode:
+	 * - 50% will be full refunds
+	 * - 25% will be single partial refunds
+	 * - 25% will be multi-partial refunds (two partial refunds)
+	 */
+	const REFUND_DISTRIBUTION_FULL_RATIO = 0.5;
+	const REFUND_DISTRIBUTION_PARTIAL_RATIO = 0.25;
+
+	/**
 	 * Pre-generated coupon flags for exact ratio distribution in batch mode.
 	 * Each element is a boolean: true = apply coupon, false = skip.
 	 *
@@ -884,8 +894,8 @@ class Order extends Generator {
 			$total_refunds = (int) round( $count * $refund_ratio );
 
 			// Split refunds: 50% full, 25% single partial, 25% multi-partial
-			$num_full = (int) round( $total_refunds * 0.5 );
-			$num_partial = (int) round( $total_refunds * 0.25 );
+			$num_full = (int) round( $total_refunds * self::REFUND_DISTRIBUTION_FULL_RATIO );
+			$num_partial = (int) round( $total_refunds * self::REFUND_DISTRIBUTION_PARTIAL_RATIO );
 			$num_multi = $total_refunds - $num_full - $num_partial; // Remainder goes to multi
 			$num_none = $count - $total_refunds;
 
