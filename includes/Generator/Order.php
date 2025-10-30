@@ -894,6 +894,11 @@ class Order extends Generator {
 		self::$batch_coupon_index = 0;
 		self::$batch_refund_index = 0;
 
+		// For large batches above threshold, skip exact ratio and use probabilistic approach
+		if ( $count > self::EXACT_RATIO_BATCH_THRESHOLD ) {
+			return;
+		}
+
 		// Initialize coupon flags if coupon-ratio is set
 		if ( isset( $args['coupon-ratio'] ) ) {
 			$coupon_ratio = floatval( $args['coupon-ratio'] );
