@@ -914,8 +914,8 @@ class Order extends Generator {
 			$total_refunds = (int) round( $count * $refund_ratio );
 
 			// Split refunds: 50% full, 25% single partial, 25% multi-partial
-			$num_full = (int) round( $total_refunds * self::REFUND_DISTRIBUTION_FULL_RATIO );
-			$num_partial = (int) round( $total_refunds * self::REFUND_DISTRIBUTION_PARTIAL_RATIO );
+			$num_full = (int) floor( $total_refunds * self::REFUND_DISTRIBUTION_FULL_RATIO );
+			$num_partial = (int) floor( $total_refunds * self::REFUND_DISTRIBUTION_PARTIAL_RATIO );
 			$num_multi = $total_refunds - $num_full - $num_partial; // Remainder goes to multi
 			$num_none = $count - $total_refunds;
 
