@@ -906,8 +906,8 @@ class Order extends Generator {
 			shuffle( self::$batch_coupon_flags );
 		}
 
-		// Initialize refund flags if refund-ratio is set
-		if ( isset( $args['refund-ratio'] ) && isset( $args['status'] ) && 'completed' === $args['status'] ) {
+		// Initialize refund flags if refund-ratio is set and status is completed
+		if ( isset( $args['refund-ratio'] ) && 'completed' === ( $args['status'] ?? '' ) ) {
 			$refund_ratio = floatval( $args['refund-ratio'] );
 			$refund_ratio = max( 0.0, min( 1.0, $refund_ratio ) );
 
