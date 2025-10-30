@@ -34,6 +34,16 @@ Generate orders with random dates between `--date-start` and `--date-end`.
 Generate orders with a specific status.
 - `wp wc generate orders <nr of orders> --status=completed`
 
+Apply coupons to a percentage of generated orders (0.0-1.0). If no coupons exist, 6 will be created automatically (3 fixed cart, 3 percentage). Note: `--coupons` flag is equivalent to `--coupon-ratio=1.0`.
+
+**Important:** Decimal ratios are converted to percentages using integer rounding. For example, `0.505` becomes 50% (not 50.5%) because the random generation uses integer comparison. Use whole percentages like `0.50` for precise 50% ratios.
+- `wp wc generate orders <nr of orders> --coupon-ratio=0.5`
+
+Refund a percentage of completed orders (0.0-1.0). Refunds will be split evenly between partial and full, and 25% of partial refunds will receive a second partial refund.
+
+**Note:** The same decimal ratio behavior applies to refund ratios as described above for coupon ratios.
+- `wp wc generate orders <nr of orders> --status=completed --refund-ratio=0.3`
+
 #### Order Attribution
 
 Order Attribution represents the origin of data for an order. By default, random values are generated and assigned to the order. Orders with a creation date before 2024-01-09 will not have attribution metadata added, as the feature was not available in WooCommerce at that time.
@@ -51,6 +61,9 @@ Generate coupons with a minimum discount amount.
 
 Generate coupons with a maximum discount amount.
 - `wp wc generate coupons <nr of coupons> --max=50`
+
+Generate coupons with a specific discount type. Options are `fixed_cart` or `percent`. If not specified, defaults to WooCommerce default (fixed_cart).
+- `wp wc generate coupons <nr of coupons> --discount_type=percent --min=5 --max=25`
 
 ### Customers
 
