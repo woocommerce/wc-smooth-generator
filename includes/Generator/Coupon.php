@@ -24,11 +24,11 @@ class Coupon extends Generator {
 	public static function generate( $save = true, $assoc_args = array() ) {
 		parent::maybe_initialize_generators();
 
-	$defaults = array(
-		'min'           => 5,
-		'max'           => 100,
-		'discount_type' => 'fixed_cart',
-	);
+		$defaults = array(
+			'min'           => 5,
+			'max'           => 100,
+			'discount_type' => 'fixed_cart',
+		);
 
 		$args = wp_parse_args( $assoc_args, $defaults );
 
