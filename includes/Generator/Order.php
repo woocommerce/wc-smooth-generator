@@ -230,7 +230,7 @@ class Order extends Generator {
 					} elseif ( $refund_ratio > 0 && wp_rand( 1, 100 ) <= ( $refund_ratio * 100 ) ) {
 						// Use random chance for ratios between 0 and 1
 						// Split evenly between full and partial
-						$refund_type = (bool) wp_rand( 0, 1 ) ? self::REFUND_TYPE_FULL : self::REFUND_TYPE_PARTIAL;
+						$refund_type = wp_rand( 0, 1 ) ? self::REFUND_TYPE_FULL : self::REFUND_TYPE_PARTIAL;
 
 						// 25% chance for multi-partial
 						if ( self::REFUND_TYPE_PARTIAL === $refund_type && wp_rand( 1, 100 ) <= self::SECOND_REFUND_PROBABILITY ) {
