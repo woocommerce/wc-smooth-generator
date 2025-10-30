@@ -337,7 +337,6 @@ class Product extends Generator {
 				'attributes'        => $possible_attribute,
 				'regular_price'     => $price,
 				'sale_price'        => $sale_price,
-				'cogs_value'        => round( $price * ( 1 - self::$faker->numberBetween( 15, 60 ) / 100 ), 2 ),
 				'date_on_sale_from' => '',
 				'date_on_sale_to'   => self::$faker->iso8601( date( 'c', strtotime( '+1 month' ) ) ),
 				'tax_status'        => 'taxable',
@@ -353,6 +352,12 @@ class Product extends Generator {
 				'downloadable'      => false,
 				'image_id'          => self::get_image(),
 			) );
+
+			// Set COGS if the feature is enabled.
+			if ( wc_get_container()->get( 'Automattic\WooCommerce\Internal\CostOfGoodsSold\CostOfGoodsSoldController' )->feature_is_enabled() ) {
+				$product->set_props( array( 'cogs_value' => round( $price * ( 1 - self::$faker->numberBetween( 15, 60 ) / 100 ), 2 ) ) );
+			}
+			
 			$variation->save();
 		}
 		$data_store = $product->get_data_store();
@@ -388,7 +393,6 @@ class Product extends Generator {
 			'global_unique_id'   => self::$faker->randomElement( [ self::$faker->ean13, self::$faker->isbn10 ] ),
 			'regular_price'      => $price,
 			'sale_price'         => $sale_price,
-			'cogs_value'         => round( $price * ( 1 - self::$faker->numberBetween( 15, 60 ) / 100 ), 2 ),
 			'date_on_sale_from'  => '',
 			'date_on_sale_to'    => self::$faker->iso8601( date( 'c', strtotime( '+1 month' ) ) ),
 			'total_sales'        => self::$faker->numberBetween( 0, 10000 ),
@@ -417,6 +421,11 @@ class Product extends Generator {
 			'image_id'           => $image_id,
 			'gallery_image_ids'  => $gallery,
 		) );
+
+		// Set COGS if the feature is enabled.
+		if ( wc_get_container()->get( 'Automattic\WooCommerce\Internal\CostOfGoodsSold\CostOfGoodsSoldController' )->feature_is_enabled() ) {
+			$product->set_props( array( 'cogs_value' => round( $price * ( 1 - self::$faker->numberBetween( 15, 60 ) / 100 ), 2 ) ) );
+		}
 
 		return $product;
 	}
