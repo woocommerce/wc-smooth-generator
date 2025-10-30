@@ -885,6 +885,12 @@ class Order extends Generator {
 	 * Initialize exact ratio flags for batch generation.
 	 * Creates pre-generated arrays for exact distribution of coupons and refunds.
 	 *
+	 * Memory Considerations:
+	 * - Pre-generating arrays ensures exact ratio distribution but consumes memory
+	 * - For batches > EXACT_RATIO_BATCH_THRESHOLD (10,000), falls back to probabilistic approach
+	 * - Typical memory usage: ~100-150 bytes per element (PHP array overhead)
+	 * - Example: 10,000 orders at 0.5 ratio ≈ 1-2MB per flag array
+	 *
 	 * @param int   $count Number of orders to generate.
 	 * @param array $args  Arguments containing ratio parameters.
 	 * @return void
@@ -896,6 +902,15 @@ class Order extends Generator {
 
 		// For large batches above threshold, skip exact ratio and use probabilistic approach
 		if ( $count > self::EXACT_RATIO_BATCH_THRESHOLD ) {
+			if ( class_exists( 'WP_CLI' ) ) {
+				\WP_CLI::log(
+					sprintf(
+						'Batch size (%d) exceeds threshold (%d). Using probabilistic distribution instead of exact ratios to optimize memory usage.',
+						$count,
+						self::EXACT_RATIO_BATCH_THRESHOLD
+					)
+				);
+			}
 			return;
 		}
 
