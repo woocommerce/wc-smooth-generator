@@ -328,8 +328,11 @@ class Product extends Generator {
 		$possible_attributes  = array_reverse( wc_array_cartesian( $variation_attributes ) );
 		foreach ( $possible_attributes as $possible_attribute ) {
 			$price      = self::$faker->randomFloat( 2, 1, 1000 );
-			$is_on_sale = self::$faker->boolean( 30 );
+			$is_on_sale = self::$faker->boolean( 35 );
+			$has_sale_schedule = $is_on_sale && self::$faker->boolean( 40 ); // ~40% of on-sale variations have a schedule.
 			$sale_price = $is_on_sale ? self::$faker->randomFloat( 2, 0, $price ) : '';
+			$date_on_sale_from = $has_sale_schedule ? self::$faker->dateTimeBetween( '-3 days', '+3 days' )->format( DATE_ATOM ) : '';
+			$date_on_sale_to   = $has_sale_schedule ? self::$faker->dateTimeBetween( '+4 days', '+4 months' )->format( DATE_ATOM ) : '';
 			$is_virtual = self::$faker->boolean( 20 );
 			$variation  = new \WC_Product_Variation();
 			$variation->set_props( array(
@@ -337,8 +340,8 @@ class Product extends Generator {
 				'attributes'        => $possible_attribute,
 				'regular_price'     => $price,
 				'sale_price'        => $sale_price,
-				'date_on_sale_from' => '',
-				'date_on_sale_to'   => self::$faker->iso8601( date( 'c', strtotime( '+1 month' ) ) ),
+				'date_on_sale_from' => $date_on_sale_from,
+				'date_on_sale_to'   => $date_on_sale_to,
 				'tax_status'        => self::$faker->randomElement( [ 'taxable', 'shipping', 'none' ] ),
 				'tax_class'         => '',
 				'manage_stock'      => $will_manage_stock,
@@ -376,8 +379,11 @@ class Product extends Generator {
 		$will_manage_stock = self::$faker->boolean();
 		$is_virtual        = self::$faker->boolean();
 		$price             = self::$faker->randomFloat( 2, 1, 1000 );
-		$is_on_sale        = self::$faker->boolean( 30 );
+		$is_on_sale        = self::$faker->boolean( 35 );
+		$has_sale_schedule = $is_on_sale && self::$faker->boolean( 40 ); // ~40% scheduled, rest indefinite.
 		$sale_price        = $is_on_sale ? self::$faker->randomFloat( 2, 0, $price ) : '';
+		$date_on_sale_from = $has_sale_schedule ? self::$faker->dateTimeBetween( '-3 days', '+3 days' )->format( DATE_ATOM ) : '';
+		$date_on_sale_to   = $has_sale_schedule ? self::$faker->dateTimeBetween( '+4 days', '+4 months' )->format( DATE_ATOM ) : '';
 		$product           = new \WC_Product();
 
 		$image_id = self::get_image();
@@ -393,8 +399,8 @@ class Product extends Generator {
 			'global_unique_id'   => self::$faker->randomElement( [ self::$faker->ean13, self::$faker->isbn10 ] ),
 			'regular_price'      => $price,
 			'sale_price'         => $sale_price,
-			'date_on_sale_from'  => '',
-			'date_on_sale_to'    => self::$faker->iso8601( date( 'c', strtotime( '+1 month' ) ) ),
+			'date_on_sale_from'  => $date_on_sale_from,
+			'date_on_sale_to'    => $date_on_sale_to,
 			'total_sales'        => self::$faker->numberBetween( 0, 10000 ),
 			'tax_status'         => self::$faker->randomElement( [ 'taxable', 'shipping', 'none' ] ),
 			'tax_class'          => '',
