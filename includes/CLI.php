@@ -255,6 +255,51 @@ class CLI extends WP_CLI_Command {
 
 		WP_CLI::success( $generated . ' terms generated in ' . $display_time );
 	}
+
+	/**
+	 * Generate customer product reviews.
+	 *
+	 * @param array $args Arguments specified.
+	 */
+	public static function reviews( $args ) {
+		list( $amount ) = $args;
+		$amount         = absint( $amount );
+
+		$time_start = microtime( true );
+
+		$progress = \WP_CLI\Utils\make_progress_bar( 'Generating reviews', $amount );
+
+		add_action(
+			'smoothgenerator_review_generated',
+			function () use ( $progress ) {
+				$progress->tick();
+			}
+		);
+
+		$remaining_amount = $amount;
+		$generated        = 0;
+
+		while ( $remaining_amount > 0 ) {
+			$batch = min( $remaining_amount, Generator\Review::MAX_BATCH_SIZE );
+
+			$result = Generator\Review::batch( $batch );
+
+			if ( is_wp_error( $result ) ) {
+				WP_CLI::error( $result );
+			}
+
+			$generated        += count( $result );
+			$remaining_amount -= $batch;
+		}
+
+		$progress->finish();
+
+		$time_end       = microtime( true );
+		$execution_time = round( ( $time_end - $time_start ), 2 );
+		$display_time   = $execution_time < 60 ? $execution_time . ' seconds' : human_time_diff( $time_start, $time_end );
+
+		WP_CLI::success( $generated . ' reviews generated in ' . $display_time );
+	}
 }
 
 WP_CLI::add_command( 'wc generate products', array( 'WC\SmoothGenerator\CLI', 'products' ), array(
@@ -438,3 +483,17 @@ WP_CLI::add_command( 'wc generate terms', array( 'WC\SmoothGenerator\CLI', 'term
 	),
 	'longdesc' => "## EXAMPLES\n\nwc generate terms product_tag 10\n\nwc generate terms product_cat 50 --max-depth=3",
 ) );
+
+WP_CLI::add_command( 'wc generate reviews', array( 'WC\SmoothGenerator\CLI', 'reviews' ), array(
+	'shortdesc' => 'Generate reviews.',
+	'synopsis'  => array(
+		array(
+			'name'        => 'amount',
+			'type'        => 'positional',
+			'description' => 'The number of reviews to generate.',
+			'optional'    => true,
+			'default'     => 10,
+		),
+	),
+	'longdesc'  => "## EXAMPLES\n\nwc generate reviews 10\n",
+));
