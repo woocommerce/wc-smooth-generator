@@ -15,6 +15,7 @@ class Router {
 		'orders'    => Generator\Order::class,
 		'products'  => Generator\Product::class,
 		'terms'     => Generator\Term::class,
+		'reviews'   => Generator\Review::class,
 	);
 
 	/**
