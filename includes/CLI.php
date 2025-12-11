@@ -115,6 +115,10 @@ class CLI extends WP_CLI_Command {
 		$execution_time = round( ( $time_end - $time_start ), 2 );
 		$display_time   = $execution_time < 60 ? $execution_time . ' seconds' : human_time_diff( $time_start, $time_end );
 
+		if ( $generated === 0 && $amount > 0 ) {
+			WP_CLI::error( 'No orders were generated. Make sure there are published products in your store.' );
+		}
+
 		WP_CLI::success( $generated . ' orders generated in ' . $display_time );
 	}
 
