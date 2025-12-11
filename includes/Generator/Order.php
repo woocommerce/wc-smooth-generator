@@ -34,20 +34,14 @@ class Order extends Generator {
 	const SECOND_REFUND_MAX_DAYS = 30;
 
 	/**
-	 * Pre-generated dates for batch order creation (ensures chronological order by ID).
-	 *
-	 * @var array|null
-	 */
-	protected static $batch_dates = null;
-
-	/**
 	 * Return a new order.
 	 *
-	 * @param bool  $save Save the object before returning or not.
-	 * @param array $assoc_args Arguments passed via the CLI for additional customization.
+	 * @param bool        $save Save the object before returning or not.
+	 * @param array       $assoc_args Arguments passed via the CLI for additional customization.
+	 * @param string|null $date Optional date string (Y-m-d) to use for order creation. If not provided, will be generated.
 	 * @return \WC_Order|false Order object with data populated or false when failed.
 	 */
-	public static function generate( $save = true, $assoc_args = array() ) {
+	public static function generate( $save = true, $assoc_args = array(), $date = null ) {
 		parent::maybe_initialize_generators();
 
 		$order    = new \WC_Order();
@@ -118,7 +112,10 @@ class Order extends Generator {
 		$order->set_status( $status );
 		$order->calculate_totals( true );
 
-		$date  = self::get_date_created( $assoc_args );
+		// Use provided date or generate one
+		if ( null === $date ) {
+			$date = self::get_date_created( $assoc_args );
+		}
 		$date .= ' ' . wp_rand( 0, 23 ) . ':00:00';
 
 		$order->set_date_created( $date );
@@ -245,23 +242,23 @@ class Order extends Generator {
 
 		// Pre-generate dates if date-start is provided
 		// This ensures chronological order: lower order IDs = earlier dates
+		$dates = null;
 		if ( ! empty( $args['date-start'] ) ) {
-			self::$batch_dates = self::generate_batch_dates( $amount, $args );
+			$dates = self::generate_batch_dates( $amount, $args );
 		}
 
 		$order_ids = array();
 
 		for ( $i = 1; $i <= $amount; $i ++ ) {
-			$order = self::generate( true, $args );
+			// Use pre-generated date if available, otherwise pass null to generate one
+			$date = ( null !== $dates && ! empty( $dates ) ) ? array_shift( $dates ) : null;
+			$order = self::generate( true, $args, $date );
 			if ( ! $order instanceof \WC_Order ) {
 				error_log( "Batch generation failed: Order {$i} of {$amount} could not be generated" );
 				continue;
 			}
 			$order_ids[] = $order->get_id();
 		}
-
-		// Clear batch dates after generation
-		self::$batch_dates = null;
 
 		return $order_ids;
 	}
@@ -299,18 +296,10 @@ class Order extends Generator {
 	 * between `date-start` and the current date. You can pass an `end-date` and a random date between start
 	 * and end will be chosen.
 	 *
-	 * In batch mode with date-start set, dates are pre-generated and sorted chronologically,
-	 * ensuring lower order IDs have earlier or equal dates.
-	 *
 	 * @param array $assoc_args CLI arguments.
 	 * @return string Date string (Y-m-d)
 	 */
 	protected static function get_date_created( $assoc_args ) {
-		// In batch mode, pop next date from pre-generated sorted array
-		if ( null !== self::$batch_dates && ! empty( self::$batch_dates ) ) {
-			return array_shift( self::$batch_dates );
-		}
-
 		$current = date( 'Y-m-d', time() );
 		if ( ! empty( $assoc_args['date-start'] ) && empty( $assoc_args['date-end'] ) ) {
 			$start = $assoc_args['date-start'];
