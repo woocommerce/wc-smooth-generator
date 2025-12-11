@@ -58,44 +58,16 @@ class Order extends Generator {
 	const EXACT_RATIO_BATCH_THRESHOLD = 10000;
 
 	/**
-	 * Pre-generated coupon flags for exact ratio distribution in batch mode.
-	 * Each element is a boolean: true = apply coupon, false = skip.
-	 *
-	 * @var array|null
-	 */
-	protected static $batch_coupon_flags = null;
-
-	/**
-	 * Current index in the batch_coupon_flags array.
-	 *
-	 * @var int
-	 */
-	protected static $batch_coupon_index = 0;
-
-	/**
-	 * Pre-generated refund flags for exact ratio distribution in batch mode.
-	 * Each element is an integer constant: REFUND_TYPE_NONE, REFUND_TYPE_FULL, etc.
-	 *
-	 * @var array|null
-	 */
-	protected static $batch_refund_flags = null;
-
-	/**
-	 * Current index in the batch_refund_flags array.
-	 *
-	 * @var int
-	 */
-	protected static $batch_refund_index = 0;
-
-	/**
 	 * Return a new order.
 	 *
 	 * @param bool        $save Save the object before returning or not.
 	 * @param array       $assoc_args Arguments passed via the CLI for additional customization.
 	 * @param string|null $date Optional date string (Y-m-d) to use for order creation. If not provided, will be generated.
+	 * @param bool|null   $include_coupon Optional flag to include coupon. If null, will be determined based on coupon-ratio.
+	 * @param int|null    $refund_type Optional refund type constant. If null, will be determined based on refund-ratio.
 	 * @return \WC_Order|false Order object with data populated or false when failed.
 	 */
-	public static function generate( $save = true, $assoc_args = array(), $date = null ) {
+	public static function generate( $save = true, $assoc_args = array(), $date = null, $include_coupon = null, $refund_type = null ) {
 		parent::maybe_initialize_generators();
 
 		$order    = new \WC_Order();
@@ -178,50 +150,22 @@ class Order extends Generator {
 		$include_coupon = ! empty( $assoc_args['coupons'] );
 
 		// Handle --coupon-ratio parameter
-		if ( isset( $assoc_args['coupon-ratio'] ) ) {
-			// Use exact ratio flag if in batch mode
-			if ( null !== self::$batch_coupon_flags ) {
-				// Validate index is within bounds
-				if ( self::$batch_coupon_index < count( self::$batch_coupon_flags ) ) {
-					$include_coupon = self::$batch_coupon_flags[ self::$batch_coupon_index ];
-					self::$batch_coupon_index++;
-				} else {
-					// Index exceeded array bounds - log error and fall back to probabilistic
-					error_log(
-						sprintf(
-							'Coupon batch index (%d) exceeded array size (%d). Falling back to probabilistic mode. This may indicate generate() was called more times than expected.',
-							self::$batch_coupon_index,
-							count( self::$batch_coupon_flags )
-						)
-					);
-					// Fall back to probabilistic - continue to else block
-					$coupon_ratio = floatval( $assoc_args['coupon-ratio'] );
-					$coupon_ratio = max( 0.0, min( 1.0, $coupon_ratio ) );
-					if ( $coupon_ratio >= 1.0 ) {
-						$include_coupon = true;
-					} elseif ( $coupon_ratio > 0 && wp_rand( 1, 100 ) <= ( $coupon_ratio * 100 ) ) {
-						$include_coupon = true;
-					} else {
-						$include_coupon = false;
-					}
-				}
+		if ( isset( $assoc_args['coupon-ratio'] ) && null === $include_coupon ) {
+			// Use probabilistic approach for single order generation or when flag not provided
+			$coupon_ratio = floatval( $assoc_args['coupon-ratio'] );
+
+			// Validate ratio is between 0.0 and 1.0
+			if ( $coupon_ratio < 0.0 || $coupon_ratio > 1.0 ) {
+				$coupon_ratio = max( 0.0, min( 1.0, $coupon_ratio ) );
+			}
+
+			// Apply coupon based on ratio
+			if ( $coupon_ratio >= 1.0 ) {
+				$include_coupon = true;
+			} elseif ( $coupon_ratio > 0 && wp_rand( 1, 100 ) <= ( $coupon_ratio * 100 ) ) {
+				$include_coupon = true;
 			} else {
-				// Fall back to probabilistic approach for single order generation
-				$coupon_ratio = floatval( $assoc_args['coupon-ratio'] );
-
-				// Validate ratio is between 0.0 and 1.0
-				if ( $coupon_ratio < 0.0 || $coupon_ratio > 1.0 ) {
-					$coupon_ratio = max( 0.0, min( 1.0, $coupon_ratio ) );
-				}
-
-				// Apply coupon based on ratio
-				if ( $coupon_ratio >= 1.0 ) {
-					$include_coupon = true;
-				} elseif ( $coupon_ratio > 0 && wp_rand( 1, 100 ) <= ( $coupon_ratio * 100 ) ) {
-					$include_coupon = true;
-				} else {
-					$include_coupon = false;
-				}
+				$include_coupon = false;
 			}
 		}
 
@@ -267,37 +211,8 @@ class Order extends Generator {
 
 			// Handle --refund-ratio parameter for completed orders
 			if ( isset( $assoc_args['refund-ratio'] ) && 'completed' === $status ) {
-				$refund_type = self::REFUND_TYPE_NONE;
-
-				// Use exact ratio flag if in batch mode
-				if ( null !== self::$batch_refund_flags ) {
-					// Validate index is within bounds
-					if ( self::$batch_refund_index < count( self::$batch_refund_flags ) ) {
-						$refund_type = self::$batch_refund_flags[ self::$batch_refund_index ];
-						self::$batch_refund_index++;
-					} else {
-						// Index exceeded array bounds - log error and fall back to probabilistic
-						error_log(
-							sprintf(
-								'Refund batch index (%d) exceeded array size (%d). Falling back to probabilistic mode. This may indicate generate() was called more times than expected.',
-								self::$batch_refund_index,
-								count( self::$batch_refund_flags )
-							)
-						);
-						// Fall back to probabilistic
-						$refund_ratio = floatval( $assoc_args['refund-ratio'] );
-						$refund_ratio = max( 0.0, min( 1.0, $refund_ratio ) );
-						if ( $refund_ratio >= 1.0 ) {
-							$refund_type = self::REFUND_TYPE_FULL;
-						} elseif ( $refund_ratio > 0 && wp_rand( 1, 100 ) <= ( $refund_ratio * 100 ) ) {
-							$refund_type = wp_rand( 0, 1 ) ? self::REFUND_TYPE_FULL : self::REFUND_TYPE_PARTIAL;
-							if ( self::REFUND_TYPE_PARTIAL === $refund_type && wp_rand( 1, 100 ) <= self::SECOND_REFUND_PROBABILITY ) {
-								$refund_type = self::REFUND_TYPE_MULTI;
-							}
-						}
-					}
-				} else {
-					// Fall back to probabilistic approach for single order generation
+				// Use provided refund type or determine probabilistically
+				if ( null === $refund_type ) {
 					$refund_ratio = floatval( $assoc_args['refund-ratio'] );
 
 					// Validate ratio is between 0.0 and 1.0
@@ -305,6 +220,7 @@ class Order extends Generator {
 						$refund_ratio = max( 0.0, min( 1.0, $refund_ratio ) );
 					}
 
+					$refund_type = self::REFUND_TYPE_NONE;
 					if ( $refund_ratio >= 1.0 ) {
 						// Always refund if ratio is 1.0 or higher
 						$refund_type = self::REFUND_TYPE_FULL;
@@ -361,8 +277,9 @@ class Order extends Generator {
 			return $amount;
 		}
 
-		// Initialize exact ratio flags for deterministic distribution
-		self::init_ratio_flags( $amount, $args );
+		// Generate ratio flags for exact distribution (if applicable)
+		$coupon_flags = self::generate_coupon_flags( $amount, $args );
+		$refund_flags = self::generate_refund_flags( $amount, $args );
 
 		// Pre-generate dates if date-start is provided
 		// This ensures chronological order: lower order IDs = earlier dates
@@ -376,16 +293,18 @@ class Order extends Generator {
 		for ( $i = 1; $i <= $amount; $i ++ ) {
 			// Use pre-generated date if available, otherwise pass null to generate one
 			$date = ( null !== $dates && ! empty( $dates ) ) ? array_shift( $dates ) : null;
-			$order = self::generate( true, $args, $date );
+
+			// Use pre-generated flags if available
+			$include_coupon = ( null !== $coupon_flags && ! empty( $coupon_flags ) ) ? array_shift( $coupon_flags ) : null;
+			$refund_type = ( null !== $refund_flags && ! empty( $refund_flags ) ) ? array_shift( $refund_flags ) : null;
+
+			$order = self::generate( true, $args, $date, $include_coupon, $refund_type );
 			if ( ! $order instanceof \WC_Order ) {
 				error_log( "Batch generation failed: Order {$i} of {$amount} could not be generated" );
 				continue;
 			}
 			$order_ids[] = $order->get_id();
 		}
-
-		// Clear ratio flags after batch generation
-		self::clear_ratio_flags();
 
 		return $order_ids;
 	}
@@ -988,24 +907,20 @@ class Order extends Generator {
 	}
 
 	/**
-	 * Initialize exact ratio flags for batch generation.
-	 * Creates pre-generated arrays for exact distribution of coupons and refunds.
+	 * Generate coupon flags for exact ratio distribution in batch mode.
+	 * Creates pre-generated array for exact distribution of coupons.
 	 *
 	 * Memory Considerations:
 	 * - Pre-generating arrays ensures exact ratio distribution but consumes memory
-	 * - For batches > EXACT_RATIO_BATCH_THRESHOLD (10,000), falls back to probabilistic approach
+	 * - For batches > EXACT_RATIO_BATCH_THRESHOLD (10,000), returns null to use probabilistic approach
 	 * - Typical memory usage: ~100-150 bytes per element (PHP array overhead)
 	 * - Example: 10,000 orders at 0.5 ratio ≈ 1-2MB per flag array
 	 *
 	 * @param int   $count Number of orders to generate.
 	 * @param array $args  Arguments containing ratio parameters.
-	 * @return void
+	 * @return array|null Array of boolean flags, or null to use probabilistic approach.
 	 */
-	protected static function init_ratio_flags( $count, $args ) {
-		// Reset indices to 0 for new batch
-		self::$batch_coupon_index = 0;
-		self::$batch_refund_index = 0;
-
+	protected static function generate_coupon_flags( $count, $args ) {
 		// For large batches above threshold, skip exact ratio and use probabilistic approach
 		if ( $count > self::EXACT_RATIO_BATCH_THRESHOLD ) {
 			if ( class_exists( 'WP_CLI' ) ) {
@@ -1017,10 +932,10 @@ class Order extends Generator {
 					)
 				);
 			}
-			return;
+			return null;
 		}
 
-		// Initialize coupon flags if coupon-ratio is set
+		// Generate coupon flags if coupon-ratio is set
 		if ( isset( $args['coupon-ratio'] ) ) {
 			$coupon_ratio = floatval( $args['coupon-ratio'] );
 			$coupon_ratio = max( 0.0, min( 1.0, $coupon_ratio ) );
@@ -1029,16 +944,41 @@ class Order extends Generator {
 			$num_without = $count - $num_with_coupons;
 
 			// Create array with exact counts
-			self::$batch_coupon_flags = array_merge(
+			$flags = array_merge(
 				array_fill( 0, $num_with_coupons, true ),
 				array_fill( 0, $num_without, false )
 			);
 
 			// Shuffle for randomness
-			shuffle( self::$batch_coupon_flags );
+			shuffle( $flags );
+
+			return $flags;
 		}
 
-		// Initialize refund flags if refund-ratio is set and status is completed
+		return null;
+	}
+
+	/**
+	 * Generate refund flags for exact ratio distribution in batch mode.
+	 * Creates pre-generated array for exact distribution of refunds.
+	 *
+	 * Memory Considerations:
+	 * - Pre-generating arrays ensures exact ratio distribution but consumes memory
+	 * - For batches > EXACT_RATIO_BATCH_THRESHOLD (10,000), returns null to use probabilistic approach
+	 * - Typical memory usage: ~100-150 bytes per element (PHP array overhead)
+	 * - Example: 10,000 orders at 0.5 ratio ≈ 1-2MB per flag array
+	 *
+	 * @param int   $count Number of orders to generate.
+	 * @param array $args  Arguments containing ratio parameters.
+	 * @return array|null Array of refund type constants, or null to use probabilistic approach.
+	 */
+	protected static function generate_refund_flags( $count, $args ) {
+		// For large batches above threshold, skip exact ratio and use probabilistic approach
+		if ( $count > self::EXACT_RATIO_BATCH_THRESHOLD ) {
+			return null;
+		}
+
+		// Generate refund flags if refund-ratio is set and status is completed
 		if ( isset( $args['refund-ratio'] ) && 'completed' === ( $args['status'] ?? '' ) ) {
 			$refund_ratio = floatval( $args['refund-ratio'] );
 			$refund_ratio = max( 0.0, min( 1.0, $refund_ratio ) );
@@ -1052,7 +992,7 @@ class Order extends Generator {
 			$num_none = $count - $total_refunds;
 
 			// Create array with exact counts using integer constants for memory efficiency
-			self::$batch_refund_flags = array_merge(
+			$flags = array_merge(
 				array_fill( 0, $num_full, self::REFUND_TYPE_FULL ),
 				array_fill( 0, $num_partial, self::REFUND_TYPE_PARTIAL ),
 				array_fill( 0, $num_multi, self::REFUND_TYPE_MULTI ),
@@ -1060,19 +1000,11 @@ class Order extends Generator {
 			);
 
 			// Shuffle for randomness
-			shuffle( self::$batch_refund_flags );
-		}
-	}
+			shuffle( $flags );
 
-	/**
-	 * Clear ratio flags after batch generation is complete.
-	 *
-	 * @return void
-	 */
-	protected static function clear_ratio_flags() {
-		self::$batch_coupon_flags = null;
-		self::$batch_coupon_index = 0;
-		self::$batch_refund_flags = null;
-		self::$batch_refund_index = 0;
+			return $flags;
+		}
+
+		return null;
 	}
 }
