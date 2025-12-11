@@ -39,18 +39,19 @@ class Order extends Generator {
 	 * @param bool        $save Save the object before returning or not.
 	 * @param array       $assoc_args Arguments passed via the CLI for additional customization.
 	 * @param string|null $date Optional date string (Y-m-d) to use for order creation. If not provided, will be generated.
+	 * @param array|null  $cache Optional cache array containing pre-loaded entity IDs for batch operations.
 	 * @return \WC_Order|false Order object with data populated or false when failed.
 	 */
-	public static function generate( $save = true, $assoc_args = array(), $date = null ) {
+	public static function generate( $save = true, $assoc_args = array(), $date = null, $cache = null ) {
 		parent::maybe_initialize_generators();
 
 		$order    = new \WC_Order();
-		$customer = self::get_customer();
+		$customer = self::get_customer( $cache );
 		if ( ! $customer instanceof \WC_Customer ) {
 			error_log( 'Order generation failed: Could not generate or retrieve customer' );
 			return false;
 		}
-		$products = self::get_random_products( 1, 10 );
+		$products = self::get_random_products( 1, 10, $cache );
 
 		if ( empty( $products ) ) {
 			error_log( 'Order generation failed: No products available to add to order' );
@@ -143,7 +144,7 @@ class Order extends Generator {
 		}
 
 		if ( $include_coupon ) {
-			$coupon = self::get_or_create_coupon();
+			$coupon = self::get_or_create_coupon( $cache );
 			if ( $coupon ) {
 				$apply_result = $order->apply_coupon( $coupon );
 				if ( is_wp_error( $apply_result ) ) {
@@ -240,6 +241,9 @@ class Order extends Generator {
 			return $amount;
 		}
 
+		// Initialize batch cache to avoid repeated queries
+		$cache = self::init_batch_cache( $args );
+
 		// Pre-generate dates if date-start is provided
 		// This ensures chronological order: lower order IDs = earlier dates
 		$dates = null;
@@ -252,7 +256,7 @@ class Order extends Generator {
 		for ( $i = 1; $i <= $amount; $i ++ ) {
 			// Use pre-generated date if available, otherwise pass null to generate one
 			$date = ( null !== $dates && ! empty( $dates ) ) ? array_shift( $dates ) : null;
-			$order = self::generate( true, $args, $date );
+			$order = self::generate( true, $args, $date, $cache );
 			if ( ! $order instanceof \WC_Order ) {
 				error_log( "Batch generation failed: Order {$i} of {$amount} could not be generated" );
 				continue;
@@ -266,18 +270,25 @@ class Order extends Generator {
 	/**
 	 * Return a new customer.
 	 *
+	 * @param array|null $cache Optional cache array containing pre-loaded customer IDs.
 	 * @return \WC_Customer Customer object with data populated.
 	 */
-	public static function get_customer() {
+	public static function get_customer( $cache = null ) {
 		global $wpdb;
 
 		$guest    = (bool) wp_rand( 0, 1 );
 		$existing = (bool) wp_rand( 0, 1 );
 
 		if ( $existing ) {
-			$total_users = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->users}" );
-			$offset      = wp_rand( 0, $total_users );
-			$user_id     = (int) $wpdb->get_var( "SELECT ID FROM {$wpdb->users} ORDER BY rand() LIMIT $offset, 1" ); // phpcs:ignore
+			// Use cached customer IDs if available (batch mode)
+			if ( null !== $cache && ! empty( $cache['customers'] ) ) {
+				$user_id = $cache['customers'][ array_rand( $cache['customers'] ) ];
+			} else {
+				// Fallback to direct query for single order generation
+				$total_users = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->users}" );
+				$offset      = wp_rand( 0, $total_users );
+				$user_id     = (int) $wpdb->get_var( "SELECT ID FROM {$wpdb->users} ORDER BY rand() LIMIT $offset, 1" ); // phpcs:ignore
+			}
 			return new \WC_Customer( $user_id );
 		}
 
@@ -349,44 +360,72 @@ class Order extends Generator {
 	/**
 	 *  Get random products selected from existing products.
 	 *
-	 * @param int $min_amount Minimum amount of products to get.
-	 * @param int $max_amount Maximum amount of products to get.
+	 * @param int        $min_amount Minimum amount of products to get.
+	 * @param int        $max_amount Maximum amount of products to get.
+	 * @param array|null $cache Optional cache array containing pre-loaded product IDs.
 	 * @return array Random list of products.
 	 */
-	protected static function get_random_products( int $min_amount = 1, int $max_amount = 4 ) {
+	protected static function get_random_products( int $min_amount = 1, int $max_amount = 4, $cache = null ) {
 		global $wpdb;
 
 		$products = array();
 
-		$num_existing_products = (int) $wpdb->get_var(
-			"SELECT COUNT( DISTINCT ID )
-			FROM {$wpdb->posts}
-			WHERE 1=1
-			AND post_type='product'
-			AND post_status='publish'"
-		);
+		// Use cached product IDs if available (batch mode)
+		if ( null !== $cache && ! empty( $cache['products'] ) ) {
+			$num_existing_products = count( $cache['products'] );
+			$num_products_to_get   = wp_rand( $min_amount, $max_amount );
 
-		if ( $num_existing_products === 0 ) {
-			error_log( 'No published products found in database' );
-			return array();
-		}
+			if ( $num_products_to_get > $num_existing_products ) {
+				$num_products_to_get = $num_existing_products;
+			}
 
-		$num_products_to_get = wp_rand( $min_amount, $max_amount );
+			// Safety check: ensure we have products to select
+			if ( $num_products_to_get <= 0 ) {
+				return $products;
+			}
 
-		if ( $num_products_to_get > $num_existing_products ) {
-			$num_products_to_get = $num_existing_products;
-		}
+			// Get random product IDs from cache
+			$random_keys = array_rand( $cache['products'], $num_products_to_get );
+			if ( ! is_array( $random_keys ) ) {
+				$random_keys = array( $random_keys );
+			}
 
-		$query = new \WC_Product_Query( array(
-			'limit'   => $num_products_to_get,
-			'return'  => 'ids',
-			'orderby' => 'rand',
-		) );
+			$product_ids = array();
+			foreach ( $random_keys as $key ) {
+				$product_ids[] = $cache['products'][ $key ];
+			}
+		} else {
+			// Fallback to direct query for single order generation
+			$num_existing_products = (int) $wpdb->get_var(
+				"SELECT COUNT( DISTINCT ID )
+				FROM {$wpdb->posts}
+				WHERE 1=1
+				AND post_type='product'
+				AND post_status='publish'"
+			);
 
-		$product_ids = $query->get_products();
-		if ( empty( $product_ids ) ) {
-			error_log( 'WC_Product_Query returned no product IDs' );
-			return array();
+			if ( $num_existing_products === 0 ) {
+				error_log( 'No published products found in database' );
+				return array();
+			}
+
+			$num_products_to_get = wp_rand( $min_amount, $max_amount );
+
+			if ( $num_products_to_get > $num_existing_products ) {
+				$num_products_to_get = $num_existing_products;
+			}
+
+			$query = new \WC_Product_Query( array(
+				'limit'   => $num_products_to_get,
+				'return'  => 'ids',
+				'orderby' => 'rand',
+			) );
+
+			$product_ids = $query->get_products();
+			if ( empty( $product_ids ) ) {
+				error_log( 'WC_Product_Query returned no product IDs' );
+				return array();
+			}
 		}
 
 		foreach ( $product_ids as $product_id ) {
@@ -419,11 +458,14 @@ class Order extends Generator {
 	 * Get a random existing coupon or create coupons if none exist.
 	 * If no coupons exist, creates 6 coupons: 3 fixed value and 3 percentage.
 	 *
+	 * @param array|null $cache Optional cache array containing pre-loaded coupon IDs.
 	 * @return \WC_Coupon|false Coupon object or false if none available.
 	 */
-	protected static function get_or_create_coupon() {
-		// Try to get a random existing coupon
-		$coupon = Coupon::get_random();
+	protected static function get_or_create_coupon( $cache = null ) {
+		$coupon_ids = ( null !== $cache && ! empty( $cache['coupons'] ) ) ? $cache['coupons'] : null;
+
+		// Try to get a random existing coupon (pass cached IDs if available)
+		$coupon = Coupon::get_random( $coupon_ids );
 
 		// If no coupons exist, create 6 (3 fixed, 3 percentage)
 		if ( false === $coupon ) {
@@ -450,8 +492,16 @@ class Order extends Generator {
 			return false;
 		}
 
+			// Update cache with newly created coupon IDs if cache exists
+			if ( null !== $cache && isset( $cache['coupons'] ) ) {
+				$cache['coupons'] = array_merge( $cache['coupons'], $fixed_result, $percent_result );
+				$coupon_ids = $cache['coupons'];
+			} else {
+				$coupon_ids = array_merge( $fixed_result, $percent_result );
+			}
+
 			// Now get a random coupon from the ones we just created
-			$coupon = Coupon::get_random();
+			$coupon = Coupon::get_random( $coupon_ids );
 		}
 
 		return $coupon;
@@ -850,5 +900,42 @@ class Order extends Generator {
 		sort( $dates );
 
 		return $dates;
+	}
+
+	/**
+	 * Initialize batch cache by pre-loading IDs for products, coupons, and customers.
+	 * This significantly improves performance when generating multiple orders by avoiding
+	 * repeated database queries.
+	 *
+	 * @param array $args Arguments passed to batch generation (used to determine what to cache).
+	 * @return array Cache array containing pre-loaded entity IDs.
+	 */
+	protected static function init_batch_cache( $args ) {
+		global $wpdb;
+
+		$cache = array();
+
+		// Load all product IDs once
+		$cache['products'] = $wpdb->get_col(
+			"SELECT ID FROM {$wpdb->posts}
+			WHERE post_type='product'
+			AND post_status='publish'"
+		);
+
+		// Load coupon IDs if coupon ratio is set
+		if ( isset( $args['coupon-ratio'] ) || isset( $args['coupons'] ) ) {
+			$cache['coupons'] = $wpdb->get_col(
+				"SELECT ID FROM {$wpdb->posts}
+				WHERE post_type='shop_coupon'
+				AND post_status='publish'"
+			);
+		} else {
+			$cache['coupons'] = array();
+		}
+
+		// Load customer IDs
+		$cache['customers'] = $wpdb->get_col( "SELECT ID FROM {$wpdb->users}" );
+
+		return $cache;
 	}
 }
