@@ -32,7 +32,7 @@ class OrderAttribution {
 		$order_products = $order->get_items();
 
 		$device_type = self::get_random_device_type();
-		$source      = 'woo.com';
+		$source      = 'woocommerce.com';
 		$source_type = self::get_source_type();
 		$origin      = self::get_origin( $source_type, $source );
 		$product_url = empty( $order_products ) ? '' : get_permalink( $order_products[ array_rand( $order_products ) ]->get_id() );
@@ -89,7 +89,7 @@ class OrderAttribution {
 		switch ( $source_type ) {
 			case 'utm':
 				$utm = array(
-					'https://woo.com/',
+					'https://woocommerce.com/',
 					'https://twitter.com',
 				);
 				return $utm[ array_rand( $utm ) ];
@@ -101,7 +101,7 @@ class OrderAttribution {
 				return $organic[ array_rand( $organic ) ];
 			case 'referral':
 				$refferal = array(
-					'https://woo.com/',
+					'https://woocommerce.com/',
 					'https://facebook.com',
 					'https://twitter.com',
 					'https://chatgpt.com',
@@ -203,7 +203,7 @@ class OrderAttribution {
 				return $organic[ array_rand( $organic ) ];
 			case 'referral':
 				$refferal = array(
-					'woo.com',
+					'woocommerce.com',
 					'facebook.com',
 					'twitter.com',
 					'chatgpt.com',
