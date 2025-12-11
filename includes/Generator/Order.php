@@ -809,7 +809,7 @@ class Order extends Generator {
 				// If base is in the future, second refund will also be in the future (but after first)
 				$refund_timestamp = $base_timestamp + HOUR_IN_SECONDS;
 			} else {
-				$refund_timestamp = wp_rand( $base_timestamp + 1, max( $base_timestamp + 1, $max_timestamp ) );
+				$refund_timestamp = wp_rand( $base_timestamp + 1, $max_timestamp );
 			}
 		} else {
 			// First refund: within 2 months of order completion, but never in the future
