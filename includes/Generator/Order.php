@@ -36,11 +36,12 @@ class Order extends Generator {
 	/**
 	 * Return a new order.
 	 *
-	 * @param bool  $save Save the object before returning or not.
-	 * @param array $assoc_args Arguments passed via the CLI for additional customization.
+	 * @param bool        $save Save the object before returning or not.
+	 * @param array       $assoc_args Arguments passed via the CLI for additional customization.
+	 * @param string|null $date Optional date string (Y-m-d) to use for order creation. If not provided, will be generated.
 	 * @return \WC_Order|false Order object with data populated or false when failed.
 	 */
-	public static function generate( $save = true, $assoc_args = array() ) {
+	public static function generate( $save = true, $assoc_args = array(), $date = null ) {
 		parent::maybe_initialize_generators();
 
 		$order    = new \WC_Order();
@@ -111,7 +112,10 @@ class Order extends Generator {
 		$order->set_status( $status );
 		$order->calculate_totals( true );
 
-		$date  = self::get_date_created( $assoc_args );
+		// Use provided date or generate one
+		if ( null === $date ) {
+			$date = self::get_date_created( $assoc_args );
+		}
 		$date .= ' ' . wp_rand( 0, 23 ) . ':00:00';
 
 		$order->set_date_created( $date );
@@ -236,11 +240,20 @@ class Order extends Generator {
 			return $amount;
 		}
 
+		// Pre-generate dates if date-start is provided
+		// This ensures chronological order: lower order IDs = earlier dates
+		$dates = null;
+		if ( ! empty( $args['date-start'] ) ) {
+			$dates = self::generate_batch_dates( $amount, $args );
+		}
+
 		$order_ids = array();
 
 		for ( $i = 1; $i <= $amount; $i ++ ) {
-			$order = self::generate( true, $args );
-			if ( ! $order ) {
+			// Use pre-generated date if available, otherwise pass null to generate one
+			$date = ( null !== $dates && ! empty( $dates ) ) ? array_shift( $dates ) : null;
+			$order = self::generate( true, $args, $date );
+			if ( ! $order instanceof \WC_Order ) {
 				error_log( "Batch generation failed: Order {$i} of {$amount} could not be generated" );
 				continue;
 			}
@@ -298,14 +311,19 @@ class Order extends Generator {
 			return $current;
 		}
 
-		$dates = array();
-		$date  = strtotime( $start );
-		while ( $date <= strtotime( $end ) ) {
-			$dates[] = date( 'Y-m-d', $date );
-			$date    = strtotime( '+1 day', $date );
+		// Use timestamp-based random selection for single order generation
+		$start_timestamp = strtotime( $start );
+		$end_timestamp   = strtotime( $end );
+		$days_between    = (int) ( ( $end_timestamp - $start_timestamp ) / DAY_IN_SECONDS );
+
+		// If start and end are the same day, return that date (time will be randomized in generate())
+		if ( 0 === $days_between ) {
+			return date( 'Y-m-d', $start_timestamp );
 		}
 
-		return $dates[ array_rand( $dates ) ];
+		// Generate random offset in days and add to start timestamp
+		$random_days = wp_rand( 0, $days_between );
+		return date( 'Y-m-d', $start_timestamp + ( $random_days * DAY_IN_SECONDS ) );
 	}
 
 	/**
@@ -789,5 +807,48 @@ class Order extends Generator {
 
 		$random_days = wp_rand( 0, $max_days );
 		return date( 'Y-m-d H:i:s', strtotime( $base_date->date( 'Y-m-d H:i:s' ) ) + ( $random_days * DAY_IN_SECONDS ) );
+	}
+
+	/**
+	 * Generate an array of sorted dates for batch order creation.
+	 * Ensures chronological order when creating multiple orders.
+	 *
+	 * @param int   $count Number of dates to generate.
+	 * @param array $args  Arguments containing date-start and optional date-end.
+	 * @return array Sorted array of date strings (Y-m-d).
+	 */
+	protected static function generate_batch_dates( $count, $args ) {
+		$current = date( 'Y-m-d', time() );
+
+		if ( ! empty( $args['date-start'] ) && empty( $args['date-end'] ) ) {
+			$start = $args['date-start'];
+			$end   = $current;
+		} elseif ( ! empty( $args['date-start'] ) && ! empty( $args['date-end'] ) ) {
+			$start = $args['date-start'];
+			$end   = $args['date-end'];
+		} else {
+			// No date range specified, return array of current dates
+			return array_fill( 0, $count, $current );
+		}
+
+		$start_timestamp = strtotime( $start );
+		$end_timestamp   = strtotime( $end );
+		$days_between    = (int) ( ( $end_timestamp - $start_timestamp ) / DAY_IN_SECONDS );
+
+		// If start and end dates are the same, return array of that date
+		if ( 0 === $days_between ) {
+			return array_fill( 0, $count, date( 'Y-m-d', $start_timestamp ) );
+		}
+
+		$dates = array();
+		for ( $i = 0; $i < $count; $i++ ) {
+			$random_days = wp_rand( 0, $days_between );
+			$dates[] = date( 'Y-m-d', $start_timestamp + ( $random_days * DAY_IN_SECONDS ) );
+		}
+
+		// Sort chronologically so lower order IDs get earlier dates
+		sort( $dates );
+
+		return $dates;
 	}
 }
