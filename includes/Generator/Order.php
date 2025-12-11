@@ -146,8 +146,10 @@ class Order extends Generator {
 
 		$order->set_date_created( $date );
 
-		// Handle legacy --coupons flag
-		$include_coupon = ! empty( $assoc_args['coupons'] );
+		// Handle legacy --coupons flag (only if not provided from batch mode)
+		if ( null === $include_coupon ) {
+			$include_coupon = ! empty( $assoc_args['coupons'] );
+		}
 
 		// Handle --coupon-ratio parameter
 		if ( isset( $assoc_args['coupon-ratio'] ) && null === $include_coupon ) {
