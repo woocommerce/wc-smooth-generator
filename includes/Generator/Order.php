@@ -805,8 +805,9 @@ class Order extends Generator {
 
 			// Ensure second refund is always after first refund
 			if ( $max_timestamp <= $base_timestamp ) {
-				// If there's no time window, use base timestamp + 1 hour (or now if that's in future)
-				$refund_timestamp = min( $base_timestamp + HOUR_IN_SECONDS, $now );
+				// If there's no time window, use base timestamp + 1 hour
+				// If base is in the future, second refund will also be in the future (but after first)
+				$refund_timestamp = $base_timestamp + HOUR_IN_SECONDS;
 			} else {
 				$refund_timestamp = wp_rand( $base_timestamp + 1, max( $base_timestamp + 1, $max_timestamp ) );
 			}
