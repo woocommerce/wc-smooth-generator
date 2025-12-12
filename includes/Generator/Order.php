@@ -789,24 +789,46 @@ class Order extends Generator {
 
 	/**
 	 * Calculate a realistic refund date based on order completion or previous refund.
+	 * Ensures refund dates never exceed current time and second refunds always occur after first.
 	 *
 	 * @param \WC_Order             $order Order being refunded.
 	 * @param \WC_Order_Refund|null $previous_refund Previous refund (for second refunds).
 	 * @return string Refund date in 'Y-m-d H:i:s' format.
 	 */
 	protected static function calculate_refund_date( $order, $previous_refund = null ) {
+		$now = time();
+
 		if ( $previous_refund ) {
-			// Second refund: within 1 month of first refund
-			$base_date = $previous_refund->get_date_created();
-			$max_days = self::SECOND_REFUND_MAX_DAYS;
+			// Second refund: must be after first refund but before current time
+			$base_timestamp = strtotime( $previous_refund->get_date_created()->date( 'Y-m-d H:i:s' ) );
+			$max_timestamp = min( $base_timestamp + ( self::SECOND_REFUND_MAX_DAYS * DAY_IN_SECONDS ), $now );
+
+			// Ensure second refund is always after first refund
+			if ( $max_timestamp <= $base_timestamp ) {
+				// If there's no time window, use base timestamp + 1 hour
+				// If base is in the future, second refund will also be in the future (but after first)
+				$refund_timestamp = $base_timestamp + HOUR_IN_SECONDS;
+			} else {
+				$refund_timestamp = wp_rand( $base_timestamp + 1, $max_timestamp );
+			}
 		} else {
-			// First refund: within 2 months of order completion
-			$base_date = $order->get_date_completed();
-			$max_days = self::FIRST_REFUND_MAX_DAYS;
+			// First refund: within 2 months of order completion, but never in the future
+			$completion_timestamp = strtotime( $order->get_date_completed()->date( 'Y-m-d H:i:s' ) );
+			$max_timestamp = min( $completion_timestamp + ( self::FIRST_REFUND_MAX_DAYS * DAY_IN_SECONDS ), $now );
+
+			// Ensure we have a valid time window
+			if ( $max_timestamp < $completion_timestamp ) {
+				// Order completed in the future somehow, use current time
+				$refund_timestamp = $now;
+			} elseif ( $max_timestamp == $completion_timestamp ) {
+				// No time window, use completion timestamp
+				$refund_timestamp = $completion_timestamp;
+			} else {
+				$refund_timestamp = wp_rand( $completion_timestamp, $max_timestamp );
+			}
 		}
 
-		$random_days = wp_rand( 0, $max_days );
-		return date( 'Y-m-d H:i:s', strtotime( $base_date->date( 'Y-m-d H:i:s' ) ) + ( $random_days * DAY_IN_SECONDS ) );
+		return date( 'Y-m-d H:i:s', $refund_timestamp );
 	}
 
 	/**
