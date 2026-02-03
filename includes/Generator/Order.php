@@ -930,15 +930,16 @@ class Order extends Generator {
 	protected static function generate_coupon_flags( $count, $args ) {
 		// For large batches above threshold, skip exact ratio and use probabilistic approach
 		if ( $count > self::EXACT_RATIO_BATCH_THRESHOLD ) {
+			$message = sprintf(
+				'Batch size (%d) exceeds threshold (%d). Using probabilistic distribution instead of exact ratios to optimize memory usage.',
+				$count,
+				self::EXACT_RATIO_BATCH_THRESHOLD
+			);
+
 			if ( class_exists( 'WP_CLI' ) ) {
-				\WP_CLI::log(
-					sprintf(
-						'Batch size (%d) exceeds threshold (%d). Using probabilistic distribution instead of exact ratios to optimize memory usage.',
-						$count,
-						self::EXACT_RATIO_BATCH_THRESHOLD
-					)
-				);
+				\WP_CLI::warning( $message );
 			}
+			error_log( 'WC Smooth Generator: ' . $message );
 			return null;
 		}
 
@@ -982,6 +983,16 @@ class Order extends Generator {
 	protected static function generate_refund_flags( $count, $args ) {
 		// For large batches above threshold, skip exact ratio and use probabilistic approach
 		if ( $count > self::EXACT_RATIO_BATCH_THRESHOLD ) {
+			$message = sprintf(
+				'Batch size (%d) exceeds threshold (%d). Using probabilistic distribution instead of exact ratios to optimize memory usage.',
+				$count,
+				self::EXACT_RATIO_BATCH_THRESHOLD
+			);
+
+			if ( class_exists( 'WP_CLI' ) ) {
+				\WP_CLI::warning( $message );
+			}
+			error_log( 'WC Smooth Generator: ' . $message );
 			return null;
 		}
 
