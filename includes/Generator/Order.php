@@ -319,8 +319,8 @@ class Order extends Generator {
 	public static function get_customer() {
 		global $wpdb;
 
-		$guest    = wp_rand( 0, 1 );
-		$existing = wp_rand( 0, 1 );
+		$guest    = (bool) wp_rand( 0, 1 );
+		$existing = (bool) wp_rand( 0, 1 );
 
 		if ( $existing ) {
 			$total_users = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->users}" );
@@ -739,7 +739,7 @@ class Order extends Generator {
 		$line_items = array();
 
 		// Decide whether to refund full items or partial quantities
-		$refund_full_items = wp_rand( 0, 1 );
+		$refund_full_items = (bool) wp_rand( 0, 1 );
 
 		if ( $refund_full_items && count( $items ) > 2 ) {
 			// Refund a random subset of items completely (requires at least 3 items)
