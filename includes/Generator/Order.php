@@ -146,6 +146,11 @@ class Order extends Generator {
 
 		$order->set_date_created( $date );
 
+		// Coupon parameter precedence:
+		// 1. Batch mode flag (from generate_coupon_flags) - takes highest priority
+		// 2. Legacy --coupons flag - used if batch flag not provided
+		// 3. Probabilistic --coupon-ratio - used if neither batch nor legacy flags are set
+
 		// Handle legacy --coupons flag (only if not provided from batch mode)
 		if ( null === $include_coupon ) {
 			$include_coupon = ! empty( $assoc_args['coupons'] );
