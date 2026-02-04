@@ -17,12 +17,18 @@
   },
   "require-dev": {
     "woocommerce/woocommerce-sniffs": "*",
-    "sirbrillig/phpcs-changed": "^2.11.8"
+    "sirbrillig/phpcs-changed": "^2.11.8",
+    "phpunit/phpunit": "^9.5",
+    "yoast/phpunit-polyfills": "^1.0"
   },
   "autoload": {
     "psr-4": {"WC\\SmoothGenerator\\": "includes/"}
   },
+  "autoload-dev": {
+    "psr-4": {"WC\\SmoothGenerator\\Tests\\": "tests/Unit"}
+  },
   "scripts": {
+    "test-unit": "./vendor/bin/phpunit",
     "phpcs": [
       "vendor/bin/phpcs"
     ],
