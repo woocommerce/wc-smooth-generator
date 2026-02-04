@@ -82,47 +82,29 @@ wp wc generate orders 11 --status=completed --refund-ratio=0.4
 - Total: 4 refunds (rounded)
 - Distribution: ~2 full, ~1 partial, ~1 multi (remainder)
 
-### 3. Threshold Boundary Tests
+### 3. Parameter Precedence Tests
 
-#### Test 3.1: At threshold (10,000 orders) - Should use exact ratios
-```bash
-wp wc generate orders 10000 --coupon-ratio=0.5
-```
-**Expected Result:**
-- No warning message
-- Exactly 5,000 orders with coupons
-
-#### Test 3.2: Above threshold (10,001 orders) - Should use probabilistic
-```bash
-wp wc generate orders 10001 --coupon-ratio=0.5
-```
-**Expected Result:**
-- Warning: "Batch size (10001) exceeds threshold (10000). Using probabilistic distribution..."
-- Approximately 5,000 orders with coupons (not exact, will vary by ~1-2%)
-
-### 4. Parameter Precedence Tests
-
-#### Test 4.1: Legacy --coupons flag
+#### Test 3.1: Legacy --coupons flag
 ```bash
 wp wc generate orders 20 --coupons
 ```
 **Expected Result:** All 20 orders have coupons (legacy behavior preserved)
 
-#### Test 4.2: Coupon ratio without legacy flag
+#### Test 3.2: Coupon ratio without legacy flag
 ```bash
 wp wc generate orders 100 --coupon-ratio=0.3
 ```
 **Expected Result:** Exactly 30 orders with coupons
 
-#### Test 4.3: Both flags (ratio should be ignored when legacy flag present)
+#### Test 3.3: Both flags (ratio should be ignored when legacy flag present)
 ```bash
 wp wc generate orders 100 --coupons --coupon-ratio=0.3
 ```
 **Expected Result:** All 100 orders have coupons (--coupons takes precedence)
 
-### 5. Single Order Generation (Probabilistic Fallback)
+### 4. Single Order Generation (Probabilistic Fallback)
 
-#### Test 5.1: Single order with coupon ratio should use probabilistic
+#### Test 4.1: Single order with coupon ratio should use probabilistic
 ```bash
 # Run multiple times to verify probabilistic behavior
 wp wc generate orders 1 --coupon-ratio=0.5
@@ -131,9 +113,9 @@ wp wc generate orders 1 --coupon-ratio=0.5
 ```
 **Expected Result:** Approximately 50% of single orders will have coupons (varies each run)
 
-### 6. Refund Distribution Verification
+### 5. Refund Distribution Verification
 
-#### Test 6.1: Verify 50/25/25 refund split
+#### Test 5.1: Verify 50/25/25 refund split
 ```bash
 # Generate orders and check distribution
 wp wc generate orders 200 --status=completed --refund-ratio=0.5
@@ -149,9 +131,9 @@ wp wc generate orders 200 --status=completed --refund-ratio=0.5
 2. Check a sample of partially refunded orders
 3. Count number of refund entries per order
 
-### 7. Combined Parameters
+### 6. Combined Parameters
 
-#### Test 7.1: Date range + coupon ratio + refund ratio
+#### Test 6.1: Date range + coupon ratio + refund ratio
 ```bash
 wp wc generate orders 100 --date-start=2024-01-01 --date-end=2024-12-31 --status=completed --coupon-ratio=0.4 --refund-ratio=0.3
 ```
@@ -160,9 +142,9 @@ wp wc generate orders 100 --date-start=2024-01-01 --date-end=2024-12-31 --status
 - Exactly 40 orders with coupons
 - Exactly 30 orders with refunds (distributed 50/25/25)
 
-### 8. Failed Orders Edge Case
+### 7. Failed Orders Edge Case
 
-#### Test 8.1: Verify failed orders don't affect count
+#### Test 7.1: Verify failed orders don't affect count
 ```bash
 # If products are missing or invalid, some orders may fail
 wp wc generate orders 100 --coupon-ratio=0.5
@@ -221,6 +203,6 @@ FROM (
 ## Notes
 
 - All exact ratio tests assume successful order generation
-- For large batches (>10,000), expect probabilistic distribution with ~1-2% variance
+- Exact ratio distribution uses O(1) memory via dynamic counters (selection without replacement algorithm)
+- Works for any batch size without memory constraints
 - Ratios are rounded using PHP's `round()` function for odd numbers
-- Memory limit may affect very large batch tests (>50,000 orders)
