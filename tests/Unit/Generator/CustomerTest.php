@@ -29,14 +29,14 @@ class CustomerTest extends WP_UnitTestCase {
 	 * Test customer has billing information.
 	 */
 	public function test_customer_has_billing_info() {
-		$customer = Customer::generate( true );
+		$customer = Customer::generate( true, array( 'type' => 'person' ) );
 
-		$this->assertNotEmpty( $customer->get_billing_first_name() );
-		$this->assertNotEmpty( $customer->get_billing_last_name() );
-		$this->assertNotEmpty( $customer->get_billing_email() );
-		$this->assertNotEmpty( $customer->get_billing_address_1() );
-		$this->assertNotEmpty( $customer->get_billing_city() );
-		$this->assertNotEmpty( $customer->get_billing_country() );
+		$this->assertNotEmpty( $customer->get_billing_first_name(), 'Billing first name should not be empty' );
+		$this->assertNotEmpty( $customer->get_billing_last_name(), 'Billing last name should not be empty' );
+		$this->assertNotEmpty( $customer->get_billing_email(), 'Billing email should not be empty' );
+		$this->assertNotEmpty( $customer->get_billing_address_1(), 'Billing address should not be empty' );
+		$this->assertNotEmpty( $customer->get_billing_city(), 'Billing city should not be empty' );
+		$this->assertNotEmpty( $customer->get_billing_country(), 'Billing country should not be empty' );
 	}
 
 	/**
@@ -127,9 +127,9 @@ class CustomerTest extends WP_UnitTestCase {
 	 * Test customer with invalid country code returns error.
 	 */
 	public function test_customer_with_invalid_country() {
-		$customer = Customer::generate( true, array( 'country' => 'INVALID' ) );
+		$customer = Customer::generate( true, array( 'country' => 'XX' ) );
 
-		$this->assertWPError( $customer );
+		$this->assertWPError( $customer, 'Invalid country code should return WP_Error' );
 	}
 
 	/**

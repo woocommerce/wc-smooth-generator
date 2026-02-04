@@ -10,7 +10,6 @@ namespace WC\SmoothGenerator\Tests\Generator;
 use WC\SmoothGenerator\Generator\Order;
 use WC\SmoothGenerator\Generator\Product;
 use WC\SmoothGenerator\Generator\Customer;
-use WC_Helper_Product;
 use WP_UnitTestCase;
 
 /**
@@ -25,9 +24,7 @@ class OrderTest extends WP_UnitTestCase {
 		parent::setUp();
 
 		// Create some products for orders to use.
-		for ( $i = 0; $i < 5; $i++ ) {
-			WC_Helper_Product::create_simple_product();
-		}
+		Product::batch( 5, array( 'type' => 'simple' ) );
 	}
 
 	/**

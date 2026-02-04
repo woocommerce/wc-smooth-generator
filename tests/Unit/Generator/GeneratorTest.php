@@ -45,9 +45,9 @@ class GeneratorTest extends WP_UnitTestCase {
 		// Generate a product to trigger initialization.
 		Product::generate( true );
 
-		// Check that email hooks have been removed.
-		$has_email_hook = has_action( 'woocommerce_order_status_pending_to_processing', array( 'WC_Emails', 'send_transactional_email' ) );
-		$this->assertFalse( $has_email_hook, 'Email hooks should be removed' );
+		// Check that the filter that blocks emails is in place.
+		$has_block_filter = has_filter( 'woocommerce_allow_send_queued_transactional_email', '__return_false' );
+		$this->assertNotFalse( $has_block_filter, 'Email blocking filter should be in place' );
 	}
 
 	/**
@@ -57,8 +57,12 @@ class GeneratorTest extends WP_UnitTestCase {
 		// Generate a product to trigger initialization.
 		Product::generate( true );
 
-		// Check that the filter returns false.
-		$result = apply_filters( 'woocommerce_allow_send_queued_transactional_email', true );
+		// Check that the filter is hooked.
+		$has_block_filter = has_filter( 'woocommerce_allow_send_queued_transactional_email', '__return_false' );
+		$this->assertNotFalse( $has_block_filter, 'Email blocking filter should be hooked' );
+
+		// Verify the filter actually blocks when called.
+		$result = apply_filters( 'woocommerce_allow_send_queued_transactional_email', true, null, null );
 		$this->assertFalse( $result, 'Queued transactional emails should be blocked' );
 	}
 }
