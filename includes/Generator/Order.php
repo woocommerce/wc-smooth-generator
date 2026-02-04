@@ -335,12 +335,15 @@ class Order extends Generator {
 
 				if ( $total_refund_remaining > 0 && wp_rand( 1, $orders_remaining ) <= $total_refund_remaining ) {
 					// This order gets a refund, decide which type using weighted selection
+					// Store thresholds before decrementing
+					$full_threshold = $full_remaining;
+					$partial_threshold = $full_remaining + $partial_remaining;
 					$rand = wp_rand( 1, $total_refund_remaining );
 
-					if ( $rand <= $full_remaining ) {
+					if ( $rand <= $full_threshold ) {
 						$refund_type = self::REFUND_TYPE_FULL;
 						$full_remaining--;
-					} elseif ( $rand <= $full_remaining + $partial_remaining ) {
+					} elseif ( $rand <= $partial_threshold ) {
 						$refund_type = self::REFUND_TYPE_PARTIAL;
 						$partial_remaining--;
 					} else {
