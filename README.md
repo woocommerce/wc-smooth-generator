@@ -36,12 +36,12 @@ Generate orders with a specific status.
 
 Apply coupons to a percentage of generated orders (0.0-1.0). If no coupons exist, 6 will be created automatically (3 fixed cart, 3 percentage). Note: `--coupons` flag is equivalent to `--coupon-ratio=1.0`.
 
-**Deterministic Distribution (Batch Mode):** When generating multiple orders, the exact number of orders with coupons is pre-calculated based on the ratio (e.g., 100 orders at 0.5 ratio = exactly 50 with coupons). For odd numbers, `round()` is used (e.g., 11 orders at 0.5 = 6 with coupons). Single order generation uses probabilistic distribution. For batches larger than 10,000 orders, probabilistic distribution is used to optimize memory.
+**Deterministic Distribution (Batch Mode):** When generating multiple orders, the exact number of orders with coupons is calculated dynamically using selection without replacement (e.g., 100 orders at 0.5 ratio = exactly 50 with coupons). For odd numbers, `round()` is used (e.g., 11 orders at 0.5 = 6 with coupons). Single order generation uses probabilistic distribution.
 - `wp wc generate orders <nr of orders> --coupon-ratio=0.5`
 
 Refund a percentage of completed orders (0.0-1.0). Refunds are distributed as: 50% full refunds, 25% single partial refunds, and 25% multi-partial refunds (two partial refunds).
 
-**Deterministic Distribution (Batch Mode):** When generating multiple orders, the exact number and type of refunds is pre-calculated (e.g., 100 orders at 0.4 ratio = exactly 20 full, 10 partial, 10 multi-partial). For odd numbers, remainders go to multi-partial refunds. Single order generation uses probabilistic distribution. For batches larger than 10,000 orders, probabilistic distribution is used to optimize memory.
+**Deterministic Distribution (Batch Mode):** When generating multiple orders, the exact number and type of refunds is calculated dynamically using weighted selection without replacement (e.g., 100 orders at 0.4 ratio = exactly 20 full, 10 partial, 10 multi-partial). For odd numbers, remainders go to multi-partial refunds. Single order generation uses probabilistic distribution.
 - `wp wc generate orders <nr of orders> --status=completed --refund-ratio=0.3`
 
 #### Order Attribution
