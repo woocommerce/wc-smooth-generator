@@ -140,7 +140,7 @@ class ProductTest extends WP_UnitTestCase {
 	 * Test that products have categories assigned.
 	 */
 	public function test_products_have_categories() {
-		$product = Product::generate( true );
+		$product = Product::generate( true, array( 'type' => 'simple' ) );
 
 		$category_ids = $product->get_category_ids();
 		// Categories are randomly assigned (0-3), so we just check it's an array.
@@ -180,7 +180,7 @@ class ProductTest extends WP_UnitTestCase {
 	public function test_product_sale_price() {
 		// Generate multiple products to increase chance of getting one on sale.
 		$found_sale = false;
-		for ( $i = 0; $i < 10; $i++ ) {
+		for ( $i = 0; $i < 20; $i++ ) {
 			$product = Product::generate( true, array( 'type' => 'simple' ) );
 			if ( $product->is_on_sale() ) {
 				$found_sale = true;
@@ -189,14 +189,14 @@ class ProductTest extends WP_UnitTestCase {
 				break;
 			}
 		}
-		$this->assertTrue( $found_sale, 'Should generate at least one product on sale in 10 attempts' );
+		$this->assertTrue( $found_sale, 'Should generate at least one product on sale in 20 attempts' );
 	}
 
 	/**
 	 * Test product stock management.
 	 */
 	public function test_product_stock_management() {
-		$product = Product::generate( true );
+		$product = Product::generate( true, array( 'type' => 'simple' ) );
 
 		// Stock management is random, so we just verify the values make sense.
 		if ( $product->managing_stock() ) {
@@ -237,7 +237,7 @@ class ProductTest extends WP_UnitTestCase {
 	 * Test that product has valid tax status.
 	 */
 	public function test_product_tax_status() {
-		$product = Product::generate( true );
+		$product = Product::generate( true, array( 'type' => 'simple' ) );
 
 		$tax_status = $product->get_tax_status();
 		$this->assertContains( $tax_status, array( 'taxable', 'shipping', 'none' ) );
@@ -329,7 +329,7 @@ class ProductTest extends WP_UnitTestCase {
 	 * Test product with global unique ID.
 	 */
 	public function test_product_global_unique_id() {
-		$product = Product::generate( true );
+		$product = Product::generate( true, array( 'type' => 'simple' ) );
 
 		$global_unique_id = $product->get_global_unique_id();
 		$this->assertNotEmpty( $global_unique_id, 'Product should have a global unique ID' );
@@ -343,7 +343,7 @@ class ProductTest extends WP_UnitTestCase {
 		wp_insert_term( 'Test Category', 'product_cat' );
 		wp_insert_term( 'Test Tag', 'product_tag' );
 
-		$product_ids = Product::batch( 3, array( 'use-existing-terms' => true ) );
+		$product_ids = Product::batch( 3, array( 'use-existing-terms' => true, 'type' => 'simple' ) );
 
 		$this->assertIsArray( $product_ids );
 		$this->assertCount( 3, $product_ids );

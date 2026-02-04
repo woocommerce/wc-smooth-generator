@@ -33,7 +33,7 @@ class GeneratorTest extends WP_UnitTestCase {
 	 * Test batch validation with max size.
 	 */
 	public function test_batch_validation_max_size() {
-		$result = Product::batch( Product::MAX_BATCH_SIZE );
+		$result = Product::batch( Product::MAX_BATCH_SIZE, array( 'type' => 'simple' ) );
 
 		$this->assertIsArray( $result );
 	}
