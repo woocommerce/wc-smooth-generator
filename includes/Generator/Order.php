@@ -360,6 +360,19 @@ class Order extends Generator {
 			$order = self::generate( true, $args, $date, $include_coupon, $refund_type );
 			if ( ! $order instanceof \WC_Order ) {
 				error_log( "Batch generation failed: Order {$i} of {$amount} could not be generated" );
+				// Restore counters since order generation failed
+				if ( $include_coupon && isset( $args['coupon-ratio'] ) ) {
+					$coupons_remaining++;
+				}
+				if ( isset( $args['refund-ratio'] ) && 'completed' === ( $args['status'] ?? '' ) && null !== $refund_type ) {
+					if ( self::REFUND_TYPE_FULL === $refund_type ) {
+						$full_remaining++;
+					} elseif ( self::REFUND_TYPE_PARTIAL === $refund_type ) {
+						$partial_remaining++;
+					} elseif ( self::REFUND_TYPE_MULTI === $refund_type ) {
+						$multi_remaining++;
+					}
+				}
 				continue;
 			}
 			$order_ids[] = $order->get_id();
