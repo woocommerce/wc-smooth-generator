@@ -361,6 +361,7 @@ class Order extends Generator {
 			if ( ! $order instanceof \WC_Order ) {
 				error_log( "Batch generation failed: Order {$i} of {$amount} could not be generated" );
 				// Restore counters since order generation failed
+				$orders_remaining++;
 				if ( $include_coupon && isset( $args['coupon-ratio'] ) ) {
 					$coupons_remaining++;
 				}
