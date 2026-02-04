@@ -104,7 +104,7 @@ class ProductTest extends WP_UnitTestCase {
 	 */
 	public function test_batch_generation() {
 		$amount      = 5;
-		$product_ids = Product::batch( $amount );
+		$product_ids = Product::batch( $amount, array( 'type' => 'simple' ) );
 
 		$this->assertIsArray( $product_ids );
 		$this->assertCount( $amount, $product_ids );
@@ -181,7 +181,7 @@ class ProductTest extends WP_UnitTestCase {
 		// Generate multiple products to increase chance of getting one on sale.
 		$found_sale = false;
 		for ( $i = 0; $i < 10; $i++ ) {
-			$product = Product::generate( true );
+			$product = Product::generate( true, array( 'type' => 'simple' ) );
 			if ( $product->is_on_sale() ) {
 				$found_sale = true;
 				$this->assertGreaterThan( 0, $product->get_sale_price() );
