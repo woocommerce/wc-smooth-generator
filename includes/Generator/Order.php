@@ -284,8 +284,15 @@ class Order extends Generator {
 			return $amount;
 		}
 
-		// Generate ratio flags for exact distribution (if applicable)
-		$coupon_flags = self::generate_coupon_flags( $amount, $args );
+		// Initialize dynamic counters for exact ratio distribution (O(1) memory)
+		// Using "selection without replacement" algorithm for exact counts
+		$coupons_remaining = 0;
+		if ( isset( $args['coupon-ratio'] ) ) {
+			$coupon_ratio = floatval( $args['coupon-ratio'] );
+			$coupon_ratio = max( 0.0, min( 1.0, $coupon_ratio ) );
+			$coupons_remaining = (int) round( $amount * $coupon_ratio );
+		}
+
 		$refund_flags = self::generate_refund_flags( $amount, $args );
 
 		// Pre-generate dates if date-start is provided
@@ -296,14 +303,26 @@ class Order extends Generator {
 		}
 
 		$order_ids = array();
+		$orders_remaining = $amount;
 
 		for ( $i = 1; $i <= $amount; $i ++ ) {
 			// Use pre-generated date if available, otherwise pass null to generate one
 			$date = ( null !== $dates && ! empty( $dates ) ) ? array_shift( $dates ) : null;
 
-			// Use pre-generated flags if available
-			$include_coupon = ( null !== $coupon_flags && ! empty( $coupon_flags ) ) ? array_shift( $coupon_flags ) : null;
+			// Use selection without replacement for exact coupon distribution
+			$include_coupon = null;
+			if ( isset( $args['coupon-ratio'] ) ) {
+				// Probability = remaining_coupons / remaining_orders
+				// Guarantees exact count while maintaining random distribution
+				$include_coupon = ( wp_rand( 1, $orders_remaining ) <= $coupons_remaining );
+				if ( $include_coupon ) {
+					$coupons_remaining--;
+				}
+			}
+
 			$refund_type = ( null !== $refund_flags && ! empty( $refund_flags ) ) ? array_shift( $refund_flags ) : null;
+
+			$orders_remaining--;
 
 			$order = self::generate( true, $args, $date, $include_coupon, $refund_type );
 			if ( ! $order instanceof \WC_Order ) {
