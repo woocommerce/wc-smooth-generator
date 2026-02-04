@@ -34,14 +34,34 @@ class Order extends Generator {
 	const SECOND_REFUND_MAX_DAYS = 30;
 
 	/**
+	 * Refund type constants for memory-efficient batch operations.
+	 */
+	const REFUND_TYPE_NONE = 0;
+	const REFUND_TYPE_FULL = 1;
+	const REFUND_TYPE_PARTIAL = 2;
+	const REFUND_TYPE_MULTI = 3;
+
+	/**
+	 * Refund distribution ratios for batch generation with exact ratios.
+	 * When generating refunds in batch mode:
+	 * - 50% will be full refunds
+	 * - 25% will be single partial refunds
+	 * - 25% will be multi-partial refunds (two partial refunds)
+	 */
+	const REFUND_DISTRIBUTION_FULL_RATIO = 0.5;
+	const REFUND_DISTRIBUTION_PARTIAL_RATIO = 0.25;
+
+	/**
 	 * Return a new order.
 	 *
 	 * @param bool        $save Save the object before returning or not.
 	 * @param array       $assoc_args Arguments passed via the CLI for additional customization.
 	 * @param string|null $date Optional date string (Y-m-d) to use for order creation. If not provided, will be generated.
+	 * @param bool|null   $include_coupon Optional flag to include coupon. If null, will be determined based on coupon-ratio.
+	 * @param int|null    $refund_type Optional refund type constant. If null, will be determined based on refund-ratio.
 	 * @return \WC_Order|false Order object with data populated or false when failed.
 	 */
-	public static function generate( $save = true, $assoc_args = array(), $date = null ) {
+	public static function generate( $save = true, $assoc_args = array(), $date = null, $include_coupon = null, $refund_type = null ) {
 		parent::maybe_initialize_generators();
 
 		$order    = new \WC_Order();
@@ -120,11 +140,19 @@ class Order extends Generator {
 
 		$order->set_date_created( $date );
 
-		// Handle legacy --coupons flag
-		$include_coupon = ! empty( $assoc_args['coupons'] );
+		// Coupon parameter precedence:
+		// 1. Batch mode flag (from generate_coupon_flags) - takes highest priority
+		// 2. Legacy --coupons flag - used if batch flag not provided
+		// 3. Probabilistic --coupon-ratio - used if neither batch nor legacy flags are set
+
+		// Handle legacy --coupons flag (only if not provided from batch mode)
+		if ( null === $include_coupon ) {
+			$include_coupon = ! empty( $assoc_args['coupons'] );
+		}
 
 		// Handle --coupon-ratio parameter
-		if ( isset( $assoc_args['coupon-ratio'] ) ) {
+		if ( isset( $assoc_args['coupon-ratio'] ) && null === $include_coupon ) {
+			// Use probabilistic approach for single order generation or when flag not provided
 			$coupon_ratio = floatval( $assoc_args['coupon-ratio'] );
 
 			// Validate ratio is between 0.0 and 1.0
@@ -184,30 +212,40 @@ class Order extends Generator {
 
 			// Handle --refund-ratio parameter for completed orders
 			if ( isset( $assoc_args['refund-ratio'] ) && 'completed' === $status ) {
-				$refund_ratio = floatval( $assoc_args['refund-ratio'] );
+				// Use provided refund type or determine probabilistically
+				if ( null === $refund_type ) {
+					$refund_ratio = floatval( $assoc_args['refund-ratio'] );
 
-				// Validate ratio is between 0.0 and 1.0
-				if ( $refund_ratio < 0.0 || $refund_ratio > 1.0 ) {
-					$refund_ratio = max( 0.0, min( 1.0, $refund_ratio ) );
+					// Validate ratio is between 0.0 and 1.0
+					if ( $refund_ratio < 0.0 || $refund_ratio > 1.0 ) {
+						$refund_ratio = max( 0.0, min( 1.0, $refund_ratio ) );
+					}
+
+					$refund_type = self::REFUND_TYPE_NONE;
+					if ( $refund_ratio >= 1.0 ) {
+						// Always refund if ratio is 1.0 or higher
+						$refund_type = self::REFUND_TYPE_FULL;
+					} elseif ( $refund_ratio > 0 && wp_rand( 1, 100 ) <= ( $refund_ratio * 100 ) ) {
+						// Use random chance for ratios between 0 and 1
+						// Split evenly between full and partial
+						$refund_type = wp_rand( 0, 1 ) ? self::REFUND_TYPE_FULL : self::REFUND_TYPE_PARTIAL;
+
+						// 25% chance for multi-partial
+						if ( self::REFUND_TYPE_PARTIAL === $refund_type && wp_rand( 1, 100 ) <= self::SECOND_REFUND_PROBABILITY ) {
+							$refund_type = self::REFUND_TYPE_MULTI;
+						}
+					}
 				}
 
-				$should_refund = false;
-
-				if ( $refund_ratio >= 1.0 ) {
-					// Always refund if ratio is 1.0 or higher
-					$should_refund = true;
-				} elseif ( $refund_ratio > 0 && wp_rand( 1, 100 ) <= ( $refund_ratio * 100 ) ) {
-					// Use random chance for ratios between 0 and 1
-					$should_refund = true;
-				}
-
-				if ( $should_refund ) {
-					// Create first refund with date within 2 months of completion
-					$first_refund = self::create_refund( $order );
-
-					// Some partial refunds get a second refund (always partial)
-					if ( $first_refund && is_object( $first_refund ) && wp_rand( 1, 100 ) <= self::SECOND_REFUND_PROBABILITY ) {
-						self::create_refund( $order, true, $first_refund );
+				// Process refund based on type
+				if ( self::REFUND_TYPE_FULL === $refund_type ) {
+					self::create_refund( $order, false, null, true ); // Explicitly full
+				} elseif ( self::REFUND_TYPE_PARTIAL === $refund_type ) {
+					self::create_refund( $order, true, null, false ); // Explicitly partial
+				} elseif ( self::REFUND_TYPE_MULTI === $refund_type ) {
+					$first_refund = self::create_refund( $order, true, null, false ); // Explicitly partial
+					if ( $first_refund && is_object( $first_refund ) ) {
+						self::create_refund( $order, true, $first_refund, false ); // Explicitly partial
 					}
 				}
 			}
@@ -240,6 +278,31 @@ class Order extends Generator {
 			return $amount;
 		}
 
+		// Initialize dynamic counters for exact ratio distribution (O(1) memory)
+		// Using "selection without replacement" algorithm for exact counts
+		$coupons_remaining = 0;
+		if ( isset( $args['coupon-ratio'] ) ) {
+			$coupon_ratio = floatval( $args['coupon-ratio'] );
+			$coupon_ratio = max( 0.0, min( 1.0, $coupon_ratio ) );
+			$coupons_remaining = (int) round( $amount * $coupon_ratio );
+		}
+
+		// Initialize refund type counters for weighted selection without replacement
+		$full_remaining = 0;
+		$partial_remaining = 0;
+		$multi_remaining = 0;
+		if ( isset( $args['refund-ratio'] ) && 'completed' === ( $args['status'] ?? '' ) ) {
+			$refund_ratio = floatval( $args['refund-ratio'] );
+			$refund_ratio = max( 0.0, min( 1.0, $refund_ratio ) );
+
+			$total_refunds = (int) round( $amount * $refund_ratio );
+
+			// Split using floor to avoid over-allocation, remainder goes to multi
+			$full_remaining = (int) floor( $total_refunds * self::REFUND_DISTRIBUTION_FULL_RATIO );
+			$partial_remaining = (int) floor( $total_refunds * self::REFUND_DISTRIBUTION_PARTIAL_RATIO );
+			$multi_remaining = $total_refunds - $full_remaining - $partial_remaining;
+		}
+
 		// Pre-generate dates if date-start is provided
 		// This ensures chronological order: lower order IDs = earlier dates
 		$dates = null;
@@ -248,13 +311,69 @@ class Order extends Generator {
 		}
 
 		$order_ids = array();
+		$orders_remaining = $amount;
 
 		for ( $i = 1; $i <= $amount; $i ++ ) {
 			// Use pre-generated date if available, otherwise pass null to generate one
 			$date = ( null !== $dates && ! empty( $dates ) ) ? array_shift( $dates ) : null;
-			$order = self::generate( true, $args, $date );
+
+			// Use selection without replacement for exact coupon distribution
+			$include_coupon = null;
+			if ( isset( $args['coupon-ratio'] ) ) {
+				// Probability = remaining_coupons / remaining_orders
+				// Guarantees exact count while maintaining random distribution
+				$include_coupon = ( wp_rand( 1, $orders_remaining ) <= $coupons_remaining );
+				if ( $include_coupon ) {
+					$coupons_remaining--;
+				}
+			}
+
+			// Use weighted selection without replacement for exact refund distribution
+			$refund_type = null;
+			if ( isset( $args['refund-ratio'] ) && 'completed' === ( $args['status'] ?? '' ) ) {
+				$total_refund_remaining = $full_remaining + $partial_remaining + $multi_remaining;
+
+				if ( $total_refund_remaining > 0 && wp_rand( 1, $orders_remaining ) <= $total_refund_remaining ) {
+					// This order gets a refund, decide which type using weighted selection
+					// Store thresholds before decrementing
+					$full_threshold = $full_remaining;
+					$partial_threshold = $full_remaining + $partial_remaining;
+					$rand = wp_rand( 1, $total_refund_remaining );
+
+					if ( $rand <= $full_threshold ) {
+						$refund_type = self::REFUND_TYPE_FULL;
+						$full_remaining--;
+					} elseif ( $rand <= $partial_threshold ) {
+						$refund_type = self::REFUND_TYPE_PARTIAL;
+						$partial_remaining--;
+					} else {
+						$refund_type = self::REFUND_TYPE_MULTI;
+						$multi_remaining--;
+					}
+				} else {
+					$refund_type = self::REFUND_TYPE_NONE;
+				}
+			}
+
+			$orders_remaining--;
+
+			$order = self::generate( true, $args, $date, $include_coupon, $refund_type );
 			if ( ! $order instanceof \WC_Order ) {
 				error_log( "Batch generation failed: Order {$i} of {$amount} could not be generated" );
+				// Restore counters since order generation failed
+				$orders_remaining++;
+				if ( $include_coupon && isset( $args['coupon-ratio'] ) ) {
+					$coupons_remaining++;
+				}
+				if ( isset( $args['refund-ratio'] ) && 'completed' === ( $args['status'] ?? '' ) && null !== $refund_type ) {
+					if ( self::REFUND_TYPE_FULL === $refund_type ) {
+						$full_remaining++;
+					} elseif ( self::REFUND_TYPE_PARTIAL === $refund_type ) {
+						$partial_remaining++;
+					} elseif ( self::REFUND_TYPE_MULTI === $refund_type ) {
+						$multi_remaining++;
+					}
+				}
 				continue;
 			}
 			$order_ids[] = $order->get_id();
@@ -461,11 +580,12 @@ class Order extends Generator {
 	 * Create a refund for an order (either full or partial).
 	 *
 	 * @param \WC_Order      $order The order to refund.
-	 * @param bool           $force_partial Force partial refund only.
+	 * @param bool           $force_partial Force partial refund only (legacy parameter).
 	 * @param \WC_Order_Refund|null $previous_refund Previous refund to base date on (for second refunds).
+	 * @param bool|null      $force_full Explicitly force full refund (overrides random logic).
 	 * @return \WC_Order_Refund|false Refund object on success, false on failure.
 	 */
-	protected static function create_refund( $order, $force_partial = false, $previous_refund = null ) {
+	protected static function create_refund( $order, $force_partial = false, $previous_refund = null, $force_full = null ) {
 		if ( ! $order instanceof \WC_Order ) {
 			error_log( "Error: Order is not an instance of \WC_Order: " . print_r( $order, true ) );
 			return false;
@@ -475,13 +595,20 @@ class Order extends Generator {
 		$existing_refunds = $order->get_refunds();
 		if ( ! empty( $existing_refunds ) ) {
 			$force_partial = true;
+			$force_full = false; // Can't do full refund if already has refunds
 		}
 
 		// Calculate already refunded quantities
 		$refunded_qty_by_item = self::calculate_refunded_quantities( $existing_refunds );
 
 		// Determine refund type (full or partial)
-		$is_full_refund = $force_partial ? false : (bool) wp_rand( 0, 1 );
+		if ( null !== $force_full ) {
+			// Explicit full/partial specified (batch mode with exact ratios)
+			$is_full_refund = $force_full;
+		} else {
+			// Legacy random logic (single order generation or old code)
+			$is_full_refund = $force_partial ? false : wp_rand( 0, 1 );
+		}
 
 		// Build refund line items
 		$line_items = $is_full_refund
@@ -873,4 +1000,5 @@ class Order extends Generator {
 
 		return $dates;
 	}
+
 }
