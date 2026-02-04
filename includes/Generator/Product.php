@@ -71,7 +71,7 @@ class Product extends Generator {
 	 *
 	 * @param bool  $save Save the object before returning or not.
 	 * @param array $assoc_args Arguments passed via the CLI for additional customization.
-	 * @return \WC_Product The product object consisting of random data.
+	 * @return \WC_Product|\WP_Error The product object consisting of random data, or WP_Error on failure.
 	 */
 	public static function generate( $save = true, $assoc_args = array() ) {
 		parent::maybe_initialize_generators();
@@ -85,6 +85,11 @@ class Product extends Generator {
 			case 'variable':
 				$product = self::generate_variable_product();
 				break;
+		}
+
+		// Check if product generation failed.
+		if ( is_wp_error( $product ) ) {
+			return $product;
 		}
 
 		if ( $product ) {
@@ -133,7 +138,13 @@ class Product extends Generator {
 		$product_ids = array();
 
 		for ( $i = 1; $i <= $amount; $i ++ ) {
-			$product       = self::generate( true, $args );
+			$product = self::generate( true, $args );
+
+			// Skip products that failed to generate.
+			if ( is_wp_error( $product ) ) {
+				continue;
+			}
+
 			$product_ids[] = $product->get_id();
 		}
 
@@ -188,7 +199,7 @@ class Product extends Generator {
 	 *
 	 * @param integer $qty Number of attributes to generate.
 	 * @param integer $maximum_terms Maximum number of terms per attribute to generate.
-	 * @return array Array of attributes.
+	 * @return array|\WP_Error Array of attributes or WP_Error on failure.
 	 */
 	protected static function generate_attributes( $qty = 1, $maximum_terms = 10 ) {
 		$used_names = array();
@@ -219,6 +230,11 @@ class Product extends Generator {
 
 				if ( ! $attribute_id ) {
 					$attribute_id = self::create_global_attribute( $raw_name );
+
+					// Check if attribute creation failed.
+					if ( is_wp_error( $attribute_id ) ) {
+						return $attribute_id;
+					}
 				}
 
 				$slug          = wc_sanitize_taxonomy_name( $raw_name );
@@ -287,7 +303,7 @@ class Product extends Generator {
 	/**
 	 * Generate a variable product and return it.
 	 *
-	 * @return \WC_Product_Variable
+	 * @return \WC_Product_Variable|\WP_Error Product object or WP_Error on failure.
 	 */
 	protected static function generate_variable_product() {
 		$name              = ucwords( self::$faker->productName );
@@ -296,6 +312,11 @@ class Product extends Generator {
 
 		$gallery    = self::maybe_get_gallery_image_ids();
 		$attributes = self::generate_attributes( self::$faker->numberBetween( 1, 3 ), 5 );
+
+		// Check if attribute generation failed.
+		if ( is_wp_error( $attributes ) ) {
+			return $attributes;
+		}
 
 		$product->set_props( array(
 			'name'              => $name,
