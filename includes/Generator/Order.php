@@ -293,7 +293,21 @@ class Order extends Generator {
 			$coupons_remaining = (int) round( $amount * $coupon_ratio );
 		}
 
-		$refund_flags = self::generate_refund_flags( $amount, $args );
+		// Initialize refund type counters for weighted selection without replacement
+		$full_remaining = 0;
+		$partial_remaining = 0;
+		$multi_remaining = 0;
+		if ( isset( $args['refund-ratio'] ) && 'completed' === ( $args['status'] ?? '' ) ) {
+			$refund_ratio = floatval( $args['refund-ratio'] );
+			$refund_ratio = max( 0.0, min( 1.0, $refund_ratio ) );
+
+			$total_refunds = (int) round( $amount * $refund_ratio );
+
+			// Split using floor to avoid over-allocation, remainder goes to multi
+			$full_remaining = (int) floor( $total_refunds * self::REFUND_DISTRIBUTION_FULL_RATIO );
+			$partial_remaining = (int) floor( $total_refunds * self::REFUND_DISTRIBUTION_PARTIAL_RATIO );
+			$multi_remaining = $total_refunds - $full_remaining - $partial_remaining;
+		}
 
 		// Pre-generate dates if date-start is provided
 		// This ensures chronological order: lower order IDs = earlier dates
@@ -320,7 +334,29 @@ class Order extends Generator {
 				}
 			}
 
-			$refund_type = ( null !== $refund_flags && ! empty( $refund_flags ) ) ? array_shift( $refund_flags ) : null;
+			// Use weighted selection without replacement for exact refund distribution
+			$refund_type = null;
+			if ( isset( $args['refund-ratio'] ) && 'completed' === ( $args['status'] ?? '' ) ) {
+				$total_refund_remaining = $full_remaining + $partial_remaining + $multi_remaining;
+
+				if ( $total_refund_remaining > 0 && wp_rand( 1, $orders_remaining ) <= $total_refund_remaining ) {
+					// This order gets a refund, decide which type using weighted selection
+					$rand = wp_rand( 1, $total_refund_remaining );
+
+					if ( $rand <= $full_remaining ) {
+						$refund_type = self::REFUND_TYPE_FULL;
+						$full_remaining--;
+					} elseif ( $rand <= $full_remaining + $partial_remaining ) {
+						$refund_type = self::REFUND_TYPE_PARTIAL;
+						$partial_remaining--;
+					} else {
+						$refund_type = self::REFUND_TYPE_MULTI;
+						$multi_remaining--;
+					}
+				} else {
+					$refund_type = self::REFUND_TYPE_NONE;
+				}
+			}
 
 			$orders_remaining--;
 
