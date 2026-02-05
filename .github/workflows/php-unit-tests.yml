@@ -57,7 +57,7 @@ jobs:
                   mysql root password: 'root'
 
             - name: Install Composer dependencies
-              run: composer install --prefer-dist --no-progress --no-suggest
+              run: composer install --prefer-dist --no-progress
 
             - name: Install SVN (used for installing WP versions)
               run: sudo apt-get update && sudo apt-get install -y subversion
