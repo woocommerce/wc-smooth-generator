@@ -1,0 +1,72 @@
+name: PHP Unit Tests
+
+on:
+    push:
+        branches:
+            - trunk
+        paths:
+            - '**.php'
+            - composer.json
+            - composer.lock
+            - phpunit.xml.dist
+            - tests/**
+            - .github/workflows/php-unit-tests.yml
+    pull_request:
+        paths:
+            - '**.php'
+            - composer.json
+            - composer.lock
+            - phpunit.xml.dist
+            - tests/**
+            - .github/workflows/php-unit-tests.yml
+
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    UnitTests:
+        name: PHP unit tests - PHP ${{ matrix.php }}, WP ${{ matrix.wp-version }}
+        runs-on: ubuntu-latest
+        env:
+            WP_CORE_DIR: '/tmp/wordpress/src'
+            WP_TESTS_DIR: '/tmp/wordpress/tests/phpunit'
+        strategy:
+            matrix:
+                php: ['7.4', '8.0', '8.1', '8.2']
+                wp-version: ['latest']
+                include:
+                    # Test with older WordPress version on PHP 7.4
+                    - php: '7.4'
+                      wp-version: '6.0'
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Setup PHP
+              uses: shivammathur/setup-php@v2
+              with:
+                  php-version: ${{ matrix.php }}
+                  extensions: mbstring, intl, mysql
+                  coverage: none
+                  tools: composer
+
+            - name: Setup MySQL
+              uses: mirromutth/mysql-action@v1.1
+              with:
+                  mysql version: '8.0'
+                  mysql database: 'wordpress_test'
+                  mysql root password: 'root'
+
+            - name: Install Composer dependencies
+              run: composer install --prefer-dist --no-progress --no-suggest
+
+            - name: Install SVN (used for installing WP versions)
+              run: sudo apt-get update && sudo apt-get install -y subversion
+
+            - name: Install WP tests
+              run: bash bin/install-wp-tests.sh wordpress_test root root 127.0.0.1 ${{ matrix.wp-version }}
+
+            - name: Run PHP unit tests
+              run: composer test-unit
