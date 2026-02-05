@@ -68,5 +68,12 @@ jobs:
             - name: Install WP tests
               run: echo "y" | bash bin/install-wp-tests.sh wordpress_test root root 127.0.0.1 ${{ matrix.wp-version }}
 
+            - name: Install WooCommerce
+              run: |
+                  mkdir -p /tmp/wordpress/src/wp-content/plugins
+                  git clone --depth 1 --branch trunk https://github.com/woocommerce/woocommerce.git /tmp/wordpress/src/wp-content/plugins/woocommerce
+                  cd /tmp/wordpress/src/wp-content/plugins/woocommerce
+                  composer install --no-dev
+
             - name: Run PHP unit tests
               run: composer test-unit
