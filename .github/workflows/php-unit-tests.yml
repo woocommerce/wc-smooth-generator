@@ -19,6 +19,7 @@ on:
             - phpunit.xml.dist
             - tests/**
             - .github/workflows/php-unit-tests.yml
+    workflow_dispatch:
 
 concurrency:
     group: ${{ github.workflow }}-${{ github.ref }}
