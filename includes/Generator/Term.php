@@ -39,7 +39,7 @@ class Term extends Generator {
 		parent::maybe_initialize_generators();
 
 		if ( $taxonomy_obj->hierarchical && 'product_brand' === $taxonomy ) {
-			$term_name = ucwords( self::$faker->department( 1 ) );
+			$term_name = ucwords( self::$faker->deviceManufacturer() );
 		} elseif ( $taxonomy_obj->hierarchical ) {
 			$term_name = ucwords( self::$faker->department( 3 ) );
 		} else {
@@ -109,11 +109,11 @@ class Term extends Generator {
 
 		$term_ids = array();
 
-		for ( $i = 1; $i <= $amount; $i ++ ) {
+		for ( $i = 1; $i <= $amount; $i++ ) {
 			$term = self::generate( true, $taxonomy );
 			if ( is_wp_error( $term ) ) {
 				if ( 'term_exists' === $term->get_error_code() ) {
-					$i --; // Try again.
+					--$i; // Try again.
 					continue;
 				}
 
@@ -175,11 +175,11 @@ class Term extends Generator {
 
 		if ( $parent || 1 === $max_depth ) {
 			// All terms will be in the same hierarchy level.
-			for ( $i = 1; $i <= $amount; $i ++ ) {
+			for ( $i = 1; $i <= $amount; $i++ ) {
 				$term = self::generate( true, $taxonomy, $parent );
 				if ( is_wp_error( $term ) ) {
 					if ( 'term_exists' === $term->get_error_code() ) {
-						$i --; // Try again.
+						--$i; // Try again.
 						continue;
 					}
 
@@ -195,41 +195,41 @@ class Term extends Generator {
 			}
 			$levels = array_fill( 1, $max_depth, array() );
 
-			for ( $i = 1; $i <= $max_depth; $i ++ ) {
+			for ( $i = 1; $i <= $max_depth; $i++ ) {
 				if ( 1 === $i ) {
 					// Always use the full term max for the top level of the hierarchy.
-					for ( $j = 1; $j <= $term_max && $remaining > 0; $j ++ ) {
+					for ( $j = 1; $j <= $term_max && $remaining > 0; $j++ ) {
 						$term = self::generate( true, $taxonomy );
 						if ( is_wp_error( $term ) ) {
 							if ( 'term_exists' === $term->get_error_code() ) {
-								$j --; // Try again.
+								--$j; // Try again.
 								continue;
 							}
 
 							return $term;
 						}
-						$term_ids[] = $term->term_id;
+						$term_ids[]     = $term->term_id;
 						$levels[ $i ][] = $term->term_id;
-						$remaining --;
+						--$remaining;
 					}
 				} else {
 					// Subsequent hierarchy levels.
 					foreach ( $levels[ $i - 1 ] as $term_id ) {
 						$tcount = wp_rand( 0, $term_max );
 
-						for ( $j = 1; $j <= $tcount && $remaining > 0; $j ++ ) {
+						for ( $j = 1; $j <= $tcount && $remaining > 0; $j++ ) {
 							$term = self::generate( true, $taxonomy, $term_id );
 							if ( is_wp_error( $term ) ) {
 								if ( 'term_exists' === $term->get_error_code() ) {
-									$j --; // Try again.
+									--$j; // Try again.
 									continue;
 								}
 
 								return $term;
 							}
-							$term_ids[] = $term->term_id;
+							$term_ids[]     = $term->term_id;
 							$levels[ $i ][] = $term->term_id;
-							$remaining --;
+							--$remaining;
 						}
 					}
 				}
