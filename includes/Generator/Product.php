@@ -94,6 +94,12 @@ class Product extends Generator {
 
 		if ( $product ) {
 			$product->save();
+
+			// Assign brand terms using wp_set_object_terms.
+			$brand_ids = self::get_term_ids( 'product_brand', self::$faker->numberBetween( 1, 3 ) );
+			if ( ! empty( $brand_ids ) ) {
+				wp_set_object_terms( $product->get_id(), $brand_ids, 'product_brand' );
+			}
 		}
 
 		// Limit size of stored relationship IDs.
@@ -119,8 +125,8 @@ class Product extends Generator {
 	/**
 	 * Create multiple products.
 	 *
-	 * @param int    $amount   The number of products to create.
-	 * @param array  $args     Additional args for product creation.
+	 * @param int   $amount   The number of products to create.
+	 * @param array $args     Additional args for product creation.
 	 *
 	 * @return int[]|\WP_Error
 	 */
@@ -137,7 +143,7 @@ class Product extends Generator {
 
 		$product_ids = array();
 
-		for ( $i = 1; $i <= $amount; $i ++ ) {
+		for ( $i = 1; $i <= $amount; $i++ ) {
 			$product = self::generate( true, $args );
 
 			// Skip products that failed to generate.
@@ -323,9 +329,9 @@ class Product extends Generator {
 			'name'              => $name,
 			'featured'          => self::$faker->boolean( 10 ),
 			'sku'               => sanitize_title( $name ) . '-' . self::$faker->ean8,
-			'global_unique_id'   => self::$faker->randomElement( [ self::$faker->ean13, self::$faker->isbn10 ] ),
+			'global_unique_id'  => self::$faker->randomElement( array( self::$faker->ean13, self::$faker->isbn10 ) ),
 			'attributes'        => $attributes,
-			'tax_status'        => self::$faker->randomElement( [ 'taxable', 'shipping', 'none' ] ),
+			'tax_status'        => self::$faker->randomElement( array( 'taxable', 'shipping', 'none' ) ),
 			'tax_class'         => '',
 			'manage_stock'      => $will_manage_stock,
 			'stock_quantity'    => $will_manage_stock ? self::$faker->numberBetween( -100, 100 ) : null,
@@ -337,7 +343,6 @@ class Product extends Generator {
 			'image_id'          => self::get_image(),
 			'category_ids'      => self::get_term_ids( 'product_cat', self::$faker->numberBetween( 0, 3 ) ),
 			'tag_ids'           => self::get_term_ids( 'product_tag', self::$faker->numberBetween( 0, 5 ) ),
-			'brand_ids'         => self::get_term_ids( 'product_brand', 1 ),
 			'gallery_image_ids' => $gallery,
 			'reviews_allowed'   => self::$faker->boolean(),
 			'purchase_note'     => self::$faker->boolean() ? self::$faker->text() : '',
@@ -350,14 +355,14 @@ class Product extends Generator {
 		$variation_attributes = wc_list_pluck( array_filter( $product->get_attributes(), 'wc_attributes_array_filter_variation' ), 'get_slugs' );
 		$possible_attributes  = array_reverse( wc_array_cartesian( $variation_attributes ) );
 		foreach ( $possible_attributes as $possible_attribute ) {
-			$price      = self::$faker->randomFloat( 2, 1, 1000 );
-			$is_on_sale = self::$faker->boolean( 35 );
+			$price             = self::$faker->randomFloat( 2, 1, 1000 );
+			$is_on_sale        = self::$faker->boolean( 35 );
 			$has_sale_schedule = $is_on_sale && self::$faker->boolean( 40 ); // ~40% of on-sale variations have a schedule.
-			$sale_price = $is_on_sale ? self::$faker->randomFloat( 2, 0, $price ) : '';
+			$sale_price        = $is_on_sale ? self::$faker->randomFloat( 2, 0, $price ) : '';
 			$date_on_sale_from = $has_sale_schedule ? self::$faker->dateTimeBetween( '-3 days', '+3 days' )->format( DATE_ATOM ) : '';
 			$date_on_sale_to   = $has_sale_schedule ? self::$faker->dateTimeBetween( '+4 days', '+4 months' )->format( DATE_ATOM ) : '';
-			$is_virtual = self::$faker->boolean( 20 );
-			$variation  = new \WC_Product_Variation();
+			$is_virtual        = self::$faker->boolean( 20 );
+			$variation         = new \WC_Product_Variation();
 			$variation->set_props( array(
 				'parent_id'         => $product->get_id(),
 				'attributes'        => $possible_attribute,
@@ -365,7 +370,7 @@ class Product extends Generator {
 				'sale_price'        => $sale_price,
 				'date_on_sale_from' => $date_on_sale_from,
 				'date_on_sale_to'   => $date_on_sale_to,
-				'tax_status'        => self::$faker->randomElement( [ 'taxable', 'shipping', 'none' ] ),
+				'tax_status'        => self::$faker->randomElement( array( 'taxable', 'shipping', 'none' ) ),
 				'tax_class'         => '',
 				'manage_stock'      => $will_manage_stock,
 				'stock_quantity'    => $will_manage_stock ? self::$faker->numberBetween( -20, 100 ) : null,
@@ -383,7 +388,7 @@ class Product extends Generator {
 			if ( wc_get_container()->get( 'Automattic\WooCommerce\Internal\CostOfGoodsSold\CostOfGoodsSoldController' )->feature_is_enabled() ) {
 				$variation->set_props( array( 'cogs_value' => round( $price * ( 1 - self::$faker->numberBetween( 15, 60 ) / 100 ), 2 ) ) );
 			}
-			
+
 			$variation->save();
 		}
 		$data_store = $product->get_data_store();
@@ -419,13 +424,13 @@ class Product extends Generator {
 			'description'        => self::$faker->paragraphs( self::$faker->numberBetween( 1, 5 ), true ),
 			'short_description'  => self::$faker->text(),
 			'sku'                => sanitize_title( $name ) . '-' . self::$faker->ean8,
-			'global_unique_id'   => self::$faker->randomElement( [ self::$faker->ean13, self::$faker->isbn10 ] ),
+			'global_unique_id'   => self::$faker->randomElement( array( self::$faker->ean13, self::$faker->isbn10 ) ),
 			'regular_price'      => $price,
 			'sale_price'         => $sale_price,
 			'date_on_sale_from'  => $date_on_sale_from,
 			'date_on_sale_to'    => $date_on_sale_to,
 			'total_sales'        => self::$faker->numberBetween( 0, 10000 ),
-			'tax_status'         => self::$faker->randomElement( [ 'taxable', 'shipping', 'none' ] ),
+			'tax_status'         => self::$faker->randomElement( array( 'taxable', 'shipping', 'none' ) ),
 			'tax_class'          => '',
 			'manage_stock'       => $will_manage_stock,
 			'stock_quantity'     => $will_manage_stock ? self::$faker->numberBetween( -100, 100 ) : null,
@@ -446,7 +451,6 @@ class Product extends Generator {
 			'downloadable'       => false,
 			'category_ids'       => self::get_term_ids( 'product_cat', self::$faker->numberBetween( 0, 3 ) ),
 			'tag_ids'            => self::get_term_ids( 'product_tag', self::$faker->numberBetween( 0, 5 ) ),
-			'brand_ids'         => self::get_term_ids( 'product_brand', 1 ),
 			'shipping_class_id'  => 0,
 			'image_id'           => $image_id,
 			'gallery_image_ids'  => $gallery,
@@ -559,7 +563,7 @@ class Product extends Generator {
 
 		$image_count = wp_rand( 0, 3 );
 
-		for ( $i = 0; $i < $image_count; $i ++ ) {
+		for ( $i = 0; $i < $image_count; $i++ ) {
 			$gallery[] = self::get_image();
 		}
 
