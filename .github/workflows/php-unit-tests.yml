@@ -37,6 +37,16 @@ jobs:
                 php: ['7.4', '8.0', '8.2', '8.4']
                 wp-version: ['latest']
 
+        services:
+            mysql:
+                image: mysql:8.0
+                env:
+                    MYSQL_ROOT_PASSWORD: root
+                    MYSQL_DATABASE: wordpress_test
+                ports:
+                    - 3306:3306
+                options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
         steps:
             - name: Checkout repository
               uses: actions/checkout@v4
@@ -48,13 +58,6 @@ jobs:
                   extensions: mbstring, intl, mysql
                   coverage: none
                   tools: composer
-
-            - name: Setup MySQL
-              uses: mirromutth/mysql-action@v1.1
-              with:
-                  mysql version: '8.0'
-                  mysql database: 'wordpress_test'
-                  mysql root password: 'root'
 
             - name: Install Composer dependencies
               run: composer install --prefer-dist --no-progress
