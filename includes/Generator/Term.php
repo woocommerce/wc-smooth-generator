@@ -175,10 +175,17 @@ class Term extends Generator {
 
 		if ( $parent || 1 === $max_depth ) {
 			// All terms will be in the same hierarchy level.
+			$retry_count = 0;
+			$max_retries = $amount * 10; // Allow up to 10x retries to account for duplicates.
 			for ( $i = 1; $i <= $amount; $i++ ) {
 				$term = self::generate( true, $taxonomy, $parent );
 				if ( is_wp_error( $term ) ) {
 					if ( 'term_exists' === $term->get_error_code() ) {
+						++$retry_count;
+						if ( $retry_count > $max_retries ) {
+							// Too many retries, likely can't generate enough unique terms.
+							break;
+						}
 						--$i; // Try again.
 						continue;
 					}

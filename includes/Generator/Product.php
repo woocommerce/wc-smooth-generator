@@ -503,7 +503,8 @@ class Product extends Generator {
 
 		$existing_brands = count( self::get_term_ids( 'product_brand', $brands ) );
 		if ( $existing_brands < $brands ) {
-			Term::batch( $brands - $existing_brands, 'product_brand' );
+			// Force max-depth of 1 to avoid infinite loop issues with hierarchical brand terms.
+			Term::batch( $brands - $existing_brands, 'product_brand', array( 'max-depth' => 1 ) );
 		}
 	}
 
