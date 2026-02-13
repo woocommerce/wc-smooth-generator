@@ -71,7 +71,7 @@ class Product extends Generator {
 	 *
 	 * @param bool  $save Save the object before returning or not.
 	 * @param array $assoc_args Arguments passed via the CLI for additional customization.
-	 * @return \WC_Product The product object consisting of random data.
+	 * @return \WC_Product|\WP_Error The product object consisting of random data, or WP_Error on failure.
 	 */
 	public static function generate( $save = true, $assoc_args = array() ) {
 		parent::maybe_initialize_generators();
@@ -85,6 +85,11 @@ class Product extends Generator {
 			case 'variable':
 				$product = self::generate_variable_product();
 				break;
+		}
+
+		// Check if product generation failed.
+		if ( is_wp_error( $product ) ) {
+			return $product;
 		}
 
 		if ( $product ) {
@@ -133,7 +138,13 @@ class Product extends Generator {
 		$product_ids = array();
 
 		for ( $i = 1; $i <= $amount; $i ++ ) {
-			$product       = self::generate( true, $args );
+			$product = self::generate( true, $args );
+
+			// Skip products that failed to generate.
+			if ( is_wp_error( $product ) ) {
+				continue;
+			}
+
 			$product_ids[] = $product->get_id();
 		}
 
@@ -189,7 +200,7 @@ class Product extends Generator {
 	 *
 	 * @param integer $qty Number of attributes to generate.
 	 * @param integer $maximum_terms Maximum number of terms per attribute to generate.
-	 * @return array Array of attributes.
+	 * @return array|\WP_Error Array of attributes or WP_Error on failure.
 	 */
 	protected static function generate_attributes( $qty = 1, $maximum_terms = 10 ) {
 		$used_names = array();
@@ -220,6 +231,11 @@ class Product extends Generator {
 
 				if ( ! $attribute_id ) {
 					$attribute_id = self::create_global_attribute( $raw_name );
+
+					// Check if attribute creation failed.
+					if ( is_wp_error( $attribute_id ) ) {
+						return $attribute_id;
+					}
 				}
 
 				$slug          = wc_sanitize_taxonomy_name( $raw_name );
@@ -288,7 +304,7 @@ class Product extends Generator {
 	/**
 	 * Generate a variable product and return it.
 	 *
-	 * @return \WC_Product_Variable
+	 * @return \WC_Product_Variable|\WP_Error Product object or WP_Error on failure.
 	 */
 	protected static function generate_variable_product() {
 		$name              = ucwords( self::$faker->productName );
@@ -298,12 +314,18 @@ class Product extends Generator {
 		$gallery    = self::maybe_get_gallery_image_ids();
 		$attributes = self::generate_attributes( self::$faker->numberBetween( 1, 3 ), 5 );
 
+		// Check if attribute generation failed.
+		if ( is_wp_error( $attributes ) ) {
+			return $attributes;
+		}
+
 		$product->set_props( array(
 			'name'              => $name,
 			'featured'          => self::$faker->boolean( 10 ),
 			'sku'               => sanitize_title( $name ) . '-' . self::$faker->ean8,
+			'global_unique_id'   => self::$faker->randomElement( [ self::$faker->ean13, self::$faker->isbn10 ] ),
 			'attributes'        => $attributes,
-			'tax_status'        => 'taxable',
+			'tax_status'        => self::$faker->randomElement( [ 'taxable', 'shipping', 'none' ] ),
 			'tax_class'         => '',
 			'manage_stock'      => $will_manage_stock,
 			'stock_quantity'    => $will_manage_stock ? self::$faker->numberBetween( -100, 100 ) : null,
@@ -329,8 +351,11 @@ class Product extends Generator {
 		$possible_attributes  = array_reverse( wc_array_cartesian( $variation_attributes ) );
 		foreach ( $possible_attributes as $possible_attribute ) {
 			$price      = self::$faker->randomFloat( 2, 1, 1000 );
-			$is_on_sale = self::$faker->boolean( 30 );
+			$is_on_sale = self::$faker->boolean( 35 );
+			$has_sale_schedule = $is_on_sale && self::$faker->boolean( 40 ); // ~40% of on-sale variations have a schedule.
 			$sale_price = $is_on_sale ? self::$faker->randomFloat( 2, 0, $price ) : '';
+			$date_on_sale_from = $has_sale_schedule ? self::$faker->dateTimeBetween( '-3 days', '+3 days' )->format( DATE_ATOM ) : '';
+			$date_on_sale_to   = $has_sale_schedule ? self::$faker->dateTimeBetween( '+4 days', '+4 months' )->format( DATE_ATOM ) : '';
 			$is_virtual = self::$faker->boolean( 20 );
 			$variation  = new \WC_Product_Variation();
 			$variation->set_props( array(
@@ -338,9 +363,9 @@ class Product extends Generator {
 				'attributes'        => $possible_attribute,
 				'regular_price'     => $price,
 				'sale_price'        => $sale_price,
-				'date_on_sale_from' => '',
-				'date_on_sale_to'   => self::$faker->iso8601( date( 'c', strtotime( '+1 month' ) ) ),
-				'tax_status'        => 'taxable',
+				'date_on_sale_from' => $date_on_sale_from,
+				'date_on_sale_to'   => $date_on_sale_to,
+				'tax_status'        => self::$faker->randomElement( [ 'taxable', 'shipping', 'none' ] ),
 				'tax_class'         => '',
 				'manage_stock'      => $will_manage_stock,
 				'stock_quantity'    => $will_manage_stock ? self::$faker->numberBetween( -20, 100 ) : null,
@@ -353,6 +378,12 @@ class Product extends Generator {
 				'downloadable'      => false,
 				'image_id'          => self::get_image(),
 			) );
+
+			// Set COGS if the feature is enabled.
+			if ( wc_get_container()->get( 'Automattic\WooCommerce\Internal\CostOfGoodsSold\CostOfGoodsSoldController' )->feature_is_enabled() ) {
+				$variation->set_props( array( 'cogs_value' => round( $price * ( 1 - self::$faker->numberBetween( 15, 60 ) / 100 ), 2 ) ) );
+			}
+			
 			$variation->save();
 		}
 		$data_store = $product->get_data_store();
@@ -371,8 +402,11 @@ class Product extends Generator {
 		$will_manage_stock = self::$faker->boolean();
 		$is_virtual        = self::$faker->boolean();
 		$price             = self::$faker->randomFloat( 2, 1, 1000 );
-		$is_on_sale        = self::$faker->boolean( 30 );
+		$is_on_sale        = self::$faker->boolean( 35 );
+		$has_sale_schedule = $is_on_sale && self::$faker->boolean( 40 ); // ~40% scheduled, rest indefinite.
 		$sale_price        = $is_on_sale ? self::$faker->randomFloat( 2, 0, $price ) : '';
+		$date_on_sale_from = $has_sale_schedule ? self::$faker->dateTimeBetween( '-3 days', '+3 days' )->format( DATE_ATOM ) : '';
+		$date_on_sale_to   = $has_sale_schedule ? self::$faker->dateTimeBetween( '+4 days', '+4 months' )->format( DATE_ATOM ) : '';
 		$product           = new \WC_Product();
 
 		$image_id = self::get_image();
@@ -385,12 +419,13 @@ class Product extends Generator {
 			'description'        => self::$faker->paragraphs( self::$faker->numberBetween( 1, 5 ), true ),
 			'short_description'  => self::$faker->text(),
 			'sku'                => sanitize_title( $name ) . '-' . self::$faker->ean8,
+			'global_unique_id'   => self::$faker->randomElement( [ self::$faker->ean13, self::$faker->isbn10 ] ),
 			'regular_price'      => $price,
 			'sale_price'         => $sale_price,
-			'date_on_sale_from'  => '',
-			'date_on_sale_to'    => self::$faker->iso8601( date( 'c', strtotime( '+1 month' ) ) ),
+			'date_on_sale_from'  => $date_on_sale_from,
+			'date_on_sale_to'    => $date_on_sale_to,
 			'total_sales'        => self::$faker->numberBetween( 0, 10000 ),
-			'tax_status'         => 'taxable',
+			'tax_status'         => self::$faker->randomElement( [ 'taxable', 'shipping', 'none' ] ),
 			'tax_class'          => '',
 			'manage_stock'       => $will_manage_stock,
 			'stock_quantity'     => $will_manage_stock ? self::$faker->numberBetween( -100, 100 ) : null,
@@ -416,6 +451,11 @@ class Product extends Generator {
 			'image_id'           => $image_id,
 			'gallery_image_ids'  => $gallery,
 		) );
+
+		// Set COGS if the feature is enabled.
+		if ( wc_get_container()->get( 'Automattic\WooCommerce\Internal\CostOfGoodsSold\CostOfGoodsSoldController' )->feature_is_enabled() ) {
+			$product->set_props( array( 'cogs_value' => round( $price * ( 1 - self::$faker->numberBetween( 15, 60 ) / 100 ), 2 ) ) );
+		}
 
 		return $product;
 	}

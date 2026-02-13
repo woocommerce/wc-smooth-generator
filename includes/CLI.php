@@ -115,6 +115,10 @@ class CLI extends WP_CLI_Command {
 		$execution_time = round( ( $time_end - $time_start ), 2 );
 		$display_time   = $execution_time < 60 ? $execution_time . ' seconds' : human_time_diff( $time_start, $time_end );
 
+		if ( $generated === 0 && $amount > 0 ) {
+			WP_CLI::error( 'No orders were generated. Make sure there are published products in your store.' );
+		}
+
 		WP_CLI::success( $generated . ' orders generated in ' . $display_time );
 	}
 
@@ -316,7 +320,19 @@ WP_CLI::add_command( 'wc generate orders', array( 'WC\SmoothGenerator\CLI', 'ord
 		array(
 			'name'        => 'coupons',
 			'type'        => 'flag',
-			'description' => 'Create and apply a coupon to each generated order.',
+			'description' => 'Create and apply a coupon to each generated order. Equivalent to --coupon-ratio=1.0.',
+			'optional'    => true,
+		),
+		array(
+			'name'        => 'coupon-ratio',
+			'type'        => 'assoc',
+			'description' => 'Decimal ratio (0.0-1.0) of orders that should have coupons applied. If no coupons exist, 6 will be created (3 fixed value, 3 percentage). Note: Decimal values are converted to percentages using integer rounding (e.g., 0.505 becomes 50%).',
+			'optional'    => true,
+		),
+		array(
+			'name'        => 'refund-ratio',
+			'type'        => 'assoc',
+			'description' => 'Decimal ratio (0.0-1.0) of completed orders that should be refunded (wholly or partially). Note: Decimal values are converted to percentages using integer rounding (e.g., 0.505 becomes 50%).',
 			'optional'    => true,
 		),
 		array(
@@ -381,8 +397,15 @@ WP_CLI::add_command( 'wc generate coupons', array( 'WC\SmoothGenerator\CLI', 'co
 			'optional'    => true,
 			'default'     => 100,
 		),
+		array(
+			'name'        => 'discount_type',
+			'type'        => 'assoc',
+			'description' => 'The type of discount for the coupon. If not specified, defaults to WooCommerce default (fixed_cart).',
+			'optional'    => true,
+			'options'     => array( 'fixed_cart', 'percent' ),
+		),
 	),
-	'longdesc'  => "## EXAMPLES\n\nwc generate coupons 10\n\nwc generate coupons 50 --min=1 --max=50",
+	'longdesc'  => "## EXAMPLES\n\nwc generate coupons 10\n\nwc generate coupons 50 --min=1 --max=50\n\nwc generate coupons 20 --discount_type=percent --min=5 --max=25",
 ) );
 
 WP_CLI::add_command( 'wc generate terms', array( 'WC\SmoothGenerator\CLI', 'terms' ), array(

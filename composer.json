@@ -7,22 +7,28 @@
   "prefer-stable": true,
   "minimum-stability": "dev",
   "require": {
-    "php": "^7.4 || ^8.0",
+    "php": ">=7.4",
     "psr/container": "1.0.0",
     "composer/installers": "~1.2",
     "fakerphp/faker": "^1.24.0",
-    "jdenticon/jdenticon": "^0.10.0",
+    "jdenticon/jdenticon": "^2.0.0",
     "mbezhanov/faker-provider-collection": "^2.0.1",
     "symfony/deprecation-contracts": "^2.2"
   },
   "require-dev": {
     "woocommerce/woocommerce-sniffs": "*",
-    "sirbrillig/phpcs-changed": "^2.10.2"
+    "sirbrillig/phpcs-changed": "^2.11.8",
+    "phpunit/phpunit": "^9.5 || ^10.0 || ^11.0",
+    "yoast/phpunit-polyfills": "^1.0 || ^2.0"
   },
   "autoload": {
     "psr-4": {"WC\\SmoothGenerator\\": "includes/"}
   },
+  "autoload-dev": {
+    "psr-4": {"WC\\SmoothGenerator\\Tests\\": "tests/Unit"}
+  },
   "scripts": {
+    "test-unit": "./vendor/bin/phpunit",
     "phpcs": [
       "vendor/bin/phpcs"
     ],
