@@ -98,7 +98,6 @@ abstract class Generator {
 		if ( ! self::$faker ) {
 			self::$faker = \Faker\Factory::create( 'en_US' );
 			self::$faker->addProvider( new \Bezhanov\Faker\Provider\Commerce( self::$faker ) );
-			self::$faker->addProvider( new \Bezhanov\Faker\Provider\Device( self::$faker ) );
 		}
 	}
 
