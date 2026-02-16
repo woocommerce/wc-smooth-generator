@@ -451,6 +451,9 @@ class ProductTest extends WP_UnitTestCase {
 		wp_insert_term( 'Test Brand 2', 'product_brand' );
 		wp_insert_term( 'Test Brand 3', 'product_brand' );
 
+		// Clear the cache to ensure fresh term lookup.
+		\WC\SmoothGenerator\Util\RandomRuntimeCache::clear( 'product_brand' );
+
 		$product = Product::generate( true, array( 'type' => 'simple' ) );
 
 		// Get assigned brands.
