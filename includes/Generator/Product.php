@@ -95,10 +95,15 @@ class Product extends Generator {
 		if ( $product ) {
 			$product->save();
 
-			// Assign brand terms using wp_set_object_terms.
-			$brand_ids = self::get_term_ids( 'product_brand', self::$faker->numberBetween( 1, 3 ) );
-			if ( ! empty( $brand_ids ) ) {
-				wp_set_object_terms( $product->get_id(), $brand_ids, 'product_brand' );
+			// Assign brand terms using wp_set_object_terms, but only if the taxonomy exists.
+			if ( taxonomy_exists( 'product_brand' ) ) {
+				$brand_ids = self::get_term_ids( 'product_brand', self::$faker->numberBetween( 1, 3 ) );
+				if ( ! empty( $brand_ids ) ) {
+					$brand_result = wp_set_object_terms( $product->get_id(), $brand_ids, 'product_brand' );
+					if ( is_wp_error( $brand_result ) ) {
+						return $brand_result;
+					}
+				}
 			}
 		}
 
