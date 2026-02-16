@@ -51,7 +51,7 @@ class ProductTest extends WP_UnitTestCase {
 		$this->assertNotEmpty( $product->get_name() );
 
 		// Check that variations were created (refresh product to get updated data).
-		$product = wc_get_product( $product->get_id() );
+		$product    = wc_get_product( $product->get_id() );
 		$variations = $product->get_children();
 		// Note: Variations may not be created if attribute registration fails in test environment.
 		// This is a known limitation of the test setup.
@@ -110,7 +110,7 @@ class ProductTest extends WP_UnitTestCase {
 		}
 
 		// Refresh product to get variations.
-		$product = wc_get_product( $product->get_id() );
+		$product    = wc_get_product( $product->get_id() );
 		$variations = $product->get_children();
 
 		if ( empty( $variations ) ) {
@@ -332,13 +332,13 @@ class ProductTest extends WP_UnitTestCase {
 	 * Test product action hook is fired.
 	 */
 	public function test_product_generated_action_hook() {
-		$hook_fired = false;
+		$hook_fired        = false;
 		$generated_product = null;
 
 		add_action(
 			'smoothgenerator_product_generated',
 			function ( $product ) use ( &$hook_fired, &$generated_product ) {
-				$hook_fired = true;
+				$hook_fired        = true;
 				$generated_product = $product;
 			}
 		);
@@ -368,7 +368,10 @@ class ProductTest extends WP_UnitTestCase {
 		wp_insert_term( 'Test Category', 'product_cat' );
 		wp_insert_term( 'Test Tag', 'product_tag' );
 
-		$product_ids = Product::batch( 3, array( 'use-existing-terms' => true, 'type' => 'simple' ) );
+		$product_ids = Product::batch( 3, array(
+			'use-existing-terms' => true,
+			'type'               => 'simple',
+		) );
 
 		$this->assertIsArray( $product_ids );
 		$this->assertCount( 3, $product_ids );
@@ -391,7 +394,7 @@ class ProductTest extends WP_UnitTestCase {
 		}
 
 		// Refresh product to get variations.
-		$product = wc_get_product( $product->get_id() );
+		$product    = wc_get_product( $product->get_id() );
 		$variations = $product->get_children();
 
 		if ( empty( $variations ) ) {
