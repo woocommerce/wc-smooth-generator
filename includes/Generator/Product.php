@@ -499,16 +499,19 @@ class Product extends Generator {
 		$existing_cats = count( self::get_term_ids( 'product_cat', $cats ) );
 		if ( $existing_cats < $cats ) {
 			Term::batch( $cats - $existing_cats, 'product_cat', array( 'max-depth' => $cat_depth ) );
+			RandomRuntimeCache::clear( 'product_cat' );
 		}
 
 		$existing_tags = count( self::get_term_ids( 'product_tag', $tags ) );
 		if ( $existing_tags < $tags ) {
 			Term::batch( $tags - $existing_tags, 'product_tag' );
+			RandomRuntimeCache::clear( 'product_tag' );
 		}
 
 		$existing_brands = count( self::get_term_ids( 'product_brand', $brands ) );
 		if ( $existing_brands < $brands ) {
 			Term::batch( $brands - $existing_brands, 'product_brand' );
+			RandomRuntimeCache::clear( 'product_brand' );
 		}
 	}
 
