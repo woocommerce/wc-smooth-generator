@@ -428,4 +428,60 @@ class ProductTest extends WP_UnitTestCase {
 		}
 		$this->assertTrue( $found_featured, 'Should generate at least one featured product in 30 attempts' );
 	}
+
+	/**
+	 * Test that products have brands assigned when taxonomy exists.
+	 */
+	public function test_products_have_brands_when_taxonomy_exists() {
+		// Register product_brand taxonomy for the test.
+		register_taxonomy(
+			'product_brand',
+			'product',
+			array(
+				'labels'       => array( 'name' => 'Brands' ),
+				'hierarchical' => false,
+				'show_ui'      => true,
+				'query_var'    => true,
+				'rewrite'      => array( 'slug' => 'brand' ),
+			)
+		);
+
+		// Create some brand terms.
+		wp_insert_term( 'Test Brand 1', 'product_brand' );
+		wp_insert_term( 'Test Brand 2', 'product_brand' );
+		wp_insert_term( 'Test Brand 3', 'product_brand' );
+
+		$product = Product::generate( true, array( 'type' => 'simple' ) );
+
+		// Get assigned brands.
+		$brand_terms = wp_get_object_terms( $product->get_id(), 'product_brand' );
+
+		$this->assertIsArray( $brand_terms );
+		$this->assertGreaterThanOrEqual( 1, count( $brand_terms ), 'Product should have at least 1 brand' );
+		$this->assertLessThanOrEqual( 3, count( $brand_terms ), 'Product should have at most 3 brands' );
+
+		// Clean up.
+		unregister_taxonomy( 'product_brand' );
+	}
+
+	/**
+	 * Test that product generation doesn't fail when brand taxonomy doesn't exist.
+	 */
+	public function test_product_generation_without_brand_taxonomy() {
+		// Ensure taxonomy doesn't exist.
+		if ( taxonomy_exists( 'product_brand' ) ) {
+			unregister_taxonomy( 'product_brand' );
+		}
+
+		$product = Product::generate( true, array( 'type' => 'simple' ) );
+
+		// Should still generate successfully.
+		$this->assertInstanceOf( \WC_Product::class, $product );
+		$this->assertTrue( $product->get_id() > 0 );
+		$this->assertEquals( 'simple', $product->get_type() );
+
+		// Should have no brand terms.
+		$brand_terms = wp_get_object_terms( $product->get_id(), 'product_brand' );
+		$this->assertTrue( is_wp_error( $brand_terms ) || empty( $brand_terms ) );
+	}
 }
