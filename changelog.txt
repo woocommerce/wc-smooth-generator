@@ -1,5 +1,29 @@
 *** Changelog ***
 
+2026-02-19 - version 1.3.0
+* Add - Brand support for generated products (product_brand taxonomy).
+* Add - Comprehensive unit test suite with PHPUnit tests.
+* Add - GitHub Actions workflow for automated PHP unit testing across multiple PHP versions.
+* Add - Exact ratio distribution for deterministic test data generation with --coupon-ratio and --refund-ratio flags.
+* Add - Cost of goods sold (COGS) support for generated products.
+* Add - Global unique ID (_wc_gla_gtin) support for product generation.
+* Add - Additional referral sources to order attribution data.
+* Add - Plugin settings link on plugins page.
+* Add - --use-existing-terms flag for product generator to use existing taxonomy terms.
+* Tweak - Sale dates now generate only future dates when is_on_sale is true.
+* Tweak - Tax status generation is now more dynamic across different product types.
+* Tweak - Order attribution source now uses woocommerce.com instead of woo.com.
+* Tweak - Notify users when no orders are generated due to lack of published products.
+* Tweak - Optimize order date generation performance.
+* Tweak - Update jdenticon to version 2.0.0.
+* Tweak - Update Composer dependencies for PHP 8.5 support.
+* Tweak - Update phpcs-changed to version 2.11.8 for PHP 8.4 compatibility.
+* Dev - Add woocommerce as required plugin in plugin header.
+* Dev - Deprecate generate_term_ids method in favor of more selective cache clearing.
+* Fix - Refund date constraints to prevent future dates.
+* Fix - GitHub Actions MySQL setup to use service containers for better reliability.
+* Fix - Allow attribution on orders with no product items.
+
 2025-03-25 - version 1.2.2
 * Add - Add date range arguments to admin UI for generating data.
 * Avoid fatal errors that sporadically occurred while generating taxonomy terms.
