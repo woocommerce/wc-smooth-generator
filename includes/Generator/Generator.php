@@ -306,7 +306,7 @@ abstract class Generator {
 		ob_start();
 		imagepng( $image );
 		$file = ob_get_clean();
-		imagedestroy( $image );
+		// imagedestroy() has no effect since PHP 8.0 and is deprecated in PHP 8.5.
 		$upload = wp_upload_bits( 'img-' . $seed . '.png', null, $file );
 
 		if ( empty( $upload['error'] ) ) {
