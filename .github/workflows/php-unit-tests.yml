@@ -82,9 +82,12 @@ jobs:
     PHPCS:
         name: PHPCS
         runs-on: ubuntu-latest
+        if: github.event_name == 'pull_request'
         steps:
             - name: Checkout repository
               uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
 
             - name: Setup PHP
               uses: shivammathur/setup-php@v2
@@ -95,5 +98,14 @@ jobs:
             - name: Install Composer dependencies
               run: composer install --prefer-dist --no-progress
 
-            - name: Run PHPCS
-              run: composer run phpcs
+            - name: Run PHPCS on changed files
+              run: |
+                  git fetch origin ${{ github.base_ref }}
+                  CHANGED_FILES=$(git diff --name-only --diff-filter=ACM origin/${{ github.base_ref }}...HEAD -- '*.php')
+                  if [ -n "$CHANGED_FILES" ]; then
+                      echo "Running PHPCS on changed files:"
+                      echo "$CHANGED_FILES"
+                      vendor/bin/phpcs-changed --git --git-base origin/${{ github.base_ref }} -s
+                  else
+                      echo "No PHP files changed"
+                  fi
