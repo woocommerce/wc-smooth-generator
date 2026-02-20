@@ -98,14 +98,12 @@ jobs:
             - name: Install Composer dependencies
               run: composer install --prefer-dist --no-progress
 
-            - name: Fetch base branch
-              run: git fetch origin ${{ github.base_ref }}
+            - name: Get Changed Files
+              id: changed-files
+              uses: tj-actions/changed-files@v41
+              with:
+                  files: '**/*.php'
 
             - name: Run PHPCS on changed files
-              run: |
-                  CHANGED_PHP=$(git diff --name-only --diff-filter=ACM origin/${{ github.base_ref }}...HEAD -- '*.php' | wc -l)
-                  if [ "$CHANGED_PHP" -gt 0 ]; then
-                      vendor/bin/phpcs-changed --git --git-base origin/${{ github.base_ref }} -s
-                  else
-                      echo "No PHP files changed, skipping PHPCS"
-                  fi
+              if: steps.changed-files.outputs.any_changed == 'true'
+              run: vendor/bin/phpcs-changed -s --git --git-base ${{ github.event.pull_request.base.sha }} ${{ steps.changed-files.outputs.all_changed_files }}
