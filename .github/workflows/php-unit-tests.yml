@@ -34,7 +34,7 @@ jobs:
             WP_TESTS_DIR: '/tmp/wordpress/tests/phpunit'
         strategy:
             matrix:
-                php: ['7.4', '8.0', '8.2', '8.4']
+                php: ['7.4', '8.2', '8.5']
                 wp-version: ['latest']
 
         services:
@@ -78,3 +78,22 @@ jobs:
 
             - name: Run PHP unit tests
               run: composer test-unit
+
+    PHPCS:
+        name: PHPCS
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Setup PHP
+              uses: shivammathur/setup-php@v2
+              with:
+                  php-version: '8.2'
+                  tools: composer
+
+            - name: Install Composer dependencies
+              run: composer install --prefer-dist --no-progress
+
+            - name: Run PHPCS
+              run: composer run phpcs
