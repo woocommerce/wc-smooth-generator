@@ -34,7 +34,7 @@ jobs:
             WP_TESTS_DIR: '/tmp/wordpress/tests/phpunit'
         strategy:
             matrix:
-                php: ['7.4', '8.0', '8.2', '8.4']
+                php: ['7.4', '8.2', '8.5']
                 wp-version: ['latest']
 
         services:
@@ -78,3 +78,32 @@ jobs:
 
             - name: Run PHP unit tests
               run: composer test-unit
+
+    PHPCS:
+        name: PHPCS
+        runs-on: ubuntu-latest
+        if: github.event_name == 'pull_request'
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+
+            - name: Setup PHP
+              uses: shivammathur/setup-php@v2
+              with:
+                  php-version: '8.2'
+                  tools: composer
+
+            - name: Install Composer dependencies
+              run: composer install --prefer-dist --no-progress
+
+            - name: Get Changed Files
+              id: changed-files
+              uses: tj-actions/changed-files@v41
+              with:
+                  files: '**/*.php'
+
+            - name: Run PHPCS on changed files
+              if: steps.changed-files.outputs.any_changed == 'true'
+              run: vendor/bin/phpcs-changed -s --git --git-base ${{ github.event.pull_request.base.sha }} ${{ steps.changed-files.outputs.all_changed_files }}
