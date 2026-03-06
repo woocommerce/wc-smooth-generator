@@ -1,112 +1,275 @@
 # WooCommerce Smooth Generator
-A super-smooth generator for products, orders, coupons, customers, and terms. WP-CLI is the preferred interface for using the plugin. There is also a WP Admin UI at Dashboard > Tools > WooCommerce Smooth Generator with (for now) more limited functionality.
+
+Generate realistic WooCommerce products, orders, customers, coupons, and taxonomy terms for development, testing, and demos.
+
+WP-CLI is the primary interface. A limited WP Admin UI is also available at Dashboard > Tools > WooCommerce Smooth Generator.
 
 ## Installation
 
-1. Download the latest release as a zip file from https://github.com/woocommerce/wc-smooth-generator/releases/
-1. Install in your WordPress site as you would any other plugin zip file.
+**From GitHub releases (recommended):**
 
-## WP-CLI Commands
+1. Download the latest zip from [GitHub Releases](https://github.com/woocommerce/wc-smooth-generator/releases/).
+2. Install via WP Admin > Plugins > Add New > Upload Plugin.
 
-You can see a summary of all available commands by running `wp help wc generate`, and more detailed guidance for each individual command is available by running `wp help wc generate <command name>`.
+**From source:**
+
+```bash
+git clone https://github.com/woocommerce/wc-smooth-generator.git
+cd wc-smooth-generator
+composer install --no-dev
+```
+
+## Requirements
+
+- PHP 7.4+
+- WordPress (tested up to 6.9)
+- WooCommerce 5.0+
+
+## WP-CLI commands
+
+All commands use the `wp wc generate` prefix. Run `wp help wc generate` for a summary, or `wp help wc generate <command>` for detailed usage.
 
 ### Products
 
-Generate products based on the number of products parameter.
-- `wp wc generate products <nr of products>`
+```bash
+# Generate 10 products (default, mix of simple and variable)
+wp wc generate products
 
-Generate products of the specified type. `simple` or `variable`.
-- `wp wc generate products <nr of products> --type=simple`
+# Generate 25 simple products
+wp wc generate products 25 --type=simple
+
+# Generate variable products using only existing categories and tags
+wp wc generate products 10 --type=variable --use-existing-terms
+```
+
+| Option | Description |
+|---|---|
+| `<amount>` | Number of products to generate. Default: `10` |
+| `--type=<type>` | Product type: `simple` or `variable`. Default: random mix |
+| `--use-existing-terms` | Only use existing categories and tags instead of generating new ones |
 
 ### Orders
 
-Generate orders from existing products based on the number of orders parameter, customers will also be generated to mimic guest checkout.
+```bash
+# Generate 10 orders for today's date
+wp wc generate orders
 
-Generate orders for the current date
-- `wp wc generate orders <nr of orders>`
+# Generate orders with random dates in a range
+wp wc generate orders 50 --date-start=2024-01-01 --date-end=2024-12-31
 
-Generate orders with random dates between `--date-start` and the current date.
-- `wp wc generate orders <nr of orders> --date-start=2018-04-01`
+# Generate completed orders with a specific status
+wp wc generate orders 20 --status=completed
 
-Generate orders with random dates between `--date-start` and `--date-end`.
-- `wp wc generate orders <nr of orders> --date-start=2018-04-01 --date-end=2018-04-24`
+# Apply coupons to half the orders
+wp wc generate orders 100 --coupon-ratio=0.5
 
-Generate orders with a specific status.
-- `wp wc generate orders <nr of orders> --status=completed`
+# Refund 30% of completed orders
+wp wc generate orders 50 --status=completed --refund-ratio=0.3
+```
 
-Apply coupons to a percentage of generated orders (0.0-1.0). If no coupons exist, 6 will be created automatically (3 fixed cart, 3 percentage). Note: `--coupons` flag is equivalent to `--coupon-ratio=1.0`.
+| Option | Description |
+|---|---|
+| `<amount>` | Number of orders to generate. Default: `10` |
+| `--date-start=<date>` | Earliest order date (YYYY-MM-DD). Dates are randomized between this and today or `--date-end` |
+| `--date-end=<date>` | Latest order date (YYYY-MM-DD). Requires `--date-start` |
+| `--status=<status>` | Order status: `completed`, `processing`, `on-hold`, or `failed`. Default: random mix |
+| `--coupons` | Apply a coupon to every order. Equivalent to `--coupon-ratio=1.0` |
+| `--coupon-ratio=<ratio>` | Fraction of orders that get coupons (0.0-1.0). Creates 6 coupons if none exist (3 fixed cart, 3 percentage) |
+| `--refund-ratio=<ratio>` | Fraction of completed orders to refund (0.0-1.0). In batch mode: 50% full, 25% partial, 25% multi-partial. Single-order mode uses probabilistic distribution |
+| `--skip-order-attribution` | Skip generating order attribution metadata |
 
-**Deterministic Distribution (Batch Mode):** When generating multiple orders, the exact number of orders with coupons is calculated dynamically using selection without replacement (e.g., 100 orders at 0.5 ratio = exactly 50 with coupons). For odd numbers, `round()` is used (e.g., 11 orders at 0.5 = 6 with coupons). Single order generation uses probabilistic distribution.
-- `wp wc generate orders <nr of orders> --coupon-ratio=0.5`
+**Batch distribution:** When generating multiple orders, coupon and refund counts are deterministic (selection without replacement). For odd totals, `round()` distributes coupons and remainders go to multi-partial refunds. Single-order generation uses probabilistic distribution.
 
-Refund a percentage of completed orders (0.0-1.0). Refunds are distributed as: 50% full refunds, 25% single partial refunds, and 25% multi-partial refunds (two partial refunds).
-
-**Deterministic Distribution (Batch Mode):** When generating multiple orders, the exact number and type of refunds is calculated dynamically using weighted selection without replacement (e.g., 100 orders at 0.4 ratio = exactly 20 full, 10 partial, 10 multi-partial). For odd numbers, remainders go to multi-partial refunds. Single order generation uses probabilistic distribution.
-- `wp wc generate orders <nr of orders> --status=completed --refund-ratio=0.3`
-
-#### Order Attribution
-
-Order Attribution represents the origin of data for an order. By default, random values are generated and assigned to the order. Orders with a creation date before 2024-01-09 will not have attribution metadata added, as the feature was not available in WooCommerce at that time.
-
-Skip order attribution meta data genereation.
-- `wp wc generate orders <nr of orders> --skip-order-attribution`
-
-### Coupons
-
-Generate coupons based on the number of coupons parameter.
-- `wp wc generate coupons <nr of coupons>`
-
-Generate coupons with a minimum discount amount.
-- `wp wc generate coupons <nr of coupons> --min=5`
-
-Generate coupons with a maximum discount amount.
-- `wp wc generate coupons <nr of coupons> --max=50`
-
-Generate coupons with a specific discount type. Options are `fixed_cart` or `percent`. If not specified, defaults to WooCommerce default (fixed_cart).
-- `wp wc generate coupons <nr of coupons> --discount_type=percent --min=5 --max=25`
+**Order attribution:** Random attribution metadata (device type, UTM parameters, referrer, session data) is added by default. Orders dated before 2024-01-09 skip attribution, since the feature didn't exist in WooCommerce yet.
 
 ### Customers
 
-Generate customers based on the number of customers parameter.
-- `wp wc generate customers <nr of customers>`
+```bash
+# Generate 10 customers (70% people, 30% companies)
+wp wc generate customers
+
+# Generate Spanish company customers
+wp wc generate customers 20 --country=ES --type=company
+```
+
+| Option | Description |
+|---|---|
+| `<amount>` | Number of customers to generate. Default: `10` |
+| `--country=<code>` | ISO 3166-1 alpha-2 country code (e.g., `US`, `ES`, `CN`). Localizes names and addresses. Default: random from store selling locations |
+| `--type=<type>` | Customer type: `person` or `company`. Default: 70/30 mix |
+
+### Coupons
+
+```bash
+# Generate 10 coupons with default discount range (5-100)
+wp wc generate coupons
+
+# Generate percentage coupons between 5% and 25%
+wp wc generate coupons 20 --discount_type=percent --min=5 --max=25
+```
+
+| Option | Description |
+|---|---|
+| `<amount>` | Number of coupons to generate. Default: `10` |
+| `--min=<amount>` | Minimum discount amount. Default: `5` |
+| `--max=<amount>` | Maximum discount amount. Default: `100` |
+| `--discount_type=<type>` | Discount type: `fixed_cart` or `percent`. Default: `fixed_cart` |
 
 ### Terms
 
-Generate terms in the Product Categories taxonomy based on the number of terms parameter.
-- `wp wc generate terms product_cat <nr of terms>`
+```bash
+# Generate 10 product tags
+wp wc generate terms product_tag 10
 
-Generate hierarchical product categories with a maximum number of sub-levels.
-- `wp wc generate terms product_cat <nr of terms> --max-depth=5`
+# Generate hierarchical product categories
+wp wc generate terms product_cat 50 --max-depth=3
 
-Generate product categories that are all child terms of an existing product category term.
-- `wp wc generate terms product_cat <nr of terms> --parent=123`
+# Generate child categories under an existing category
+wp wc generate terms product_cat 10 --parent=123
+```
 
-Generate terms in the Product Tags taxonomy based on the number of terms parameter.
-- `wp wc generate terms product_tag <nr of terms>`
+| Option | Description |
+|---|---|
+| `<taxonomy>` | Required. Taxonomy to generate terms for: `product_cat` or `product_tag` |
+| `<amount>` | Number of terms to generate. Default: `10` |
+| `--max-depth=<levels>` | Maximum hierarchy depth (1-5). Only applies to `product_cat`. Default: `1` (flat) |
+| `--parent=<term_id>` | Create all terms as children of this existing term ID. Only applies to `product_cat` |
 
-## Development
+## Programmatic usage
 
-Requirements
+All generators live in the `WC\SmoothGenerator\Generator` namespace and expose `generate()` and `batch()` static methods.
 
-* Node.js v16
-* Composer v2+
+### Single objects
 
-1. If you use [Node Version Manager](https://github.com/nvm-sh/nvm) (nvm) you can run `nvm use` to ensure your current Node version is compatible.
-1. Run `npm run setup` to get started. This will install a pre-commit Git hook that will lint changes to PHP files before they are committed. It uses the same phpcs ruleset that's used by WooCommerce Core.
+```php
+use WC\SmoothGenerator\Generator;
 
-### Releasing a new version
+// Generate and save a product (returns WC_Product or WP_Error).
+$product = Generator\Product::generate( true, [ 'type' => 'simple' ] );
 
-1. Create a new branch with a name like `release-x.x.x`.
-1. Add a new entry to the **changelog.txt** file with all the changes since the last release. Follow the conventions of previous changelog entries.
-1. If necessary, update the `Tested up to` and `WC tested up to` values in the plugin header in **wc-smooth-generator.php**.
-1. Update the plugin version with the new value in the **wc-smooth-generator.php** and **package.json** files.
-1. Run `npm run build` to generate a production-ready zip file.
-1. Test the zip file by installing it in a WordPress instance and ensuring it has the expected version number and changes.
-1. Commit the changes to your release branch, and push to the repository. Create a pull request from the release branch.
-1. Merge the pull request.
-1. In GitHub, go to the Releases screen and click "Draft a new release".
-1. Set the release title as "Version x.x.x" (but with the actual version number). In the release description, add a brief summary of highlights, and then paste the new changelog entry below that. From the "Choose a tag" dropdown, type the new version number and then click "Create a new tag". Ensure the target is trunk.
-1. Upload the new zip file to the release where it says "Attach binaries".
-1. Publish the release!
+// Generate and save an order (returns WC_Order or false).
+$order = Generator\Order::generate( true, [ 'status' => 'completed' ] );
 
-After finishing the release, you may want to run `npm run setup` again, because the `build` script removes dev dependencies.
+// Generate and save a customer (returns WC_Customer or WP_Error).
+$customer = Generator\Customer::generate( true, [ 'country' => 'US', 'type' => 'person' ] );
+
+// Generate and save a coupon (returns WC_Coupon or WP_Error).
+$coupon = Generator\Coupon::generate( true, [ 'min' => 5, 'max' => 25, 'discount_type' => 'percent' ] );
+
+// Generate and save a term (returns WP_Term or WP_Error).
+$term = Generator\Term::generate( true, 'product_cat', 0 );
+```
+
+### Batch generation
+
+```php
+use WC\SmoothGenerator\Generator;
+
+// Generate 50 products (returns array of product IDs or WP_Error).
+// Max batch size: 100.
+$product_ids = Generator\Product::batch( 50, [ 'type' => 'variable', 'use-existing-terms' => true ] );
+
+// Generate 100 orders with date range and coupons.
+$order_ids = Generator\Order::batch( 100, [
+    'date-start'   => '2024-01-01',
+    'date-end'     => '2024-06-30',
+    'status'       => 'completed',
+    'coupon-ratio' => '0.3',
+    'refund-ratio' => '0.2',
+] );
+
+// Generate 25 customers.
+$customer_ids = Generator\Customer::batch( 25, [ 'country' => 'ES' ] );
+
+// Generate 10 coupons.
+$coupon_ids = Generator\Coupon::batch( 10, [ 'min' => 1, 'max' => 50 ] );
+
+// Generate 20 hierarchical product categories.
+$term_ids = Generator\Term::batch( 20, 'product_cat', [ 'max-depth' => 3 ] );
+```
+
+### Action hooks
+
+Each generator fires an action after creating an object:
+
+- `smoothgenerator_product_generated` -- after a product is saved
+- `smoothgenerator_order_generated` -- after an order is saved
+- `smoothgenerator_customer_generated` -- after a customer is saved
+- `smoothgenerator_coupon_generated` -- after a coupon is saved
+- `smoothgenerator_term_generated` -- after a term is saved
+
+## Available generators
+
+### Product generator
+
+Creates simple or variable products with:
+
+- Name, SKU, global unique ID, featured status
+- Price, sale price, sale date scheduling
+- Tax status and class, stock management
+- Product image and gallery images (auto-generated)
+- Categories, tags, and brands (if the `product_brand` taxonomy exists)
+- Upsells and cross-sells from existing products
+- Attributes and variations (for variable products)
+- Virtual/downloadable flags, dimensions, weight
+- Cost of Goods Sold (if WooCommerce COGS is enabled)
+- Reviews allowed toggle, purchase notes, menu order
+
+### Order generator
+
+Creates orders with realistic data:
+
+- Billing and shipping addresses from the customer
+- Line items from existing products
+- Random status distribution (or a specific status)
+- Date randomization within a given range
+- Coupon application with configurable ratio
+- Refunds: full, partial, and multi-partial with realistic timing
+- Order attribution: device type, UTM parameters, referrer, session data
+- Extra fees (~20% chance per order)
+- Paid and completed dates based on status
+
+### Customer generator
+
+Creates customer accounts with localized data:
+
+- Person (first/last name) or company profiles
+- Localized names, emails, and phone numbers based on country
+- Billing address with street, city, state, postcode
+- Shipping address (50% chance; half copy billing, half are unique)
+- Username and password
+
+### Coupon generator
+
+Creates discount coupons:
+
+- Auto-generated coupon codes
+- Configurable discount range (min/max)
+- Fixed cart or percentage discount type
+
+### Term generator
+
+Creates taxonomy terms for products:
+
+- Product categories (`product_cat`) with optional hierarchy (up to 5 levels deep)
+- Product tags (`product_tag`)
+- Auto-generated descriptions
+- Child terms under a specified parent
+
+## Contributing
+
+Found a bug or want a feature? [Open an issue](https://github.com/woocommerce/wc-smooth-generator/issues) or submit a pull request.
+
+### Development setup
+
+Requires Node.js v16 and Composer v2+.
+
+```bash
+npm run setup
+```
+
+This installs dependencies and sets up a pre-commit hook that lints PHP changes using the WooCommerce Core phpcs ruleset.
+
+## License
+
+[GPL-3.0-or-later](https://www.gnu.org/licenses/gpl-3.0.html)
