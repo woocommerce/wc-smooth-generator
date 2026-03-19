@@ -67,8 +67,8 @@ If code touches term generation (`includes/Generator/Term.php` or term-related c
 
 - [ ] Term cache clearing AFTER batch generation:
   ```php
-  // After generating terms in batch
-  clean_term_cache( $taxonomy );
+  // After generating terms in batch; $term_ids is the array of generated term IDs
+  clean_term_cache( $term_ids, $taxonomy );
   ```
 
 **Why this matters:**

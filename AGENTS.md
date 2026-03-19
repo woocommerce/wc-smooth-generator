@@ -321,8 +321,8 @@ Unless explicitly requested by the user:
 
 **MUST clear term caches after batch generation:**
 ```php
-// After generating terms in batch
-clean_term_cache( $taxonomy );
+// After generating terms in batch; $term_ids is the array of generated term IDs
+clean_term_cache( $term_ids, $taxonomy );
 ```
 
 **MUST validate taxonomy exists before generation:**
