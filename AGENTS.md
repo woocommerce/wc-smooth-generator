@@ -12,8 +12,8 @@ This file provides essential context for AI agents working on this project. It c
 ### Tech Stack
 
 - **PHP:** 7.4+ (required)
-- **WordPress:** 6.7+ (tested up to 6.9)
-- **WooCommerce:** 10.3+ (tested up to 10.5)
+- **WordPress:** tested up to 6.5
+- **WooCommerce:** 5.0.0+ (tested up to 9.1.0)
 - **HPOS:** Compatible with WooCommerce High-Performance Order Storage
 - **Node.js:** 14+ (recommended: v16 via nvm)
 
