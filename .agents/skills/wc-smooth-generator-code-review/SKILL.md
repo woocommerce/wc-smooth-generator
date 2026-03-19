@@ -18,8 +18,7 @@ This skill provides a comprehensive code review checklist specific to this proje
 - [ ] Other plugins (only `wp-content/plugins/wc-smooth-generator/` should be modified)
 
 **Check that these files are NOT staged for commit:**
-- [ ] `CLAUDE.md` (unless explicitly requested)
-- [ ] `AGENTS.md` (unless explicitly requested)
+- [ ] `CLAUDE.md` or `AGENTS.md` — only commit these when intentionally updating agent configuration; do not commit incidental changes
 - [ ] `.claude/settings.local.json`
 - [ ] `.claude/plans/` directory (unless explicitly updating PROGRESS.md)
 - [ ] `changelog.txt` (should ONLY be updated during releases)

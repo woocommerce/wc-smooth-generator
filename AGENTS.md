@@ -298,8 +298,7 @@ All generators extend `includes/Generator/Generator.php` base class:
 
 ### Version Control - Files to NEVER Commit
 
-Unless explicitly requested by the user:
-- **NEVER commit `CLAUDE.md`** (or `AGENTS.md`)
+- **Only update `CLAUDE.md` or `AGENTS.md`** when intentionally updating agent configuration — do not commit incidental changes to these files
 - **NEVER commit `.claude/settings.local.json`**
 - **NEVER commit `.claude/plans/` directory**
 - **NEVER commit `changelog.txt` updates** (only during releases)
