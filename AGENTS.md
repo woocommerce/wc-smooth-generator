@@ -282,7 +282,7 @@ wp wc generate terms product_tag 30
 
 ### 5. Generator Architecture
 
-All generators extend `includes/Generator.php` base class:
+All generators extend `includes/Generator/Generator.php` base class:
 - Use Faker library for data generation
 - Support batch processing
 - Implement error handling and validation
