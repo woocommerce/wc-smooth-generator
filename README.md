@@ -1,6 +1,6 @@
 # WooCommerce Smooth Generator
 
-Generate realistic WooCommerce products, orders, customers, coupons, and taxonomy terms for development, testing, and demos.
+Generate realistic WooCommerce products, orders, customers, coupons, taxonomy terms, and bookings for development, testing, and demos.
 
 WP-CLI is the primary interface. A limited WP Admin UI is also available at Dashboard > Tools > WooCommerce Smooth Generator.
 
@@ -24,6 +24,7 @@ composer install --no-dev
 - PHP 7.4+
 - WordPress (tested up to 6.9)
 - WooCommerce 5.0+
+- [WooCommerce Bookings](https://woocommerce.com/products/woocommerce-bookings/) (optional, required for booking generation)
 
 ## WP-CLI commands
 
@@ -81,6 +82,33 @@ wp wc generate orders 50 --status=completed --refund-ratio=0.3
 **Batch distribution:** When generating multiple orders, coupon and refund counts are deterministic (selection without replacement). For odd totals, `round()` distributes coupons and remainders go to multi-partial refunds. Single-order generation uses probabilistic distribution.
 
 **Order attribution:** Random attribution metadata (device type, UTM parameters, referrer, session data) is added by default. Orders dated before 2024-01-09 skip attribution, since the feature didn't exist in WooCommerce yet.
+
+### Bookings
+
+Requires the [WooCommerce Bookings](https://woocommerce.com/products/woocommerce-bookings/) extension.
+
+```bash
+# Generate 10 bookings (creates bookable products automatically if none exist)
+wp wc generate bookings
+
+# Generate bookings with a specific date range
+wp wc generate bookings 50 --date-start=2026-04-01 --date-end=2026-06-30
+
+# Generate confirmed bookings for a specific bookable product
+wp wc generate bookings 20 --status=confirmed --product-id=42
+
+# Generate bookings without associated WooCommerce orders
+wp wc generate bookings 30 --no-orders
+```
+
+| Option | Description |
+|---|---|
+| `<amount>` | Number of bookings to generate. Default: `10` |
+| `--date-start=<date>` | Earliest booking date (YYYY-MM-DD). Default: 14 days ago |
+| `--date-end=<date>` | Latest booking date (YYYY-MM-DD). Default: 42 days from now |
+| `--status=<status>` | Booking status: `unpaid`, `pending-confirmation`, `confirmed`, `paid`, `cancelled`, or `complete`. Default: weighted random mix |
+| `--product-id=<id>` | Use a specific bookable product for all bookings |
+| `--no-orders` | Skip creating associated WooCommerce orders (orders are created by default) |
 
 ### Customers
 
@@ -153,6 +181,9 @@ $order = Generator\Order::generate( true, [ 'status' => 'completed' ] );
 // Generate and save a customer (returns WC_Customer or WP_Error).
 $customer = Generator\Customer::generate( true, [ 'country' => 'US', 'type' => 'person' ] );
 
+// Generate and save a booking (returns booking ID or WP_Error). Requires WooCommerce Bookings.
+$booking_id = Generator\Booking::generate( true, [ 'status' => 'confirmed' ] );
+
 // Generate and save a coupon (returns WC_Coupon or WP_Error).
 $coupon = Generator\Coupon::generate( true, [ 'min' => 5, 'max' => 25, 'discount_type' => 'percent' ] );
 
@@ -178,6 +209,13 @@ $order_ids = Generator\Order::batch( 100, [
     'refund-ratio' => '0.2',
 ] );
 
+// Generate 20 bookings with associated orders.
+$booking_ids = Generator\Booking::batch( 20, [
+    'date-start'  => '2026-04-01',
+    'date-end'    => '2026-06-30',
+    'with-orders' => true,
+] );
+
 // Generate 25 customers.
 $customer_ids = Generator\Customer::batch( 25, [ 'country' => 'ES' ] );
 
@@ -194,6 +232,7 @@ Each generator fires an action after creating an object:
 
 - `smoothgenerator_product_generated` -- after a product is saved
 - `smoothgenerator_order_generated` -- after an order is saved
+- `smoothgenerator_booking_generated` -- after a booking is saved (requires WooCommerce Bookings)
 - `smoothgenerator_customer_generated` -- after a customer is saved
 - `smoothgenerator_coupon_generated` -- after a coupon is saved
 - `smoothgenerator_term_generated` -- after a term is saved
@@ -228,6 +267,19 @@ Creates orders with realistic data:
 - Order attribution: device type, UTM parameters, referrer, session data
 - Extra fees (~20% chance per order)
 - Paid and completed dates based on status
+
+### Booking generator
+
+Requires the [WooCommerce Bookings](https://woocommerce.com/products/woocommerce-bookings/) extension. Creates bookings with:
+
+- Checks for WooCommerce Bookings dependency before proceeding
+- Auto-creates varied bookable products (hourly services, daily rentals, group workshops) if none exist
+- Random booking dates within a configurable range
+- Weighted status distribution: paid (35%), confirmed (25%), complete (20%), unpaid (10%), pending-confirmation (5%), cancelled (5%)
+- Person counts based on product configuration
+- Resource assignment from product's available resources
+- Associated WooCommerce orders with mapped statuses (optional)
+- Customer assignment from existing customers or auto-created ones
 
 ### Customer generator
 
