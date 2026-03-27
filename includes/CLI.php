@@ -215,6 +215,58 @@ class CLI extends WP_CLI_Command {
 	}
 
 	/**
+	 * Generate bookings.
+	 *
+	 * @param array $args Arguments specified.
+	 * @param array $assoc_args Associative arguments specified.
+	 */
+	public static function bookings( $args, $assoc_args ) {
+		list( $amount ) = $args;
+		$amount = absint( $amount );
+
+		$time_start = microtime( true );
+
+		// Convert --no-orders flag to with-orders arg.
+		if ( ! empty( $assoc_args['no-orders'] ) ) {
+			$assoc_args['with-orders'] = false;
+			unset( $assoc_args['no-orders'] );
+		}
+
+		$progress = \WP_CLI\Utils\make_progress_bar( 'Generating bookings', $amount );
+
+		add_action(
+			'smoothgenerator_booking_generated',
+			function () use ( $progress ) {
+				$progress->tick();
+			}
+		);
+
+		$remaining_amount = $amount;
+		$generated        = 0;
+
+		while ( $remaining_amount > 0 ) {
+			$batch = min( $remaining_amount, Generator\Booking::MAX_BATCH_SIZE );
+
+			$result = Generator\Booking::batch( $batch, $assoc_args );
+
+			if ( is_wp_error( $result ) ) {
+				WP_CLI::error( $result );
+			}
+
+			$generated        += count( $result );
+			$remaining_amount -= $batch;
+		}
+
+		$progress->finish();
+
+		$time_end       = microtime( true );
+		$execution_time = round( ( $time_end - $time_start ), 2 );
+		$display_time   = $execution_time < 60 ? $execution_time . ' seconds' : human_time_diff( $time_start, $time_end );
+
+		WP_CLI::success( $generated . ' bookings generated in ' . $display_time );
+	}
+
+	/**
 	 * Generate terms for the Product Category taxonomy.
 	 *
 	 * @param array $args Arguments specified.
@@ -343,6 +395,57 @@ WP_CLI::add_command( 'wc generate orders', array( 'WC\SmoothGenerator\CLI', 'ord
 		)
 	),
 	'longdesc'  => "## EXAMPLES\n\nwc generate orders 10\n\nwc generate orders 50 --date-start=2020-01-01 --date-end=2022-12-31 --status=completed --coupons",
+) );
+
+WP_CLI::add_command( 'wc generate bookings', array( 'WC\SmoothGenerator\CLI', 'bookings' ), array(
+	'shortdesc' => 'Generate bookings. Requires the WooCommerce Bookings extension.',
+	'synopsis'  => array(
+		array(
+			'name'        => 'amount',
+			'type'        => 'positional',
+			'description' => 'The number of bookings to generate.',
+			'optional'    => true,
+			'default'     => 10,
+		),
+		array(
+			'name'        => 'date-start',
+			'type'        => 'assoc',
+			'description' => 'Earliest booking date (Y-m-d). Default: 14 days ago.',
+			'optional'    => true,
+		),
+		array(
+			'name'        => 'date-end',
+			'type'        => 'assoc',
+			'description' => 'Latest booking date (Y-m-d). Default: 42 days from now.',
+			'optional'    => true,
+		),
+		array(
+			'name'        => 'status',
+			'type'        => 'assoc',
+			'description' => 'Specify one status for all generated bookings. Otherwise defaults to a weighted mix.',
+			'optional'    => true,
+			'options'     => array( 'unpaid', 'pending-confirmation', 'confirmed', 'paid', 'cancelled', 'complete' ),
+		),
+		array(
+			'name'        => 'product-id',
+			'type'        => 'assoc',
+			'description' => 'Generate bookings for a specific bookable product ID. Otherwise picks from available bookable products.',
+			'optional'    => true,
+		),
+		array(
+			'name'        => 'with-orders',
+			'type'        => 'flag',
+			'description' => 'Create associated WooCommerce orders for each booking. Default: true.',
+			'optional'    => true,
+		),
+		array(
+			'name'        => 'no-orders',
+			'type'        => 'flag',
+			'description' => 'Skip creating associated WooCommerce orders.',
+			'optional'    => true,
+		),
+	),
+	'longdesc'  => "## EXAMPLES\n\nwc generate bookings 10\n\nwc generate bookings 50 --date-start=2026-04-01 --date-end=2026-06-30\n\nwc generate bookings 20 --status=confirmed --product-id=42\n\nwc generate bookings 30 --no-orders",
 ) );
 
 WP_CLI::add_command( 'wc generate customers', array( 'WC\SmoothGenerator\CLI', 'customers' ), array(

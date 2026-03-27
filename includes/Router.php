@@ -10,6 +10,7 @@ class Router {
 	 * @const array Associative array of available generator classes.
 	 */
 	const GENERATORS = array(
+		'bookings'  => Generator\Booking::class,
 		'coupons'   => Generator\Coupon::class,
 		'customers' => Generator\Customer::class,
 		'orders'    => Generator\Order::class,
