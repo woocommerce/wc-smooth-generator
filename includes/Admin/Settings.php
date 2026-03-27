@@ -14,7 +14,7 @@ class Settings {
 
 	const DEFAULT_NUM_PRODUCTS           = 10;
 	const DEFAULT_NUM_ORDERS             = 10;
-	const DEFAULT_NUM_BOOKINGS           = 10;
+	const DEFAULT_NUM_BOOKINGS = 10;
 
 	/**
 	 *  Set up hooks.
@@ -327,7 +327,7 @@ class Settings {
 			check_admin_referer( 'generate', 'smoothgenerator_nonce' );
 			$num_to_generate = absint( $_POST['num_orders_to_generate'] );
 			BatchProcessor::create_new_job( 'orders', $num_to_generate, $args );
-		} else if ( ! empty( $_POST['generate_bookings'] ) && ! empty( $_POST['num_bookings_to_generate'] ) ) {
+		} elseif ( ! empty( $_POST['generate_bookings'] ) && ! empty( $_POST['num_bookings_to_generate'] ) ) {
 			check_admin_referer( 'generate', 'smoothgenerator_nonce' );
 			$num_to_generate = absint( $_POST['num_bookings_to_generate'] );
 			BatchProcessor::create_new_job( 'bookings', $num_to_generate, $args );

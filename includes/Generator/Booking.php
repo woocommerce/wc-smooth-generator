@@ -34,7 +34,7 @@ class Booking extends Generator {
 	 * @var array
 	 */
 	private static $product_templates = array(
-		'hourly'    => array(
+		'hourly'  => array(
 			'names'         => array(
 				'Private Consultation',
 				'Photography Session',
@@ -50,7 +50,7 @@ class Booking extends Generator {
 			'min_cost'      => 50,
 			'max_cost'      => 200,
 		),
-		'daily'     => array(
+		'daily'   => array(
 			'names'         => array(
 				'Equipment Rental',
 				'Venue Booking',
@@ -64,7 +64,7 @@ class Booking extends Generator {
 			'min_cost'      => 100,
 			'max_cost'      => 500,
 		),
-		'persons'   => array(
+		'persons' => array(
 			'names'         => array(
 				'Group Workshop',
 				'Team Building Event',
@@ -160,8 +160,8 @@ class Booking extends Generator {
 
 		// Add person counts if the product supports them.
 		if ( method_exists( $product, 'get_has_persons' ) && $product->get_has_persons() ) {
-			$min_persons = max( 1, $product->get_min_persons() );
-			$max_persons = max( $min_persons, $product->get_max_persons() );
+			$min_persons             = max( 1, $product->get_min_persons() );
+			$max_persons             = max( $min_persons, $product->get_max_persons() );
 			$booking_data['persons'] = wp_rand( $min_persons, $max_persons );
 		}
 
