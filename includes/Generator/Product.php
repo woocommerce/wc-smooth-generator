@@ -699,10 +699,18 @@ class Product extends Generator {
 	 */
 	protected static function add_booking_resources( $product ) {
 		$resource_names = array(
-			'Room A', 'Room B', 'Room C',
-			'Court 1', 'Court 2', 'Court 3',
-			'Station Alpha', 'Station Beta',
-			'Bay 1', 'Bay 2', 'Bay 3', 'Bay 4',
+			'Room A',
+			'Room B',
+			'Room C',
+			'Court 1',
+			'Court 2',
+			'Court 3',
+			'Station Alpha',
+			'Station Beta',
+			'Bay 1',
+			'Bay 2',
+			'Bay 3',
+			'Bay 4',
 		);
 
 		$num_resources = self::$faker->numberBetween( 2, 4 );

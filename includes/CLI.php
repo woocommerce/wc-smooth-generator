@@ -222,8 +222,8 @@ class CLI extends WP_CLI_Command {
 	 */
 	public static function bookings( $args, $assoc_args ) {
 		list( $amount ) = $args;
-		$amount     = absint( $amount );
-		$time_start = microtime( true );
+		$amount         = absint( $amount );
+		$time_start     = microtime( true );
 
 		// Convert --no-orders flag to with-orders arg.
 		if ( ! empty( $assoc_args['no-orders'] ) ) {
