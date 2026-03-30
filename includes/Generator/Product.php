@@ -85,6 +85,12 @@ class Product extends Generator {
 			case 'variable':
 				$product = self::generate_variable_product();
 				break;
+			case 'booking':
+				$product = self::generate_booking_product();
+				break;
+			case 'booking-service':
+				$product = self::generate_booking_service_product();
+				break;
 		}
 
 		// Check if product generation failed.
@@ -289,6 +295,15 @@ class Product extends Generator {
 	}
 
 	/**
+	 * Check whether WooCommerce Bookings is active.
+	 *
+	 * @return bool
+	 */
+	protected static function is_bookings_active() {
+		return class_exists( 'WC_Bookings' ) || class_exists( 'WC_Product_Booking' );
+	}
+
+	/**
 	 * Returns a product type to generate. If no type is specified, or an invalid type is specified,
 	 * a weighted random type is returned.
 	 *
@@ -301,6 +316,11 @@ class Product extends Generator {
 			'simple',
 			'variable',
 		);
+
+		if ( self::is_bookings_active() ) {
+			$types[] = 'booking';
+			$types[] = 'booking-service';
+		}
 
 		if ( ! is_null( $type ) && in_array( $type, $types, true ) ) {
 			return $type;
@@ -467,6 +487,242 @@ class Product extends Generator {
 		}
 
 		return $product;
+	}
+
+	/**
+	 * Names for bookable product generation.
+	 *
+	 * @var array
+	 */
+	protected static $booking_product_names = array(
+		'hourly' => array(
+			'Private Consultation',
+			'Photography Session',
+			'Personal Training',
+			'Tutoring Session',
+			'Therapy Appointment',
+			'Music Lesson',
+			'Yoga Class',
+			'Massage Session',
+			'Career Coaching',
+			'Language Lesson',
+		),
+		'daily'  => array(
+			'Equipment Rental',
+			'Venue Booking',
+			'Car Rental',
+			'Vacation Cabin',
+			'Meeting Room',
+			'Studio Rental',
+			'Boat Rental',
+			'Campsite Reservation',
+		),
+	);
+
+	/**
+	 * Names for bookable service products.
+	 *
+	 * @var array
+	 */
+	protected static $booking_service_names = array(
+		'Express Haircut',
+		'Oil Change Service',
+		'Pet Grooming',
+		'Phone Screen Repair',
+		'Dry Cleaning Pickup',
+		'Car Wash & Detail',
+		'Key Cutting Service',
+		'Passport Photo Service',
+		'Bike Tune-Up',
+		'Shoe Repair',
+	);
+
+	/**
+	 * Generate a bookable product (WC_Product_Booking) and return it.
+	 *
+	 * Requires WooCommerce Bookings to be active.
+	 *
+	 * @return \WC_Product_Booking|\WP_Error Product object or WP_Error on failure.
+	 */
+	protected static function generate_booking_product() {
+		if ( ! self::is_bookings_active() ) {
+			return new \WP_Error(
+				'smoothgenerator_missing_bookings',
+				'WooCommerce Bookings extension is not active. Cannot generate booking products.'
+			);
+		}
+
+		$is_daily      = self::$faker->boolean( 40 );
+		$duration_unit = $is_daily ? 'day' : 'hour';
+		$duration      = $is_daily ? self::$faker->numberBetween( 1, 3 ) : self::$faker->numberBetween( 1, 4 );
+		$cost          = $is_daily
+			? self::$faker->numberBetween( 50, 500 )
+			: self::$faker->numberBetween( 25, 200 );
+
+		$name_pool = $is_daily ? self::$booking_product_names['daily'] : self::$booking_product_names['hourly'];
+		$name      = $name_pool[ array_rand( $name_pool ) ];
+
+		$has_persons   = self::$faker->boolean( 40 );
+		$has_resources = self::$faker->boolean( 30 );
+
+		$product = new \WC_Product_Booking();
+
+		$image_id = self::get_image();
+
+		$product->set_props( array(
+			'name'               => $name,
+			'featured'           => self::$faker->boolean( 10 ),
+			'catalog_visibility' => 'visible',
+			'description'        => self::$faker->paragraphs( self::$faker->numberBetween( 1, 3 ), true ),
+			'short_description'  => self::$faker->sentence(),
+			'sku'                => sanitize_title( $name ) . '-' . self::$faker->ean8,
+			'regular_price'      => $cost,
+			'image_id'           => $image_id,
+			'category_ids'       => self::get_term_ids( 'product_cat', self::$faker->numberBetween( 0, 2 ) ),
+			'tag_ids'            => self::get_term_ids( 'product_tag', self::$faker->numberBetween( 0, 3 ) ),
+		) );
+
+		// Booking-specific settings.
+		$product->set_duration_type( 'fixed' );
+		$product->set_duration_unit( $duration_unit );
+		$product->set_duration( $duration );
+		$product->set_cost( $cost );
+
+		// Availability window: bookable from now to 90 days in the future.
+		$product->set_min_date_value( 0 );
+		$product->set_min_date_unit( 'day' );
+		$product->set_max_date_value( self::$faker->numberBetween( 30, 180 ) );
+		$product->set_max_date_unit( 'day' );
+		$product->set_default_date_availability( 'available' );
+
+		// Cancellation.
+		$product->set_user_can_cancel( self::$faker->boolean( 60 ) );
+
+		// Person support.
+		if ( $has_persons ) {
+			$min_persons = self::$faker->numberBetween( 1, 2 );
+			$max_persons = self::$faker->numberBetween( $min_persons + 1, 20 );
+
+			$product->set_has_persons( true );
+			$product->set_min_persons( $min_persons );
+			$product->set_max_persons( $max_persons );
+			$product->set_has_person_cost_multiplier( self::$faker->boolean( 70 ) );
+		}
+
+		$product->set_status( 'publish' );
+		$product->save();
+
+		// Add resources after save (they need a product ID).
+		if ( $has_resources && method_exists( $product, 'set_has_resources' ) ) {
+			self::add_booking_resources( $product );
+		}
+
+		return $product;
+	}
+
+	/**
+	 * Generate a bookable service product and return it.
+	 *
+	 * A "service" booking product is a virtual booking with no physical component:
+	 * short duration (minutes to a few hours), no persons, no resources.
+	 *
+	 * Requires WooCommerce Bookings to be active.
+	 *
+	 * @return \WC_Product_Booking|\WP_Error Product object or WP_Error on failure.
+	 */
+	protected static function generate_booking_service_product() {
+		if ( ! self::is_bookings_active() ) {
+			return new \WP_Error(
+				'smoothgenerator_missing_bookings',
+				'WooCommerce Bookings extension is not active. Cannot generate booking-service products.'
+			);
+		}
+
+		$name     = self::$booking_service_names[ array_rand( self::$booking_service_names ) ];
+		$is_short = self::$faker->boolean( 60 );
+		$cost     = self::$faker->numberBetween( 10, 100 );
+
+		$product = new \WC_Product_Booking();
+
+		$image_id = self::get_image();
+
+		$product->set_props( array(
+			'name'               => $name,
+			'featured'           => self::$faker->boolean( 10 ),
+			'catalog_visibility' => 'visible',
+			'description'        => self::$faker->paragraphs( self::$faker->numberBetween( 1, 2 ), true ),
+			'short_description'  => self::$faker->sentence(),
+			'sku'                => sanitize_title( $name ) . '-' . self::$faker->ean8,
+			'regular_price'      => $cost,
+			'virtual'            => true,
+			'image_id'           => $image_id,
+			'category_ids'       => self::get_term_ids( 'product_cat', self::$faker->numberBetween( 0, 2 ) ),
+			'tag_ids'            => self::get_term_ids( 'product_tag', self::$faker->numberBetween( 0, 3 ) ),
+		) );
+
+		// Booking-specific settings: short fixed-duration services.
+		$product->set_duration_type( 'fixed' );
+
+		if ( $is_short ) {
+			$product->set_duration_unit( 'minute' );
+			$product->set_duration( self::$faker->randomElement( array( 15, 20, 30, 45, 60 ) ) );
+		} else {
+			$product->set_duration_unit( 'hour' );
+			$product->set_duration( self::$faker->numberBetween( 1, 2 ) );
+		}
+
+		$product->set_cost( $cost );
+
+		// Availability: same-day or short-notice bookings.
+		$product->set_min_date_value( 0 );
+		$product->set_min_date_unit( 'day' );
+		$product->set_max_date_value( self::$faker->numberBetween( 14, 60 ) );
+		$product->set_max_date_unit( 'day' );
+		$product->set_default_date_availability( 'available' );
+
+		// Services are typically not cancellable or have tight cancellation windows.
+		$product->set_user_can_cancel( self::$faker->boolean( 30 ) );
+
+		// No persons, no resources — this is the key differentiator from a regular booking.
+		$product->set_has_persons( false );
+
+		$product->set_status( 'publish' );
+		$product->save();
+
+		return $product;
+	}
+
+	/**
+	 * Add random resources to a bookable product.
+	 *
+	 * @param \WC_Product_Booking $product The bookable product.
+	 */
+	protected static function add_booking_resources( $product ) {
+		$resource_names = array(
+			'Room A', 'Room B', 'Room C',
+			'Court 1', 'Court 2', 'Court 3',
+			'Station Alpha', 'Station Beta',
+			'Bay 1', 'Bay 2', 'Bay 3', 'Bay 4',
+		);
+
+		$num_resources = self::$faker->numberBetween( 2, 4 );
+		shuffle( $resource_names );
+		$selected = array_slice( $resource_names, 0, $num_resources );
+
+		$product->set_has_resources( true );
+
+		foreach ( $selected as $resource_name ) {
+			$resource = new \WC_Product_Booking_Resource();
+			$resource->set_name( $resource_name );
+			$resource->set_qty( self::$faker->numberBetween( 1, 5 ) );
+			$resource->set_base_cost( 0 );
+			$resource->set_block_cost( 0 );
+			$resource->save();
+
+			$product->add_resource( $resource );
+		}
+
+		$product->save();
 	}
 
 	/**

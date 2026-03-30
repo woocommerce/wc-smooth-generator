@@ -325,9 +325,9 @@ WP_CLI::add_command( 'wc generate products', array( 'WC\SmoothGenerator\CLI', 'p
 		array(
 			'name'        => 'type',
 			'type'        => 'assoc',
-			'description' => 'Specify one type of product to generate. Otherwise defaults to a mix.',
+			'description' => 'Specify one type of product to generate. Otherwise defaults to a mix. "booking" and "booking-service" require the WooCommerce Bookings extension.',
 			'optional'    => true,
-			'options'     => array( 'simple', 'variable' ),
+			'options'     => array( 'simple', 'variable', 'booking', 'booking-service' ),
 		),
 		array(
 			'name'        => 'use-existing-terms',
@@ -336,7 +336,7 @@ WP_CLI::add_command( 'wc generate products', array( 'WC\SmoothGenerator\CLI', 'p
 			'optional'    => true,
 		),
 	),
-	'longdesc'  => "## EXAMPLES\n\nwc generate products 10\n\nwc generate products 20 --type=variable --use-existing-terms",
+	'longdesc'  => "## EXAMPLES\n\nwc generate products 10\n\nwc generate products 20 --type=variable --use-existing-terms\n\nwc generate products 5 --type=booking\n\nwc generate products 5 --type=booking-service",
 ) );
 
 WP_CLI::add_command( 'wc generate orders', array( 'WC\SmoothGenerator\CLI', 'orders' ), array(

@@ -41,12 +41,18 @@ wp wc generate products 25 --type=simple
 
 # Generate variable products using only existing categories and tags
 wp wc generate products 10 --type=variable --use-existing-terms
+
+# Generate bookable products (requires WooCommerce Bookings)
+wp wc generate products 5 --type=booking
+
+# Generate bookable service products (virtual, short-duration)
+wp wc generate products 5 --type=booking-service
 ```
 
 | Option | Description |
 |---|---|
 | `<amount>` | Number of products to generate. Default: `10` |
-| `--type=<type>` | Product type: `simple` or `variable`. Default: random mix |
+| `--type=<type>` | Product type: `simple`, `variable`, `booking`, or `booking-service`. Default: random mix of simple/variable. `booking` and `booking-service` require [WooCommerce Bookings](https://woocommerce.com/products/woocommerce-bookings/) |
 | `--use-existing-terms` | Only use existing categories and tags instead of generating new ones |
 
 ### Orders
@@ -184,6 +190,12 @@ $customer = Generator\Customer::generate( true, [ 'country' => 'US', 'type' => '
 // Generate and save a booking (returns booking ID or WP_Error). Requires WooCommerce Bookings.
 $booking_id = Generator\Booking::generate( true, [ 'status' => 'confirmed' ] );
 
+// Generate and save a bookable product (returns WC_Product_Booking or WP_Error). Requires WooCommerce Bookings.
+$booking_product = Generator\Product::generate( true, [ 'type' => 'booking' ] );
+
+// Generate and save a bookable service product (returns WC_Product_Booking or WP_Error). Requires WooCommerce Bookings.
+$service_product = Generator\Product::generate( true, [ 'type' => 'booking-service' ] );
+
 // Generate and save a coupon (returns WC_Coupon or WP_Error).
 $coupon = Generator\Coupon::generate( true, [ 'min' => 5, 'max' => 25, 'discount_type' => 'percent' ] );
 
@@ -199,6 +211,9 @@ use WC\SmoothGenerator\Generator;
 // Generate 50 products (returns array of product IDs or WP_Error).
 // Max batch size: 100.
 $product_ids = Generator\Product::batch( 50, [ 'type' => 'variable', 'use-existing-terms' => true ] );
+
+// Generate 10 bookable products. Requires WooCommerce Bookings.
+$booking_product_ids = Generator\Product::batch( 10, [ 'type' => 'booking' ] );
 
 // Generate 100 orders with date range and coupons.
 $order_ids = Generator\Order::batch( 100, [
@@ -241,7 +256,7 @@ Each generator fires an action after creating an object:
 
 ### Product generator
 
-Creates simple or variable products with:
+Creates simple, variable, booking, or booking-service products with:
 
 - Name, SKU, global unique ID, featured status
 - Price, sale price, sale date scheduling
@@ -253,6 +268,21 @@ Creates simple or variable products with:
 - Virtual/downloadable flags, dimensions, weight
 - Cost of Goods Sold (if WooCommerce COGS is enabled)
 - Reviews allowed toggle, purchase notes, menu order
+
+**Booking products** (requires [WooCommerce Bookings](https://woocommerce.com/products/woocommerce-bookings/)):
+
+- Hourly or daily duration with realistic names (consultations, rentals, venues)
+- Person support with min/max counts and cost multiplier (~40% of products)
+- Resource assignment with named resources like rooms and stations (~30% of products)
+- Configurable availability windows (30-180 days)
+- Cancellation settings
+
+**Booking-service products** (requires [WooCommerce Bookings](https://woocommerce.com/products/woocommerce-bookings/)):
+
+- Virtual, short-duration services (haircuts, repairs, grooming)
+- Minute-based (15-60 min) or short hour-based (1-2 hrs) durations
+- No persons or resources (simple appointment-style bookings)
+- Short availability windows (14-60 days)
 
 ### Order generator
 
