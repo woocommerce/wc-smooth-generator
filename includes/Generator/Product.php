@@ -797,17 +797,24 @@ class Product extends Generator {
 
 		$product->set_has_resources( true );
 
+		$base_costs  = array();
+		$block_costs = array();
+
 		foreach ( $selected as $resource_name ) {
 			$resource = new \WC_Product_Booking_Resource();
 			$resource->set_name( $resource_name );
 			$resource->set_qty( self::$faker->numberBetween( 1, 5 ) );
-			$resource->set_base_cost( 0 );
-			$resource->set_block_cost( 0 );
 			$resource->save();
 
 			$product->add_resource( $resource );
+
+			// Resource costs are stored at the product level, not on the resource object.
+			$base_costs[ $resource->get_id() ]  = 0;
+			$block_costs[ $resource->get_id() ] = 0;
 		}
 
+		$product->set_resource_base_costs( $base_costs );
+		$product->set_resource_block_costs( $block_costs );
 		$product->save();
 	}
 
