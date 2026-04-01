@@ -88,8 +88,11 @@ class Product extends Generator {
 			case 'booking':
 				$product = self::generate_booking_product();
 				break;
-			case 'booking-service':
-				$product = self::generate_booking_service_product();
+			case 'bookable-service':
+				$product = self::generate_bookable_service_product();
+				break;
+			case 'bookable-event':
+				$product = self::generate_bookable_event_product();
 				break;
 		}
 
@@ -297,10 +300,12 @@ class Product extends Generator {
 	/**
 	 * Check whether WooCommerce Bookings is active.
 	 *
+	 * Delegates to Booking::is_bookings_active() as the single source of truth.
+	 *
 	 * @return bool
 	 */
 	protected static function is_bookings_active() {
-		return class_exists( 'WC_Bookings' ) || class_exists( 'WC_Product_Booking' );
+		return Booking::is_bookings_active();
 	}
 
 	/**
@@ -319,7 +324,11 @@ class Product extends Generator {
 
 		if ( self::is_bookings_active() ) {
 			$types[] = 'booking';
-			$types[] = 'booking-service';
+		}
+
+		if ( Booking::is_bookings_experimental_active() ) {
+			$types[] = 'bookable-service';
+			$types[] = 'bookable-event';
 		}
 
 		if ( ! is_null( $type ) && in_array( $type, $types, true ) ) {
@@ -524,7 +533,7 @@ class Product extends Generator {
 	 *
 	 * @var array
 	 */
-	protected static $booking_service_names = array(
+	protected static $bookable_service_names = array(
 		'Express Haircut',
 		'Oil Change Service',
 		'Pet Grooming',
@@ -535,6 +544,24 @@ class Product extends Generator {
 		'Passport Photo Service',
 		'Bike Tune-Up',
 		'Shoe Repair',
+	);
+
+	/**
+	 * Names for bookable event products.
+	 *
+	 * @var array
+	 */
+	protected static $bookable_event_names = array(
+		'Live Concert',
+		'Weekend Workshop',
+		'Wine Tasting Evening',
+		'Charity Gala',
+		'Tech Conference',
+		'Cooking Masterclass',
+		'Open Mic Night',
+		'Outdoor Movie Screening',
+		'Networking Mixer',
+		'Art Exhibition Opening',
 	);
 
 	/**
@@ -621,28 +648,26 @@ class Product extends Generator {
 	}
 
 	/**
-	 * Generate a bookable service product and return it.
+	 * Generate a bookable service product using the real WC_Product_Bookable_Service class.
 	 *
-	 * A "service" booking product is a virtual booking with no physical component:
-	 * short duration (minutes to a few hours), no persons, no resources.
+	 * Requires WooCommerce Bookings with experimental features enabled
+	 * (WC_BOOKINGS_EXPERIMENTAL_ENABLED). The class enforces: virtual, fixed duration
+	 * in minutes, default date availability = non-available, resources assignment = customer.
 	 *
-	 * Requires WooCommerce Bookings to be active.
-	 *
-	 * @return \WC_Product_Booking|\WP_Error Product object or WP_Error on failure.
+	 * @return \WC_Product_Bookable_Service|\WP_Error Product object or WP_Error on failure.
 	 */
-	protected static function generate_booking_service_product() {
-		if ( ! self::is_bookings_active() ) {
+	protected static function generate_bookable_service_product() {
+		if ( ! Booking::is_bookings_experimental_active() ) {
 			return new \WP_Error(
-				'smoothgenerator_missing_bookings',
-				'WooCommerce Bookings extension is not active. Cannot generate booking-service products.'
+				'smoothgenerator_missing_bookings_experimental',
+				'WooCommerce Bookings experimental features are not active. The bookable-service type requires WC_BOOKINGS_EXPERIMENTAL_ENABLED.'
 			);
 		}
 
-		$name     = self::$booking_service_names[ array_rand( self::$booking_service_names ) ];
-		$is_short = self::$faker->boolean( 60 );
-		$cost     = self::$faker->numberBetween( 10, 100 );
+		$name = self::$bookable_service_names[ array_rand( self::$bookable_service_names ) ];
+		$cost = self::$faker->numberBetween( 10, 100 );
 
-		$product = new \WC_Product_Booking();
+		$product = new \WC_Product_Bookable_Service();
 
 		$image_id = self::get_image();
 
@@ -654,37 +679,90 @@ class Product extends Generator {
 			'short_description'  => self::$faker->sentence(),
 			'sku'                => sanitize_title( $name ) . '-' . self::$faker->ean8,
 			'regular_price'      => $cost,
-			'virtual'            => true,
 			'image_id'           => $image_id,
 			'category_ids'       => self::get_term_ids( 'product_cat', self::$faker->numberBetween( 0, 2 ) ),
 			'tag_ids'            => self::get_term_ids( 'product_tag', self::$faker->numberBetween( 0, 3 ) ),
 		) );
 
-		// Booking-specific settings: short fixed-duration services.
-		$product->set_duration_type( 'fixed' );
-
-		if ( $is_short ) {
-			$product->set_duration_unit( 'minute' );
-			$product->set_duration( self::$faker->randomElement( array( 15, 20, 30, 45, 60 ) ) );
-		} else {
-			$product->set_duration_unit( 'hour' );
-			$product->set_duration( self::$faker->numberBetween( 1, 2 ) );
-		}
-
+		// Duration is always in minutes for service products (enforced by the class).
+		$product->set_duration( self::$faker->randomElement( array( 15, 20, 30, 45, 60 ) ) );
 		$product->set_cost( $cost );
 
-		// Availability: same-day or short-notice bookings.
+		// Availability window.
 		$product->set_min_date_value( 0 );
 		$product->set_min_date_unit( 'day' );
 		$product->set_max_date_value( self::$faker->numberBetween( 14, 60 ) );
 		$product->set_max_date_unit( 'day' );
-		$product->set_default_date_availability( 'available' );
 
-		// Services are typically not cancellable or have tight cancellation windows.
+		// Cancellation.
 		$product->set_user_can_cancel( self::$faker->boolean( 30 ) );
 
-		// No persons, no resources — this is the key differentiator from a regular booking.
-		$product->set_has_persons( false );
+		$product->set_status( 'publish' );
+		$product->save();
+
+		return $product;
+	}
+
+	/**
+	 * Generate a bookable event product using the real WC_Product_Bookable_Event class.
+	 *
+	 * Requires WooCommerce Bookings with experimental features enabled
+	 * (WC_BOOKINGS_EXPERIMENTAL_ENABLED).
+	 *
+	 * @return \WC_Product_Bookable_Event|\WP_Error Product object or WP_Error on failure.
+	 */
+	protected static function generate_bookable_event_product() {
+		if ( ! Booking::is_bookings_experimental_active() ) {
+			return new \WP_Error(
+				'smoothgenerator_missing_bookings_experimental',
+				'WooCommerce Bookings experimental features are not active. The bookable-event type requires WC_BOOKINGS_EXPERIMENTAL_ENABLED.'
+			);
+		}
+
+		$name = self::$bookable_event_names[ array_rand( self::$bookable_event_names ) ];
+		$cost = self::$faker->numberBetween( 15, 250 );
+
+		$product = new \WC_Product_Bookable_Event();
+
+		$image_id = self::get_image();
+
+		$product->set_props( array(
+			'name'               => $name,
+			'featured'           => self::$faker->boolean( 15 ),
+			'catalog_visibility' => 'visible',
+			'description'        => self::$faker->paragraphs( self::$faker->numberBetween( 1, 3 ), true ),
+			'short_description'  => self::$faker->sentence(),
+			'sku'                => sanitize_title( $name ) . '-' . self::$faker->ean8,
+			'regular_price'      => $cost,
+			'image_id'           => $image_id,
+			'category_ids'       => self::get_term_ids( 'product_cat', self::$faker->numberBetween( 0, 2 ) ),
+			'tag_ids'            => self::get_term_ids( 'product_tag', self::$faker->numberBetween( 0, 3 ) ),
+		) );
+
+		// Event-specific settings.
+		$product->set_duration_type( 'fixed' );
+		$product->set_duration_unit( 'hour' );
+		$product->set_duration( self::$faker->numberBetween( 1, 4 ) );
+		$product->set_cost( $cost );
+
+		// Availability window.
+		$product->set_min_date_value( 0 );
+		$product->set_min_date_unit( 'day' );
+		$product->set_max_date_value( self::$faker->numberBetween( 30, 120 ) );
+		$product->set_max_date_unit( 'day' );
+		$product->set_default_date_availability( 'available' );
+
+		// Events typically support persons (attendees).
+		$min_persons = 1;
+		$max_persons = self::$faker->numberBetween( 20, 200 );
+
+		$product->set_has_persons( true );
+		$product->set_min_persons( $min_persons );
+		$product->set_max_persons( $max_persons );
+		$product->set_has_person_cost_multiplier( true );
+
+		// Cancellation.
+		$product->set_user_can_cancel( self::$faker->boolean( 40 ) );
 
 		$product->set_status( 'publish' );
 		$product->save();

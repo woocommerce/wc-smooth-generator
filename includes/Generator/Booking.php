@@ -29,63 +29,43 @@ class Booking extends Generator {
 	private static $customer_ids = array();
 
 	/**
-	 * Names for auto-generated bookable products, by type.
+	 * Product types to auto-create when no bookable products exist.
 	 *
-	 * @var array
+	 * Each entry generates one product via Product::generate() to provide variety.
+	 *
+	 * @var string[]
 	 */
-	private static $product_templates = array(
-		'hourly'  => array(
-			'names'         => array(
-				'Private Consultation',
-				'Photography Session',
-				'Personal Training',
-				'Tutoring Session',
-				'Therapy Appointment',
-				'Music Lesson',
-				'Yoga Class',
-				'Massage Session',
-			),
-			'duration_unit' => 'hour',
-			'duration'      => 1,
-			'min_cost'      => 50,
-			'max_cost'      => 200,
-		),
-		'daily'   => array(
-			'names'         => array(
-				'Equipment Rental',
-				'Venue Booking',
-				'Car Rental',
-				'Vacation Cabin',
-				'Meeting Room',
-				'Studio Rental',
-			),
-			'duration_unit' => 'day',
-			'duration'      => 1,
-			'min_cost'      => 100,
-			'max_cost'      => 500,
-		),
-		'persons' => array(
-			'names'         => array(
-				'Group Workshop',
-				'Team Building Event',
-				'Guided Tour',
-				'Cooking Class',
-				'Wine Tasting',
-			),
-			'duration_unit' => 'hour',
-			'duration'      => 2,
-			'min_cost'      => 30,
-			'max_cost'      => 100,
-		),
-	);
+	private static $auto_create_types = array( 'booking', 'booking', 'bookable-service' );
 
 	/**
-	 * Check that WooCommerce Bookings is active.
+	 * Check whether WooCommerce Bookings is active.
+	 *
+	 * This is the canonical check used across all generators and admin UI.
+	 *
+	 * @return bool
+	 */
+	public static function is_bookings_active() {
+		return class_exists( 'WC_Bookings' ) || function_exists( 'create_wc_booking' );
+	}
+
+	/**
+	 * Check whether the experimental Bookings product types are available.
+	 *
+	 * The bookable-service and bookable-event types require WC_BOOKINGS_EXPERIMENTAL_ENABLED.
+	 *
+	 * @return bool
+	 */
+	public static function is_bookings_experimental_active() {
+		return self::is_bookings_active() && class_exists( 'WC_Product_Bookable_Service' );
+	}
+
+	/**
+	 * Check that WooCommerce Bookings is active, returning WP_Error if not.
 	 *
 	 * @return true|\WP_Error
 	 */
 	private static function check_dependencies() {
-		if ( ! class_exists( 'WC_Bookings' ) && ! function_exists( 'create_wc_booking' ) ) {
+		if ( ! self::is_bookings_active() ) {
 			return new \WP_Error(
 				'smoothgenerator_missing_bookings',
 				'WooCommerce Bookings extension is not installed or active. Please install and activate it before generating bookings.'
@@ -268,75 +248,24 @@ class Booking extends Generator {
 	}
 
 	/**
-	 * Create a set of varied bookable products.
+	 * Create a set of varied bookable products using the Product generator.
+	 *
+	 * Delegates to Product::generate() so product creation logic is not duplicated.
 	 *
 	 * @return int[]|\WP_Error Array of product IDs on success.
 	 */
 	private static function create_bookable_products() {
 		$product_ids = array();
 
-		foreach ( self::$product_templates as $type => $template ) {
-			$product_id = self::create_bookable_product( $type );
-			if ( is_wp_error( $product_id ) ) {
-				return $product_id;
+		foreach ( self::$auto_create_types as $type ) {
+			$product = Product::generate( true, array( 'type' => $type ) );
+			if ( is_wp_error( $product ) ) {
+				return $product;
 			}
-			$product_ids[] = $product_id;
+			$product_ids[] = $product->get_id();
 		}
 
 		return $product_ids;
-	}
-
-	/**
-	 * Create a single bookable product of a given type.
-	 *
-	 * @param string $type One of 'hourly', 'daily', 'persons'.
-	 *
-	 * @return int|\WP_Error Product ID on success.
-	 */
-	private static function create_bookable_product( $type ) {
-		if ( ! isset( self::$product_templates[ $type ] ) ) {
-			return new \WP_Error(
-				'smoothgenerator_invalid_product_type',
-				sprintf( 'Unknown bookable product type: %s', $type )
-			);
-		}
-
-		$template = self::$product_templates[ $type ];
-		$name     = $template['names'][ array_rand( $template['names'] ) ];
-		$cost     = wp_rand( $template['min_cost'], $template['max_cost'] );
-
-		$product = new \WC_Product_Booking();
-		$product->set_name( $name );
-		$product->set_status( 'publish' );
-		$product->set_catalog_visibility( 'visible' );
-		$product->set_description( self::$faker->paragraph() );
-		$product->set_short_description( self::$faker->sentence() );
-		$product->set_regular_price( $cost );
-
-		// Booking-specific properties.
-		$product->set_duration_type( 'fixed' );
-		$product->set_duration_unit( $template['duration_unit'] );
-		$product->set_duration( $template['duration'] );
-		$product->set_cost( $cost );
-
-		// Set availability: bookable by default, 90 days into the future.
-		$product->set_min_date_value( 0 );
-		$product->set_min_date_unit( 'day' );
-		$product->set_max_date_value( 90 );
-		$product->set_max_date_unit( 'day' );
-		$product->set_default_date_availability( 'available' );
-
-		// Type-specific configuration.
-		if ( 'persons' === $type ) {
-			$product->set_has_persons( true );
-			$product->set_min_persons( 1 );
-			$product->set_max_persons( 10 );
-			$product->set_has_person_cost_multiplier( true );
-		}
-
-		$product->save();
-
-		return $product->get_id();
 	}
 
 	/**

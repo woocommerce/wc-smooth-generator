@@ -45,14 +45,17 @@ wp wc generate products 10 --type=variable --use-existing-terms
 # Generate bookable products (requires WooCommerce Bookings)
 wp wc generate products 5 --type=booking
 
-# Generate bookable service products (virtual, short-duration)
-wp wc generate products 5 --type=booking-service
+# Generate bookable service products (requires WooCommerce Bookings + experimental features)
+wp wc generate products 5 --type=bookable-service
+
+# Generate bookable event products (requires WooCommerce Bookings + experimental features)
+wp wc generate products 5 --type=bookable-event
 ```
 
 | Option | Description |
 |---|---|
 | `<amount>` | Number of products to generate. Default: `10` |
-| `--type=<type>` | Product type: `simple`, `variable`, `booking`, or `booking-service`. Default: random mix of simple/variable. `booking` and `booking-service` require [WooCommerce Bookings](https://woocommerce.com/products/woocommerce-bookings/) |
+| `--type=<type>` | Product type: `simple`, `variable`, `booking`, `bookable-service`, or `bookable-event`. Default: random mix of simple/variable. `booking` requires [WooCommerce Bookings](https://woocommerce.com/products/woocommerce-bookings/). `bookable-service` and `bookable-event` also require `WC_BOOKINGS_EXPERIMENTAL_ENABLED` |
 | `--use-existing-terms` | Only use existing categories and tags instead of generating new ones |
 
 ### Orders
@@ -193,8 +196,13 @@ $booking_id = Generator\Booking::generate( true, [ 'status' => 'confirmed' ] );
 // Generate and save a bookable product (returns WC_Product_Booking or WP_Error). Requires WooCommerce Bookings.
 $booking_product = Generator\Product::generate( true, [ 'type' => 'booking' ] );
 
-// Generate and save a bookable service product (returns WC_Product_Booking or WP_Error). Requires WooCommerce Bookings.
-$service_product = Generator\Product::generate( true, [ 'type' => 'booking-service' ] );
+// Generate and save a bookable service product (returns WC_Product_Bookable_Service or WP_Error).
+// Requires WooCommerce Bookings + WC_BOOKINGS_EXPERIMENTAL_ENABLED.
+$service_product = Generator\Product::generate( true, [ 'type' => 'bookable-service' ] );
+
+// Generate and save a bookable event product (returns WC_Product_Bookable_Event or WP_Error).
+// Requires WooCommerce Bookings + WC_BOOKINGS_EXPERIMENTAL_ENABLED.
+$event_product = Generator\Product::generate( true, [ 'type' => 'bookable-event' ] );
 
 // Generate and save a coupon (returns WC_Coupon or WP_Error).
 $coupon = Generator\Coupon::generate( true, [ 'min' => 5, 'max' => 25, 'discount_type' => 'percent' ] );
@@ -256,7 +264,7 @@ Each generator fires an action after creating an object:
 
 ### Product generator
 
-Creates simple, variable, booking, or booking-service products with:
+Creates simple, variable, booking, bookable-service, or bookable-event products with:
 
 - Name, SKU, global unique ID, featured status
 - Price, sale price, sale date scheduling
@@ -277,12 +285,22 @@ Creates simple, variable, booking, or booking-service products with:
 - Configurable availability windows (30-180 days)
 - Cancellation settings
 
-**Booking-service products** (requires [WooCommerce Bookings](https://woocommerce.com/products/woocommerce-bookings/)):
+**Bookable-service products** (requires [WooCommerce Bookings](https://woocommerce.com/products/woocommerce-bookings/) + `WC_BOOKINGS_EXPERIMENTAL_ENABLED`):
 
-- Virtual, short-duration services (haircuts, repairs, grooming)
-- Minute-based (15-60 min) or short hour-based (1-2 hrs) durations
+- Uses the real `WC_Product_Bookable_Service` class
+- Virtual, fixed-duration services in minutes (haircuts, repairs, grooming)
+- Duration always in minutes (15-60 min), enforced by the product class
+- Default date availability set to non-available (per class defaults)
 - No persons or resources (simple appointment-style bookings)
 - Short availability windows (14-60 days)
+
+**Bookable-event products** (requires [WooCommerce Bookings](https://woocommerce.com/products/woocommerce-bookings/) + `WC_BOOKINGS_EXPERIMENTAL_ENABLED`):
+
+- Uses the real `WC_Product_Bookable_Event` class
+- Events with ticket-style bookings (concerts, workshops, conferences)
+- Hour-based durations (1-4 hours)
+- Person/attendee support with cost multiplier
+- Availability windows (30-120 days)
 
 ### Order generator
 
