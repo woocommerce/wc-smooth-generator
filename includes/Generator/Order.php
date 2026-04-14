@@ -52,6 +52,28 @@ class Order extends Generator {
 	const REFUND_DISTRIBUTION_PARTIAL_RATIO = 0.25;
 
 	/**
+	 * Cached user IDs for fast random customer selection without repeated COUNT + ORDER BY RAND() queries.
+	 *
+	 * @var int[]|null Null means not yet loaded.
+	 */
+	private static $cached_user_ids = null;
+
+	/**
+	 * Cached published product IDs for fast random product selection without repeated queries.
+	 *
+	 * @var int[]|null Null means not yet loaded.
+	 */
+	private static $cached_product_ids = null;
+
+	/**
+	 * Cached WC_Product objects keyed by product ID.
+	 * Avoids repeated wc_get_product() calls for the same product across orders.
+	 *
+	 * @var array<int, \WC_Product>
+	 */
+	private static $cached_product_objects = array();
+
+	/**
 	 * Return a new order.
 	 *
 	 * @param bool        $save Save the object before returning or not.
@@ -385,6 +407,10 @@ class Order extends Generator {
 	/**
 	 * Return a new customer.
 	 *
+	 * User IDs are fetched once per process lifetime and cached in memory,
+	 * eliminating the COUNT + ORDER BY RAND() full table scan that ran on every order.
+	 * Newly created guest customers are appended to the cache to keep it warm.
+	 *
 	 * @return \WC_Customer Customer object with data populated.
 	 */
 	public static function get_customer() {
@@ -394,16 +420,29 @@ class Order extends Generator {
 		$existing = (bool) wp_rand( 0, 1 );
 
 		if ( $existing ) {
-			$total_users = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->users}" );
-			$offset      = wp_rand( 0, $total_users );
-			$user_id     = (int) $wpdb->get_var( "SELECT ID FROM {$wpdb->users} ORDER BY rand() LIMIT $offset, 1" ); // phpcs:ignore
-			return new \WC_Customer( $user_id );
+			if ( null === self::$cached_user_ids ) {
+				self::$cached_user_ids = array_map(
+					'intval',
+					$wpdb->get_col( "SELECT ID FROM {$wpdb->users}" )
+				);
+			}
+
+			if ( ! empty( self::$cached_user_ids ) ) {
+				$user_id = self::$cached_user_ids[ array_rand( self::$cached_user_ids ) ];
+				return new \WC_Customer( $user_id );
+			}
 		}
 
 		$customer = Customer::generate( ! $guest );
 
 		if ( ! $customer instanceof \WC_Customer ) {
 			error_log( 'Customer generation failed: Customer::generate() returned invalid result' );
+			return $customer;
+		}
+
+		// Keep the cache warm so subsequent "existing" picks can use this customer.
+		if ( null !== self::$cached_user_ids && $customer->get_id() ) {
+			self::$cached_user_ids[] = $customer->get_id();
 		}
 
 		return $customer;
@@ -466,7 +505,11 @@ class Order extends Generator {
 	}
 
 	/**
-	 *  Get random products selected from existing products.
+	 * Get random products selected from existing products.
+	 *
+	 * Product IDs are fetched once per process lifetime and cached in memory,
+	 * replacing the per-order COUNT + WC_Product_Query with ORDER BY RAND().
+	 * Product objects are also cached to avoid repeated wc_get_product() calls.
 	 *
 	 * @param int $min_amount Minimum amount of products to get.
 	 * @param int $max_amount Maximum amount of products to get.
@@ -475,53 +518,48 @@ class Order extends Generator {
 	protected static function get_random_products( int $min_amount = 1, int $max_amount = 4 ) {
 		global $wpdb;
 
-		$products = array();
+		if ( null === self::$cached_product_ids ) {
+			self::$cached_product_ids = array_map(
+				'intval',
+				$wpdb->get_col(
+					"SELECT ID FROM {$wpdb->posts}
+					WHERE post_type = 'product'
+					AND post_status = 'publish'"
+				)
+			);
+		}
 
-		$num_existing_products = (int) $wpdb->get_var(
-			"SELECT COUNT( DISTINCT ID )
-			FROM {$wpdb->posts}
-			WHERE 1=1
-			AND post_type='product'
-			AND post_status='publish'"
-		);
-
-		if ( $num_existing_products === 0 ) {
+		if ( empty( self::$cached_product_ids ) ) {
 			error_log( 'No published products found in database' );
 			return array();
 		}
 
-		$num_products_to_get = wp_rand( $min_amount, $max_amount );
+		$pool_size           = count( self::$cached_product_ids );
+		$num_products_to_get = wp_rand( $min_amount, min( $max_amount, $pool_size ) );
 
-		if ( $num_products_to_get > $num_existing_products ) {
-			$num_products_to_get = $num_existing_products;
-		}
+		// Pick unique random indices from the pool.
+		$keys        = (array) array_rand( self::$cached_product_ids, min( $num_products_to_get, $pool_size ) );
+		$product_ids = array_map( fn( $k ) => self::$cached_product_ids[ $k ], $keys );
 
-		$query = new \WC_Product_Query( array(
-			'limit'   => $num_products_to_get,
-			'return'  => 'ids',
-			'orderby' => 'rand',
-		) );
-
-		$product_ids = $query->get_products();
-		if ( empty( $product_ids ) ) {
-			error_log( 'WC_Product_Query returned no product IDs' );
-			return array();
-		}
-
+		$products = array();
 		foreach ( $product_ids as $product_id ) {
-			$product = wc_get_product( $product_id );
-
-			if ( ! $product ) {
-				error_log( "Failed to retrieve product with ID: {$product_id}" );
-				continue;
+			if ( ! isset( self::$cached_product_objects[ $product_id ] ) ) {
+				$product = wc_get_product( $product_id );
+				if ( ! $product ) {
+					error_log( "Failed to retrieve product with ID: {$product_id}" );
+					continue;
+				}
+				self::$cached_product_objects[ $product_id ] = $product;
 			}
+
+			$product = self::$cached_product_objects[ $product_id ];
 
 			if ( $product->is_type( 'variable' ) ) {
 				$available_variations = $product->get_available_variations();
 				if ( empty( $available_variations ) ) {
 					continue;
 				}
-				$index      = self::$faker->numberBetween( 0, count( $available_variations ) - 1 );
+				$index     = self::$faker->numberBetween( 0, count( $available_variations ) - 1 );
 				$variation = new \WC_Product_Variation( $available_variations[ $index ]['variation_id'] );
 				if ( $variation && $variation->exists() ) {
 					$products[] = $variation;
@@ -555,6 +593,9 @@ class Order extends Generator {
 
 			// Create 3 percentage coupons (5%-25%)
 			$percent_result = Coupon::batch( 3, array( 'min' => 5, 'max' => 25, 'discount_type' => 'percent' ) );
+
+			// Invalidate the coupon ID cache so the newly created coupons are included.
+			Coupon::invalidate_cache();
 
 		// If coupon creation failed, return false
 		if ( is_wp_error( $fixed_result ) || is_wp_error( $percent_result ) ) {

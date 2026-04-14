@@ -13,6 +13,14 @@ use WC_Data_Store;
  * Customer data generator.
  */
 class Coupon extends Generator {
+
+	/**
+	 * Cached coupon IDs for fast random selection without repeated DB queries.
+	 *
+	 * @var int[]|null Null means not yet loaded.
+	 */
+	private static $cached_coupon_ids = null;
+
 	/**
 	 * Create a new coupon.
 	 *
@@ -148,28 +156,43 @@ class Coupon extends Generator {
 	/**
 	 * Get a random existing coupon.
 	 *
+	 * Coupon IDs are fetched once per process lifetime and cached in memory,
+	 * eliminating the repeated full-table scan that occurred on every order.
+	 *
 	 * @return \WC_Coupon|false Coupon object or false if none available.
 	 */
 	public static function get_random() {
-		// Note: Using posts_per_page=-1 loads all coupon IDs into memory for random selection.
-		// For stores with thousands of coupons, consider using direct SQL with RAND() for better performance.
-		// This approach was chosen for consistency with WordPress APIs and to avoid raw SQL queries.
-		$coupon_ids = get_posts(
-			array(
-				'post_type'      => 'shop_coupon',
-				'post_status'    => 'publish',
-				'posts_per_page' => -1,
-				'fields'         => 'ids',
-			)
-		);
+		global $wpdb;
 
-		if ( empty( $coupon_ids ) ) {
+		if ( null === self::$cached_coupon_ids ) {
+			self::$cached_coupon_ids = array_map(
+				'intval',
+				$wpdb->get_col(
+					"SELECT ID FROM {$wpdb->posts}
+					WHERE post_type = 'shop_coupon'
+					AND post_status = 'publish'"
+				)
+			);
+		}
+
+		if ( empty( self::$cached_coupon_ids ) ) {
 			return false;
 		}
 
-		$random_coupon_id = $coupon_ids[ array_rand( $coupon_ids ) ];
+		$random_coupon_id = self::$cached_coupon_ids[ array_rand( self::$cached_coupon_ids ) ];
 
 		return new \WC_Coupon( $random_coupon_id );
+	}
+
+	/**
+	 * Invalidate the coupon ID cache so the next call to get_random() re-fetches from the DB.
+	 *
+	 * Call this after creating new coupons during a generation run.
+	 *
+	 * @return void
+	 */
+	public static function invalidate_cache() {
+		self::$cached_coupon_ids = null;
 	}
 }
 

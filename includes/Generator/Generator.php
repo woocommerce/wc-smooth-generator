@@ -14,7 +14,7 @@ abstract class Generator {
 	/**
 	 * Maximum number of objects that can be generated in one batch.
 	 */
-	const MAX_BATCH_SIZE = 100;
+	const MAX_BATCH_SIZE = 1000;
 
 	/**
 	 * Dimension, in pixels, of generated images.
