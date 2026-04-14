@@ -163,12 +163,47 @@ class Settings {
 						name="use_bulk_insert"
 						<?php disabled( $current_job instanceof AsyncJob || ! $hpos_enabled ); ?>
 					/>
-					Use bulk insert for orders (HPOS required)
+					Use bulk insert for orders (HPOS required) <span class="description">&mdash; experimental</span>
 				</label>
 				<?php if ( ! $hpos_enabled ) : ?>
 					<span class="description"> &mdash; HPOS is not enabled. <a href="<?php echo esc_url( admin_url( 'admin.php?page=wc-settings&tab=advanced&section=features' ) ); ?>">Enable it here</a>.</span>
 				<?php endif; ?>
 			</p>
+			<div id="bulk_insert_options" style="display: none; margin-left: 1.5em;">
+				<p>
+					<label>
+						<input
+							type="checkbox"
+							id="use_bulk_coupons"
+							name="use_bulk_coupons"
+							<?php disabled( $current_job instanceof AsyncJob || ! $hpos_enabled ); ?>
+						/>
+						Apply a random coupon to each order (uses existing coupons; creates 6 if none exist)
+					</label>
+				</p>
+				<p>
+					<label>
+						<input
+							type="checkbox"
+							id="use_bulk_shipping"
+							name="use_bulk_shipping"
+							<?php disabled( $current_job instanceof AsyncJob || ! $hpos_enabled ); ?>
+						/>
+						Add a shipping line using a random enabled shipping zone method
+					</label>
+				</p>
+				<p>
+					<label>
+						<input
+							type="checkbox"
+							id="use_bulk_taxes"
+							name="use_bulk_taxes"
+							<?php disabled( $current_job instanceof AsyncJob || ! $hpos_enabled ); ?>
+						/>
+						Add a tax line using a random defined tax rate
+					</label>
+				</p>
+			</div>
 			<div id="date_range_inputs" style="display: none;">
 				<p>
 					<label for="generate_start_date_input">Start date</label>
@@ -190,7 +225,7 @@ class Settings {
 				</p>
 			</div>
 
-			<h2>Sync Analytics</h2>
+			<h2>Sync Analytics <span class="description" style="font-size: 0.8em; font-weight: normal;">&mdash; experimental</span></h2>
 			<?php if ( ! $hpos_enabled ) : ?>
 				<p class="description">
 					Analytics sync requires HPOS to be enabled.
@@ -276,6 +311,10 @@ class Settings {
 					$( '#date_range_inputs' ).toggle( this.checked );
 				} );
 
+				$( '#use_bulk_insert' ).on( 'change', function() {
+					$( '#bulk_insert_options' ).toggle( this.checked );
+				} );
+
 				$( '#confirm_resync_all' ).on( 'change', function() {
 					$( '#sync_analytics_all_btn' ).prop( 'disabled', ! this.checked );
 				} );
@@ -295,7 +334,7 @@ class Settings {
 			( function( $ ) {
 				const $document = $( document );
 				const $progress = $( '#smoothgenerator-progress-bar' );
-				const $controls = $( '[id^="generate_"], #use_date_range, #use_bulk_insert, #confirm_resync_all, #date_range_inputs input, [name="sync_analytics_unsynced"]' );
+				const $controls = $( '[id^="generate_"], #use_date_range, #use_bulk_insert, #use_bulk_coupons, #use_bulk_shipping, #use_bulk_taxes, #confirm_resync_all, #date_range_inputs input, [name="sync_analytics_unsynced"]' );
 				const $cancel   = $( '#cancel_job' );
 
 				$document.on( 'ready', function () {
@@ -384,6 +423,15 @@ class Settings {
 			$num_to_generate = absint( $_POST['num_orders_to_generate'] );
 			if ( ! empty( $_POST['use_bulk_insert'] ) && \WC\SmoothGenerator\Generator\OrderBulkInserter::is_hpos_enabled() ) {
 				$args['bulk-insert'] = true;
+				if ( ! empty( $_POST['use_bulk_coupons'] ) ) {
+					$args['coupons'] = true;
+				}
+				if ( ! empty( $_POST['use_bulk_shipping'] ) ) {
+					$args['shipping'] = true;
+				}
+				if ( ! empty( $_POST['use_bulk_taxes'] ) ) {
+					$args['taxes'] = true;
+				}
 			}
 			BatchProcessor::create_new_job( 'orders', $num_to_generate, $args );
 		} else if ( ! empty( $_POST['sync_analytics_unsynced'] ) ) {

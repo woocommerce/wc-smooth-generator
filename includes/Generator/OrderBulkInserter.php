@@ -15,8 +15,9 @@ use Automattic\WooCommerce\Utilities\OrderUtil;
  * WC_Order ORM entirely for maximum throughput.
  *
  * What this path skips vs the ORM path:
- * - Tax calculation  (all tax amounts stored as zero)
- * - Coupon application
+ * - Tax calculation   (enable via --taxes flag or UI checkbox; applies a random existing tax rate)
+ * - Coupon application (enable via --coupons flag or UI checkbox; applies a random existing coupon)
+ * - Shipping lines    (enable via --shipping flag or UI checkbox; applies a random enabled shipping method)
  * - Refund creation
  * - WooCommerce Analytics lookup tables (wc_order_stats etc.) — use
  *   `wp wc sync analytics` or the "Sync Analytics" button in the UI
@@ -76,6 +77,30 @@ class OrderBulkInserter {
 	 */
 	private static $email_counter = 0;
 
+	/**
+	 * Pre-fetched coupon pool (stdObjects with id, code, discount_type, coupon_amount).
+	 * Loaded on first run when --coupons is active.
+	 *
+	 * @var object[]|null
+	 */
+	private static $coupon_pool = null;
+
+	/**
+	 * Pre-fetched shipping pool (arrays with instance_id, method_id, cost, title).
+	 * Loaded on first run when --shipping is active.
+	 *
+	 * @var array[]|null
+	 */
+	private static $shipping_pool = null;
+
+	/**
+	 * Pre-fetched tax rate pool (stdObjects with tax_rate_id, tax_rate, tax_rate_name).
+	 * Loaded on first run when --taxes is active.
+	 *
+	 * @var object[]|null
+	 */
+	private static $tax_rate_pool = null;
+
 	// -------------------------------------------------------------------------
 	// Public API
 	// -------------------------------------------------------------------------
@@ -108,7 +133,7 @@ class OrderBulkInserter {
 			);
 		}
 
-		self::init();
+		self::init( $args );
 
 		if ( empty( self::$product_pool ) ) {
 			return new \WP_Error(
@@ -149,9 +174,10 @@ class OrderBulkInserter {
 	/**
 	 * Load shared data that stays constant for the full generation run.
 	 *
+	 * @param array $args CLI / UI args — used to determine which optional pools to load.
 	 * @return void
 	 */
-	private static function init(): void {
+	private static function init( array $args = array() ): void {
 		global $wpdb;
 
 		// Disable WC email sending and ensure SERVER_NAME is set
@@ -193,6 +219,18 @@ class OrderBulkInserter {
 				? 'shop_order'
 				: DataSynchronizer::PLACEHOLDER_ORDER_POST_TYPE;
 		}
+
+		if ( ! empty( $args['coupons'] ) && null === self::$coupon_pool ) {
+			self::$coupon_pool = self::fetch_coupon_pool();
+		}
+
+		if ( ! empty( $args['shipping'] ) && null === self::$shipping_pool ) {
+			self::$shipping_pool = self::fetch_shipping_pool();
+		}
+
+		if ( ! empty( $args['taxes'] ) && null === self::$tax_rate_pool ) {
+			self::$tax_rate_pool = self::fetch_tax_rate_pool();
+		}
 	}
 
 	// -------------------------------------------------------------------------
@@ -219,6 +257,7 @@ class OrderBulkInserter {
 		self::insert_operational_data( $order_ids, $data );
 		self::insert_meta( $order_ids, $data );
 		self::insert_order_items( $order_ids, $data );
+		self::insert_extra_order_items( $order_ids, $data );
 
 		return $order_ids;
 	}
@@ -271,10 +310,56 @@ class OrderBulkInserter {
 				$attribution = OrderAttribution::generate_meta_array( $date_gmt );
 			}
 
+			// Optional: coupon discount.
+			$coupon_line     = null;
+			$discount_amount = 0.0;
+			if ( ! empty( $args['coupons'] ) && ! empty( self::$coupon_pool ) ) {
+				$coupon = self::$coupon_pool[ array_rand( self::$coupon_pool ) ];
+				if ( 'percent' === $coupon->discount_type ) {
+					$discount_amount = round( $total * (float) $coupon->coupon_amount / 100, 2 );
+				} else {
+					$discount_amount = min( (float) $coupon->coupon_amount, $total );
+				}
+				$coupon_line = array(
+					'id'       => (int) $coupon->id,
+					'code'     => $coupon->code,
+					'discount' => $discount_amount,
+				);
+			}
+
+			// Optional: shipping line item.
+			$shipping_line   = null;
+			$shipping_amount = 0.0;
+			if ( ! empty( $args['shipping'] ) && ! empty( self::$shipping_pool ) ) {
+				$method          = self::$shipping_pool[ array_rand( self::$shipping_pool ) ];
+				$shipping_amount = (float) $method['cost'];
+				$shipping_line   = $method;
+			}
+
+			// Optional: tax on (subtotal - discount + shipping).
+			$tax_line   = null;
+			$tax_amount = 0.0;
+			if ( ! empty( $args['taxes'] ) && ! empty( self::$tax_rate_pool ) ) {
+				$rate       = self::$tax_rate_pool[ array_rand( self::$tax_rate_pool ) ];
+				$taxable    = $total - $discount_amount + $shipping_amount;
+				$tax_amount = round( $taxable * (float) $rate->tax_rate / 100, 2 );
+				$tax_line   = array(
+					'tax_rate_id'   => (int) $rate->tax_rate_id,
+					'tax_rate'      => (float) $rate->tax_rate,
+					'tax_rate_name' => $rate->tax_rate_name ?: 'Tax',
+					'tax_amount'    => $tax_amount,
+					'shipping_tax'  => 0.0,
+				);
+			}
+
+			$order_total = round( $total - $discount_amount + $shipping_amount + $tax_amount, 2 );
+
 			$data[] = compact(
 				'status', 'date_gmt', 'date_paid_gmt', 'date_compl_gmt',
-				'total', 'items', 'billing', 'shipping',
-				'customer_id', 'order_key', 'attribution'
+				'total', 'order_total', 'items', 'billing', 'shipping',
+				'customer_id', 'order_key', 'attribution',
+				'discount_amount', 'shipping_amount', 'tax_amount',
+				'coupon_line', 'shipping_line', 'tax_line'
 			);
 		}
 
@@ -403,8 +488,8 @@ class OrderBulkInserter {
 				'wc-' . $row['status'],
 				get_woocommerce_currency(),
 				'shop_order',
-				0.0,
-				$row['total'],
+				$row['tax_amount'],
+				$row['order_total'],
 				$row['customer_id'],
 				$row['billing']['email'],
 				$row['date_gmt'],
@@ -471,7 +556,8 @@ class OrderBulkInserter {
 		$cols       = '(order_id, created_via, woocommerce_version, prices_include_tax,
 		                coupon_usages_are_counted, download_permission_granted,
 		                new_order_email_sent, order_key, order_stock_reduced,
-		                date_paid_gmt, date_completed_gmt)';
+		                date_paid_gmt, date_completed_gmt,
+		                discount_total_amount, shipping_total_amount)';
 
 		foreach ( $data as $i => $row ) {
 			$date_paid  = self::nullable_datetime( $row['date_paid_gmt'] );
@@ -489,7 +575,9 @@ class OrderBulkInserter {
 				$row['order_key'],
 				0    // order_stock_reduced
 			);
-			$rows[] = $base . ', ' . $date_paid . ', ' . $date_compl . ')';
+			$discount = sprintf( '%.8F', $row['discount_amount'] ?? 0.0 );
+			$shipping = sprintf( '%.8F', $row['shipping_amount'] ?? 0.0 );
+			$rows[]   = $base . ', ' . $date_paid . ', ' . $date_compl . ', ' . $discount . ', ' . $shipping . ')';
 		}
 
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
@@ -623,6 +711,215 @@ class OrderBulkInserter {
 				. implode( ',', $meta_rows )
 			);
 		}
+	}
+
+	/**
+	 * Bulk-insert coupon, shipping, and tax line items produced by the optional
+	 * --coupons / --shipping / --taxes flags.
+	 *
+	 * Nothing is inserted for orders that have no extra items (e.g. when none of
+	 * the flags are active, or when a pool was empty at init time).
+	 *
+	 * @param int[]   $order_ids Ordered list of order IDs.
+	 * @param array[] $data      Batch data aligned with $order_ids.
+	 */
+	private static function insert_extra_order_items( array $order_ids, array $data ): void {
+		global $wpdb;
+
+		// Build the flat list of items to insert.
+		$items = array();
+
+		foreach ( $data as $i => $row ) {
+			if ( isset( $row['coupon_line'] ) ) {
+				$items[] = array(
+					'order_id' => $order_ids[ $i ],
+					'name'     => $row['coupon_line']['code'],
+					'type'     => 'coupon',
+					'meta'     => array(
+						'coupon_id'       => $row['coupon_line']['id'],
+						'discount_amount' => $row['coupon_line']['discount'],
+					),
+				);
+			}
+			if ( isset( $row['shipping_line'] ) ) {
+				$items[] = array(
+					'order_id' => $order_ids[ $i ],
+					'name'     => $row['shipping_line']['title'],
+					'type'     => 'shipping',
+					'meta'     => array(
+						'method_id'   => $row['shipping_line']['method_id'],
+						'instance_id' => $row['shipping_line']['instance_id'],
+						'cost'        => $row['shipping_line']['cost'],
+						'total_tax'   => 0,
+					),
+				);
+			}
+			if ( isset( $row['tax_line'] ) ) {
+				$items[] = array(
+					'order_id' => $order_ids[ $i ],
+					'name'     => $row['tax_line']['tax_rate_name'],
+					'type'     => 'tax',
+					'meta'     => array(
+						'rate_id'             => $row['tax_line']['tax_rate_id'],
+						'label'               => $row['tax_line']['tax_rate_name'],
+						'compound'            => 0,
+						'tax_amount'          => $row['tax_line']['tax_amount'],
+						'shipping_tax_amount' => $row['tax_line']['shipping_tax'],
+					),
+				);
+			}
+		}
+
+		if ( empty( $items ) ) {
+			return;
+		}
+
+		$items_table = $wpdb->prefix . 'woocommerce_order_items';
+		$meta_table  = $wpdb->prefix . 'woocommerce_order_itemmeta';
+
+		$item_rows = array();
+		foreach ( $items as $item ) {
+			$item_rows[] = $wpdb->prepare(
+				'(%s, %s, %d)',
+				$item['name'],
+				$item['type'],
+				$item['order_id']
+			);
+		}
+
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$wpdb->query(
+			"INSERT INTO {$items_table} (order_item_name, order_item_type, order_id) VALUES "
+			. implode( ',', $item_rows )
+		);
+
+		$first_item_id = (int) $wpdb->insert_id;
+		$total_items   = count( $items );
+
+		$item_ids = array_map(
+			'intval',
+			$wpdb->get_col(
+				$wpdb->prepare(
+					"SELECT order_item_id FROM {$items_table}
+					 WHERE order_item_id >= %d
+					 ORDER BY order_item_id ASC LIMIT %d",
+					$first_item_id,
+					$total_items
+				)
+			)
+		);
+
+		$meta_rows = array();
+		foreach ( $items as $idx => $item ) {
+			$item_id = $item_ids[ $idx ] ?? null;
+			if ( null === $item_id ) {
+				continue;
+			}
+			foreach ( $item['meta'] as $key => $val ) {
+				$meta_rows[] = $wpdb->prepare( '(%d, %s, %s)', $item_id, $key, (string) $val );
+			}
+		}
+
+		if ( ! empty( $meta_rows ) ) {
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			$wpdb->query(
+				"INSERT INTO {$meta_table} (order_item_id, meta_key, meta_value) VALUES "
+				. implode( ',', $meta_rows )
+			);
+		}
+	}
+
+	// -------------------------------------------------------------------------
+	// Pool fetch helpers
+	// -------------------------------------------------------------------------
+
+	/**
+	 * Fetch all published coupons from the database.
+	 *
+	 * If no coupons exist, seeds 6 (3 fixed_cart, 3 percent) using the Coupon
+	 * generator so there is always something to pick from.
+	 *
+	 * @return object[]
+	 */
+	private static function fetch_coupon_pool(): array {
+		global $wpdb;
+
+		$fetch = static function () use ( $wpdb ): array {
+			return $wpdb->get_results(
+				"SELECT p.ID AS id,
+				        p.post_title AS code,
+				        dt.meta_value AS discount_type,
+				        CAST( ca.meta_value AS DECIMAL(10,2) ) AS coupon_amount
+				 FROM {$wpdb->posts} p
+				 JOIN {$wpdb->postmeta} dt ON dt.post_id = p.ID AND dt.meta_key = 'discount_type'
+				 JOIN {$wpdb->postmeta} ca ON ca.post_id = p.ID AND ca.meta_key = 'coupon_amount'
+				 WHERE p.post_type = 'shop_coupon'
+				   AND p.post_status = 'publish'
+				 LIMIT 200"
+			);
+		};
+
+		$pool = $fetch();
+
+		if ( empty( $pool ) ) {
+			// Seed coupons the same way the ORM path does.
+			Coupon::batch( 6, array() );
+			$pool = $fetch();
+		}
+
+		return $pool ?: array();
+	}
+
+	/**
+	 * Fetch all enabled shipping zone methods, resolving each method's cost and
+	 * display title from its wp_options settings record.
+	 *
+	 * @return array[]
+	 */
+	private static function fetch_shipping_pool(): array {
+		global $wpdb;
+
+		$methods = $wpdb->get_results(
+			"SELECT instance_id, method_id
+			 FROM {$wpdb->prefix}woocommerce_shipping_zone_methods
+			 WHERE is_enabled = 1"
+		);
+
+		if ( empty( $methods ) ) {
+			return array();
+		}
+
+		$pool = array();
+		foreach ( $methods as $method ) {
+			$option_key = "woocommerce_{$method->method_id}_{$method->instance_id}_settings";
+			$settings   = get_option( $option_key, array() );
+			$cost       = isset( $settings['cost'] ) ? (float) $settings['cost'] : 5.0;
+			$title      = isset( $settings['title'] ) && '' !== $settings['title']
+				? $settings['title']
+				: ucwords( str_replace( '_', ' ', $method->method_id ) );
+			$pool[]     = array(
+				'instance_id' => (int) $method->instance_id,
+				'method_id'   => $method->method_id,
+				'cost'        => $cost,
+				'title'       => $title,
+			);
+		}
+
+		return $pool;
+	}
+
+	/**
+	 * Fetch all defined tax rates.
+	 *
+	 * @return object[]
+	 */
+	private static function fetch_tax_rate_pool(): array {
+		global $wpdb;
+
+		return $wpdb->get_results(
+			"SELECT tax_rate_id, tax_rate, tax_rate_name, tax_rate_compound
+			 FROM {$wpdb->prefix}woocommerce_tax_rates"
+		) ?: array();
 	}
 
 	// -------------------------------------------------------------------------

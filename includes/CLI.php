@@ -93,7 +93,7 @@ class CLI extends WP_CLI_Command {
 				);
 				return;
 			}
-			WP_CLI::log( 'Bulk-insert mode: writing directly into HPOS tables (no ORM, no tax calculation, no coupons/refunds).' );
+			WP_CLI::log( 'Bulk-insert mode: writing directly into HPOS tables (no ORM, no refunds).' );
 			WP_CLI::log( 'Run `wp wc sync analytics` after generation to populate Analytics report data.' );
 		}
 
@@ -445,11 +445,23 @@ WP_CLI::add_command( 'wc generate orders', array( 'WC\SmoothGenerator\CLI', 'ord
 		array(
 			'name'        => 'bulk-insert',
 			'type'        => 'flag',
-			'description' => 'Write orders directly into HPOS tables via raw SQL, bypassing the WC_Order ORM. Requires HPOS to be enabled. Much faster for large volumes but skips tax calculation, coupons, and refunds. Run `wp wc sync analytics` after to populate Analytics report data.',
+			'description' => 'Write orders directly into HPOS tables via raw SQL, bypassing the WC_Order ORM. Requires HPOS to be enabled. Much faster for large volumes but skips refunds. Combine with --coupons, --shipping, --taxes for those features. Run `wp wc sync analytics` after to populate Analytics report data.',
+			'optional'    => true,
+		),
+		array(
+			'name'        => 'shipping',
+			'type'        => 'flag',
+			'description' => 'Bulk-insert only: add a shipping line item to each order using a random enabled shipping zone method. If no shipping zones are defined, shipping is skipped.',
+			'optional'    => true,
+		),
+		array(
+			'name'        => 'taxes',
+			'type'        => 'flag',
+			'description' => 'Bulk-insert only: add a tax line item to each order using a random defined tax rate. If no tax rates are defined, taxes are skipped.',
 			'optional'    => true,
 		),
 	),
-	'longdesc'  => "## EXAMPLES\n\nwc generate orders 10\n\nwc generate orders 50 --date-start=2020-01-01 --date-end=2022-12-31 --status=completed --coupons\n\nwc generate orders 1000000 --bulk-insert --status=completed --date-start=2020-01-01 --date-end=2024-12-31",
+	'longdesc'  => "## EXAMPLES\n\nwc generate orders 10\n\nwc generate orders 50 --date-start=2020-01-01 --date-end=2022-12-31 --status=completed --coupons\n\nwc generate orders 1000000 --bulk-insert --status=completed --date-start=2020-01-01 --date-end=2024-12-31\n\nwc generate orders 1000000 --bulk-insert --coupons --shipping --taxes --date-start=2020-01-01 --date-end=2024-12-31",
 ) );
 
 WP_CLI::add_command( 'wc generate customers', array( 'WC\SmoothGenerator\CLI', 'customers' ), array(
