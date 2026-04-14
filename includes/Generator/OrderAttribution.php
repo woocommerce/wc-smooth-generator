@@ -30,52 +30,69 @@ class OrderAttribution {
 		}
 
 		$order_products = $order->get_items();
+		$product_url    = empty( $order_products ) ? '' : get_permalink( $order_products[ array_rand( $order_products ) ]->get_id() );
+		$date_gmt       = $order->get_date_created() ? $order->get_date_created()->date( 'Y-m-d H:i:s' ) : gmdate( 'Y-m-d H:i:s' );
 
-		$device_type = self::get_random_device_type();
-		$source      = 'woocommerce.com';
-		$source_type = self::get_source_type();
-		$origin      = self::get_origin( $source_type, $source );
-		$product_url = empty( $order_products ) ? '' : get_permalink( $order_products[ array_rand( $order_products ) ]->get_id() );
-		$utm_content = array( '/', 'campaign_a', 'campaign_b' );
-		$utm_content = $utm_content[ array_rand( $utm_content ) ];
-
-		$meta = array();
-
-		// For these source types, we only need to set the source type.
-		if ( in_array( $source_type, array( 'admin', 'mobile_app', 'unknown' ), true ) ) {
-			$meta = array(
-				'_wc_order_attribution_source_type' => $source_type,
-			);
-		} else {
-			$meta = array(
-				'_wc_order_attribution_origin'             => $origin,
-				'_wc_order_attribution_device_type'        => $device_type,
-				'_wc_order_attribution_user_agent'         => self::get_random_user_agent_for_device( $device_type ),
-				'_wc_order_attribution_session_count'      => wp_rand( 1, 10 ),
-				'_wc_order_attribution_session_pages'      => wp_rand( 1, 10 ),
-				'_wc_order_attribution_session_start_time' => self::get_random_session_start_time( $order ),
-				'_wc_order_attribution_session_entry'      => $product_url,
-				'_wc_order_attribution_utm_content'        => $utm_content,
-				'_wc_order_attribution_utm_source'         => self::get_source( $source_type ),
-				'_wc_order_attribution_referrer'           => self::get_referrer( $source_type ),
-				'_wc_order_attribution_source_type'        => $source_type,
-			);
-
-			// Add campaign data only for a percentage of orders.
-			if ( wp_rand( 1, 100 ) <= self::CAMPAIGN_PROBABILITY ) {
-				$campaign_data = self::get_campaign_data();
-				$meta          = array_merge( $meta, $campaign_data );
-			}
-		}
-
-		// If the source type is not typein ( Direct ), set a random utm medium.
-		if ( ! in_array( $source_type, array( 'typein', 'admin', 'mobile_app', 'unknown' ), true ) ) {
-			$meta['_wc_order_attribution_utm_medium'] = self::get_random_utm_medium();
-		}
+		$meta = self::generate_meta_array( $date_gmt, $product_url );
 
 		foreach ( $meta as $key => $value ) {
 			$order->add_meta_data( $key, $value );
 		}
+	}
+
+	/**
+	 * Generate an attribution meta array without requiring a WC_Order object.
+	 *
+	 * This is the canonical data-generation logic. Both the ORM path
+	 * (add_order_attribution_meta) and the bulk-insert path call this method.
+	 *
+	 * @param string $date_gmt    Order creation date in GMT (Y-m-d H:i:s).
+	 * @param string $product_url Optional permalink for a product on the order.
+	 * @return array<string, string|int> Meta key => value pairs.
+	 */
+	public static function generate_meta_array( string $date_gmt, string $product_url = '' ): array {
+		$device_type = self::get_random_device_type();
+		$source      = 'woocommerce.com';
+		$source_type = self::get_source_type();
+		$origin      = self::get_origin( $source_type, $source );
+		$utm_content = array( '/', 'campaign_a', 'campaign_b' );
+		$utm_content = $utm_content[ array_rand( $utm_content ) ];
+
+		// Calculate session start time from the date string (mirrors get_random_session_start_time).
+		$session_start = gmdate(
+			'Y-m-d H:i:s',
+			strtotime( $date_gmt ) - wp_rand( 10, 360 ) * MINUTE_IN_SECONDS
+		);
+
+		if ( in_array( $source_type, array( 'admin', 'mobile_app', 'unknown' ), true ) ) {
+			return array(
+				'_wc_order_attribution_source_type' => $source_type,
+			);
+		}
+
+		$meta = array(
+			'_wc_order_attribution_origin'             => $origin,
+			'_wc_order_attribution_device_type'        => $device_type,
+			'_wc_order_attribution_user_agent'         => self::get_random_user_agent_for_device( $device_type ),
+			'_wc_order_attribution_session_count'      => wp_rand( 1, 10 ),
+			'_wc_order_attribution_session_pages'      => wp_rand( 1, 10 ),
+			'_wc_order_attribution_session_start_time' => $session_start,
+			'_wc_order_attribution_session_entry'      => $product_url,
+			'_wc_order_attribution_utm_content'        => $utm_content,
+			'_wc_order_attribution_utm_source'         => self::get_source( $source_type ),
+			'_wc_order_attribution_referrer'           => self::get_referrer( $source_type ),
+			'_wc_order_attribution_source_type'        => $source_type,
+		);
+
+		if ( wp_rand( 1, 100 ) <= self::CAMPAIGN_PROBABILITY ) {
+			$meta = array_merge( $meta, self::get_campaign_data() );
+		}
+
+		if ( ! in_array( $source_type, array( 'typein', 'admin', 'mobile_app', 'unknown' ), true ) ) {
+			$meta['_wc_order_attribution_utm_medium'] = self::get_random_utm_medium();
+		}
+
+		return $meta;
 	}
 
 	/**
@@ -337,7 +354,7 @@ class OrderAttribution {
 	 *
 	 * @return array Campaign attribution data.
 	 */
-	private static function get_campaign_data() {
+	public static function get_campaign_data() {
 		$campaign_type = self::get_campaign_type();
 
 		switch ( $campaign_type ) {
@@ -357,7 +374,7 @@ class OrderAttribution {
 	 *
 	 * @return string Campaign type.
 	 */
-	private static function get_campaign_type() {
+	public static function get_campaign_type() {
 		$random = wp_rand( 1, 100 );
 
 		if ( $random <= 40 ) {

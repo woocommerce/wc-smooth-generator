@@ -286,6 +286,21 @@ class Order extends Generator {
 	}
 
 	/**
+	 * Create multiple orders using raw SQL bulk inserts (HPOS only).
+	 *
+	 * Delegates to OrderBulkInserter which writes directly into the HPOS tables,
+	 * bypassing the WC_Order ORM for maximum throughput. See OrderBulkInserter
+	 * for a full description of what is and isn't supported in this mode.
+	 *
+	 * @param int   $amount Number of orders to create.
+	 * @param array $args   Additional args for order creation.
+	 * @return int[]|\WP_Error IDs of inserted orders, or a WP_Error on failure.
+	 */
+	public static function bulk_insert( int $amount, array $args = array() ) {
+		return OrderBulkInserter::run( $amount, $args );
+	}
+
+	/**
 	 * Create multiple orders.
 	 *
 	 * @param int    $amount   The number of orders to create.

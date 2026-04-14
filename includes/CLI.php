@@ -74,7 +74,8 @@ class CLI extends WP_CLI_Command {
 		list( $amount ) = $args;
 		$amount = absint( $amount );
 
-		$time_start = microtime( true );
+		$time_start  = microtime( true );
+		$bulk_insert = ! empty( $assoc_args['bulk-insert'] );
 
 		if ( ! empty( $assoc_args['status'] ) ) {
 			$status = $assoc_args['status'];
@@ -82,6 +83,18 @@ class CLI extends WP_CLI_Command {
 				WP_CLI::error( "The argument \"$status\" is not a valid order status." );
 				return;
 			}
+		}
+
+		if ( $bulk_insert ) {
+			if ( ! Generator\OrderBulkInserter::is_hpos_enabled() ) {
+				WP_CLI::error(
+					'--bulk-insert requires WooCommerce HPOS (High-Performance Order Storage) to be enabled. '
+					. 'Enable it under WooCommerce > Settings > Advanced > Features.'
+				);
+				return;
+			}
+			WP_CLI::log( 'Bulk-insert mode: writing directly into HPOS tables (no ORM, no tax calculation, no coupons/refunds).' );
+			WP_CLI::log( 'Run `wp wc analytics sync` after generation to rebuild Analytics report data.' );
 		}
 
 		$progress = \WP_CLI\Utils\make_progress_bar( 'Generating orders', $amount );
@@ -93,20 +106,32 @@ class CLI extends WP_CLI_Command {
 			}
 		);
 
-		$remaining_amount = $amount;
-		$generated        = 0;
+		$generated = 0;
 
-		while ( $remaining_amount > 0 ) {
-			$batch = min( $remaining_amount, Generator\Order::MAX_BATCH_SIZE );
-
-			$result = Generator\Order::batch( $batch, $assoc_args );
+		if ( $bulk_insert ) {
+			$result = Generator\Order::bulk_insert( $amount, $assoc_args );
 
 			if ( is_wp_error( $result ) ) {
-				WP_CLI::error( $result );
+				WP_CLI::error( $result->get_error_message() );
+				return;
 			}
 
-			$generated        += count( $result );
-			$remaining_amount -= $batch;
+			$generated = count( $result );
+		} else {
+			$remaining_amount = $amount;
+
+			while ( $remaining_amount > 0 ) {
+				$batch = min( $remaining_amount, Generator\Order::MAX_BATCH_SIZE );
+
+				$result = Generator\Order::batch( $batch, $assoc_args );
+
+				if ( is_wp_error( $result ) ) {
+					WP_CLI::error( $result );
+				}
+
+				$generated        += count( $result );
+				$remaining_amount -= $batch;
+			}
 		}
 
 		$progress->finish();
@@ -340,9 +365,15 @@ WP_CLI::add_command( 'wc generate orders', array( 'WC\SmoothGenerator\CLI', 'ord
 			'type'        => 'flag',
 			'description' => 'Skip adding order attribution meta to the generated orders.',
 			'optional'    => true,
-		)
+		),
+		array(
+			'name'        => 'bulk-insert',
+			'type'        => 'flag',
+			'description' => 'Write orders directly into HPOS tables via raw SQL, bypassing the WC_Order ORM. Requires HPOS to be enabled. Much faster for large volumes but skips tax calculation, coupons, and refunds. Run `wp wc analytics sync` after to rebuild report data.',
+			'optional'    => true,
+		),
 	),
-	'longdesc'  => "## EXAMPLES\n\nwc generate orders 10\n\nwc generate orders 50 --date-start=2020-01-01 --date-end=2022-12-31 --status=completed --coupons",
+	'longdesc'  => "## EXAMPLES\n\nwc generate orders 10\n\nwc generate orders 50 --date-start=2020-01-01 --date-end=2022-12-31 --status=completed --coupons\n\nwc generate orders 1000000 --bulk-insert --status=completed --date-start=2020-01-01 --date-end=2024-12-31",
 ) );
 
 WP_CLI::add_command( 'wc generate customers', array( 'WC\SmoothGenerator\CLI', 'customers' ), array(
