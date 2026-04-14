@@ -42,8 +42,10 @@ class Settings {
 	 * Render the admin page.
 	 */
 	public static function render_admin_page() {
-		$current_job  = self::get_current_job();
-		$hpos_enabled = \WC\SmoothGenerator\Generator\OrderBulkInserter::is_hpos_enabled();
+		$current_job    = self::get_current_job();
+		$hpos_enabled   = \WC\SmoothGenerator\Generator\OrderBulkInserter::is_hpos_enabled();
+		$unsynced_count = $hpos_enabled ? \WC\SmoothGenerator\Generator\OrderAnalyticsSync::get_unsynced_count() : 0;
+		$total_count    = $hpos_enabled ? \WC\SmoothGenerator\Generator\OrderAnalyticsSync::get_total_order_count() : 0;
 
 		$generate_button_atts = $current_job instanceof AsyncJob ? array( 'disabled' => true ) : array();
 		$cancel_button_atts   = ! $current_job instanceof AsyncJob ? array( 'disabled' => true ) : array();
@@ -60,11 +62,18 @@ class Settings {
 			<div id="smoothgenerator-progress">
 				<label for="smoothgenerator-progress-bar" style="display: block;">
 					<?php
-					printf(
-						'Generating %s %s&hellip;',
-						number_format_i18n( $current_job->amount ),
-						esc_html( $current_job->generator_slug )
-					);
+					if ( 'analytics-sync' === $current_job->generator_slug ) {
+						printf(
+							'Syncing analytics for %s orders&hellip;',
+							number_format_i18n( $current_job->amount )
+						);
+					} else {
+						printf(
+							'Generating %s %s&hellip;',
+							number_format_i18n( $current_job->amount ),
+							esc_html( $current_job->generator_slug )
+						);
+					}
 					?>
 				</label>
 				<progress
@@ -181,6 +190,63 @@ class Settings {
 				</p>
 			</div>
 
+			<h2>Sync Analytics</h2>
+			<?php if ( ! $hpos_enabled ) : ?>
+				<p class="description">
+					Analytics sync requires HPOS to be enabled.
+					<a href="<?php echo esc_url( admin_url( 'admin.php?page=wc-settings&tab=advanced&section=features' ) ); ?>">Enable it here</a>.
+				</p>
+			<?php else : ?>
+				<p>
+					<?php if ( $unsynced_count > 0 ) : ?>
+						<strong><?php echo number_format_i18n( $unsynced_count ); ?></strong> of
+						<strong><?php echo number_format_i18n( $total_count ); ?></strong> orders
+						are not yet reflected in Analytics reports.
+					<?php else : ?>
+						All <?php echo number_format_i18n( $total_count ); ?> orders are reflected in Analytics reports.
+					<?php endif; ?>
+				</p>
+				<p>
+					<?php
+					submit_button(
+						'Sync unsynced orders',
+						'secondary',
+						'sync_analytics_unsynced',
+						false,
+						array_merge(
+							$generate_button_atts,
+							$unsynced_count === 0 ? array( 'disabled' => true ) : array()
+						)
+					);
+					?>
+				</p>
+				<p>
+					<label>
+						<input
+							type="checkbox"
+							id="confirm_resync_all"
+							name="confirm_resync_all"
+							<?php disabled( $current_job instanceof AsyncJob ); ?>
+						/>
+						Re-sync all <?php echo number_format_i18n( $total_count ); ?> orders (replaces existing Analytics data)
+					</label>
+				</p>
+				<p>
+					<?php
+					submit_button(
+						'Re-sync all orders',
+						'secondary',
+						'sync_analytics_all',
+						false,
+						array_merge(
+							$generate_button_atts,
+							array( 'disabled' => true, 'id' => 'sync_analytics_all_btn' )
+						)
+					);
+					?>
+				</p>
+			<?php endif; ?>
+
 			<?php
 			submit_button(
 				'Cancel current job',
@@ -209,6 +275,10 @@ class Settings {
 				$( '#use_date_range' ).on( 'change', function() {
 					$( '#date_range_inputs' ).toggle( this.checked );
 				} );
+
+				$( '#confirm_resync_all' ).on( 'change', function() {
+					$( '#sync_analytics_all_btn' ).prop( 'disabled', ! this.checked );
+				} );
 			} )( jQuery );
 		</script>
 		<?php
@@ -225,7 +295,7 @@ class Settings {
 			( function( $ ) {
 				const $document = $( document );
 				const $progress = $( '#smoothgenerator-progress-bar' );
-				const $controls = $( '[id^="generate_"], #use_date_range, #use_bulk_insert, #date_range_inputs input' );
+				const $controls = $( '[id^="generate_"], #use_date_range, #use_bulk_insert, #confirm_resync_all, #date_range_inputs input, [name="sync_analytics_unsynced"]' );
 				const $cancel   = $( '#cancel_job' );
 
 				$document.on( 'ready', function () {
@@ -316,6 +386,23 @@ class Settings {
 				$args['bulk-insert'] = true;
 			}
 			BatchProcessor::create_new_job( 'orders', $num_to_generate, $args );
+		} else if ( ! empty( $_POST['sync_analytics_unsynced'] ) ) {
+			check_admin_referer( 'generate', 'smoothgenerator_nonce' );
+			if ( \WC\SmoothGenerator\Generator\OrderAnalyticsSync::is_hpos_available() ) {
+				$unsynced = \WC\SmoothGenerator\Generator\OrderAnalyticsSync::get_unsynced_count();
+				if ( $unsynced > 0 ) {
+					BatchProcessor::create_new_job( 'analytics-sync', $unsynced, array() );
+				}
+			}
+		} else if ( ! empty( $_POST['sync_analytics_all'] ) && ! empty( $_POST['confirm_resync_all'] ) ) {
+			check_admin_referer( 'generate', 'smoothgenerator_nonce' );
+			if ( \WC\SmoothGenerator\Generator\OrderAnalyticsSync::is_hpos_available() ) {
+				$total = \WC\SmoothGenerator\Generator\OrderAnalyticsSync::get_total_order_count();
+				if ( $total > 0 ) {
+					delete_option( \WC\SmoothGenerator\Generator\OrderAnalyticsSync::CURSOR_OPTION );
+					BatchProcessor::create_new_job( 'analytics-sync', $total, array( 'all' => true ) );
+				}
+			}
 		} else if ( ! empty( $_POST['cancel_job'] ) ) {
 			check_admin_referer( 'generate', 'smoothgenerator_nonce' );
 			BatchProcessor::delete_current_job();

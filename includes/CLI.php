@@ -94,7 +94,7 @@ class CLI extends WP_CLI_Command {
 				return;
 			}
 			WP_CLI::log( 'Bulk-insert mode: writing directly into HPOS tables (no ORM, no tax calculation, no coupons/refunds).' );
-			WP_CLI::log( 'Analytics tables (wc_order_stats, wc_order_product_lookup) are populated inline.' );
+			WP_CLI::log( 'Run `wp wc sync analytics` after generation to populate Analytics report data.' );
 		}
 
 		$progress = \WP_CLI\Utils\make_progress_bar( 'Generating orders', $amount );
@@ -284,7 +284,83 @@ class CLI extends WP_CLI_Command {
 
 		WP_CLI::success( $generated . ' terms generated in ' . $display_time );
 	}
+
+	/**
+	 * Sync orders into WooCommerce Analytics tables.
+	 *
+	 * @param array $args Arguments specified.
+	 * @param array $assoc_args Associative arguments specified.
+	 */
+	public static function sync_analytics( $args, $assoc_args ) {
+		if ( ! Generator\OrderAnalyticsSync::is_hpos_available() ) {
+			WP_CLI::error(
+				'Analytics sync requires WooCommerce HPOS (High-Performance Order Storage) to be enabled. '
+				. 'Enable it under WooCommerce > Settings > Advanced > Features.'
+			);
+			return;
+		}
+
+		$all        = ! empty( $assoc_args['all'] );
+		$time_start = microtime( true );
+
+		if ( $all ) {
+			$total = Generator\OrderAnalyticsSync::get_total_order_count();
+			WP_CLI::log( "Re-syncing all $total orders into Analytics tables." );
+			delete_option( Generator\OrderAnalyticsSync::CURSOR_OPTION );
+		} else {
+			$total = Generator\OrderAnalyticsSync::get_unsynced_count();
+			if ( $total === 0 ) {
+				WP_CLI::success( 'All orders are already reflected in the Analytics tables.' );
+				return;
+			}
+			WP_CLI::log( "Syncing $total unsynced orders into Analytics tables." );
+		}
+
+		$progress = \WP_CLI\Utils\make_progress_bar( 'Syncing analytics', $total );
+		$synced   = 0;
+
+		while ( true ) {
+			$batch_size = min( Generator\OrderAnalyticsSync::MAX_BATCH_SIZE, $total - $synced );
+			if ( $batch_size <= 0 ) {
+				break;
+			}
+
+			$result = Generator\OrderAnalyticsSync::batch( $batch_size, $assoc_args );
+
+			if ( empty( $result ) ) {
+				break; // No more orders to process.
+			}
+
+			$synced += count( $result );
+			$progress->tick( count( $result ) );
+		}
+
+		$progress->finish();
+
+		if ( $all ) {
+			delete_option( Generator\OrderAnalyticsSync::CURSOR_OPTION );
+		}
+
+		$time_end       = microtime( true );
+		$execution_time = round( ( $time_end - $time_start ), 2 );
+		$display_time   = $execution_time < 60 ? $execution_time . ' seconds' : human_time_diff( $time_start, $time_end );
+
+		WP_CLI::success( "$synced orders synced into Analytics tables in $display_time." );
+	}
 }
+
+WP_CLI::add_command( 'wc sync analytics', array( 'WC\SmoothGenerator\CLI', 'sync_analytics' ), array(
+	'shortdesc' => 'Sync orders into WooCommerce Analytics tables.',
+	'synopsis'  => array(
+		array(
+			'name'        => 'all',
+			'type'        => 'flag',
+			'description' => 'Re-sync every order, including those already in the Analytics tables. Useful after bulk imports. Without this flag only orders missing from the Analytics tables are processed.',
+			'optional'    => true,
+		),
+	),
+	'longdesc'  => "## EXAMPLES\n\nwc sync analytics\n\nwc sync analytics --all",
+) );
 
 WP_CLI::add_command( 'wc generate products', array( 'WC\SmoothGenerator\CLI', 'products' ), array(
 	'shortdesc' => 'Generate products.',
@@ -369,7 +445,7 @@ WP_CLI::add_command( 'wc generate orders', array( 'WC\SmoothGenerator\CLI', 'ord
 		array(
 			'name'        => 'bulk-insert',
 			'type'        => 'flag',
-			'description' => 'Write orders directly into HPOS tables via raw SQL, bypassing the WC_Order ORM. Requires HPOS to be enabled. Much faster for large volumes but skips tax calculation, coupons, and refunds. Analytics tables (wc_order_stats, wc_order_product_lookup) are populated inline.',
+			'description' => 'Write orders directly into HPOS tables via raw SQL, bypassing the WC_Order ORM. Requires HPOS to be enabled. Much faster for large volumes but skips tax calculation, coupons, and refunds. Run `wp wc sync analytics` after to populate Analytics report data.',
 			'optional'    => true,
 		),
 	),
