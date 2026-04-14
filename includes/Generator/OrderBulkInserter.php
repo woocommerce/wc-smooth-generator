@@ -18,8 +18,6 @@ use Automattic\WooCommerce\Utilities\OrderUtil;
  * - Tax calculation  (all tax amounts stored as zero)
  * - Coupon application
  * - Refund creation
- * - WooCommerce Analytics lookup tables (wc_order_stats etc.) — run
- *   `wp wc analytics sync` afterwards if you need analytics to reflect the data
  * - Billing/shipping addresses are freshly generated fake data rather than
  *   being loaded from existing WC_Customer records
  *
@@ -27,6 +25,8 @@ use Automattic\WooCommerce\Utilities\OrderUtil;
  * - All six HPOS tables (wp_posts, wc_orders, wc_order_addresses,
  *   wc_order_operational_data, wc_orders_meta, woocommerce_order_items +
  *   woocommerce_order_itemmeta)
+ * - Analytics lookup tables (wc_customer_lookup, wc_order_stats,
+ *   wc_order_product_lookup) populated inline via INSERT…SELECT
  * - Full order attribution meta (same data as the ORM path)
  * - Realistic billing + shipping addresses (Faker-generated)
  * - Weighted random order statuses (or a fixed status via --status)
@@ -219,6 +219,7 @@ class OrderBulkInserter {
 		self::insert_operational_data( $order_ids, $data );
 		self::insert_meta( $order_ids, $data );
 		self::insert_order_items( $order_ids, $data );
+		self::sync_analytics_tables( $order_ids );
 
 		return $order_ids;
 	}
@@ -623,6 +624,165 @@ class OrderBulkInserter {
 				. implode( ',', $meta_rows )
 			);
 		}
+	}
+
+	// -------------------------------------------------------------------------
+	// Analytics sync
+	// -------------------------------------------------------------------------
+
+	/**
+	 * Populate WooCommerce Analytics lookup tables for a completed sub-batch.
+	 *
+	 * Three INSERT…SELECT statements replace per-order ORM calls:
+	 *   1. wc_customer_lookup  — one row per unique WP user seen in the batch.
+	 *   2. wc_order_stats      — one row per order; references customer_id from (1).
+	 *   3. wc_order_product_lookup — one row per line item; also references customer_id.
+	 *
+	 * wc_order_coupon_lookup and wc_order_tax_lookup are intentionally skipped:
+	 * the bulk path does not create coupon or tax line items.
+	 *
+	 * @param int[] $order_ids IDs of the orders that were just inserted.
+	 * @return void
+	 */
+	private static function sync_analytics_tables( array $order_ids ): void {
+		global $wpdb;
+
+		if ( empty( $order_ids ) ) {
+			return;
+		}
+
+		$in = implode( ',', array_fill( 0, count( $order_ids ), '%d' ) );
+
+		// ------------------------------------------------------------------
+		// 1. wc_customer_lookup
+		//    Insert one row per unique WP user. INSERT IGNORE skips users who
+		//    already have a customer record. MIN() aggregates satisfy
+		//    ONLY_FULL_GROUP_BY without distorting the data for test purposes.
+		// ------------------------------------------------------------------
+		$wpdb->query(
+			$wpdb->prepare(
+				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				"INSERT IGNORE INTO {$wpdb->prefix}wc_customer_lookup
+				     (user_id, username, first_name, last_name, email,
+				      date_last_active, date_registered, country, postcode, city, state)
+				 SELECT
+				     o.customer_id,
+				     MIN( COALESCE( u.user_login, '' ) ),
+				     MIN( COALESCE( a.first_name, '' ) ),
+				     MIN( COALESCE( a.last_name, '' ) ),
+				     MIN( a.email ),
+				     MAX( o.date_created_gmt ),
+				     MIN( u.user_registered ),
+				     MIN( COALESCE( a.country, '' ) ),
+				     MIN( COALESCE( a.postcode, '' ) ),
+				     MIN( COALESCE( a.city, '' ) ),
+				     MIN( COALESCE( a.state, '' ) )
+				 FROM {$wpdb->prefix}wc_orders o
+				 LEFT JOIN {$wpdb->users} u ON u.ID = o.customer_id
+				 LEFT JOIN {$wpdb->prefix}wc_order_addresses a
+				        ON a.order_id = o.id AND a.address_type = 'billing'
+				 WHERE o.id IN ( $in )
+				 GROUP BY o.customer_id",
+				...$order_ids
+			)
+		);
+
+		// ------------------------------------------------------------------
+		// 2. wc_order_stats
+		//    date_paid / date_completed come from wc_order_operational_data.
+		//    num_items_sold is summed from order item meta (_qty).
+		//    status strips the 'wc-' prefix stored in wc_orders.status.
+		//    returning_customer is left NULL (requires cross-order analysis
+		//    that would negate the throughput benefit of bulk insert).
+		// ------------------------------------------------------------------
+		$wpdb->query(
+			$wpdb->prepare(
+				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				"INSERT IGNORE INTO {$wpdb->prefix}wc_order_stats
+				     (order_id, parent_id, date_created, date_created_gmt,
+				      date_paid, date_completed, num_items_sold,
+				      total_sales, tax_total, shipping_total, net_total,
+				      returning_customer, status, customer_id)
+				 SELECT
+				     o.id,
+				     COALESCE( o.parent_order_id, 0 ),
+				     o.date_created_gmt,
+				     o.date_created_gmt,
+				     od.date_paid_gmt,
+				     od.date_completed_gmt,
+				     COALESCE( ic.num_items, 0 ),
+				     o.total_amount,
+				     o.tax_amount,
+				     0,
+				     o.total_amount - o.tax_amount,
+				     NULL,
+				     IF( o.status LIKE 'wc-%%', SUBSTR( o.status, 4 ), o.status ),
+				     COALESCE( cl.customer_id, 0 )
+				 FROM {$wpdb->prefix}wc_orders o
+				 LEFT JOIN {$wpdb->prefix}wc_order_operational_data od ON od.order_id = o.id
+				 LEFT JOIN {$wpdb->prefix}wc_customer_lookup cl ON cl.user_id = o.customer_id
+				 LEFT JOIN (
+				     SELECT oi.order_id,
+				            SUM( CAST( oim.meta_value AS UNSIGNED ) ) AS num_items
+				     FROM {$wpdb->prefix}woocommerce_order_items oi
+				     JOIN {$wpdb->prefix}woocommerce_order_itemmeta oim
+				          ON oim.order_item_id = oi.order_item_id AND oim.meta_key = '_qty'
+				     WHERE oi.order_item_type = 'line_item'
+				       AND oi.order_id IN ( $in )
+				     GROUP BY oi.order_id
+				 ) ic ON ic.order_id = o.id
+				 WHERE o.id IN ( $in )",
+				...$order_ids,
+				...$order_ids
+			)
+		);
+
+		// ------------------------------------------------------------------
+		// 3. wc_order_product_lookup
+		//    One row per line item. Shipping and coupon amounts are zero
+		//    because the bulk path does not generate those line item types.
+		// ------------------------------------------------------------------
+		$wpdb->query(
+			$wpdb->prepare(
+				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				"INSERT IGNORE INTO {$wpdb->prefix}wc_order_product_lookup
+				     (order_item_id, order_id, product_id, variation_id, customer_id,
+				      date_created, product_qty, product_net_revenue,
+				      product_gross_revenue, coupon_amount, tax_amount,
+				      shipping_amount, shipping_tax_amount)
+				 SELECT
+				     oi.order_item_id,
+				     oi.order_id,
+				     COALESCE( CAST( pid.meta_value AS UNSIGNED ), 0 ),
+				     COALESCE( CAST( vid.meta_value AS UNSIGNED ), 0 ),
+				     COALESCE( cl.customer_id, 0 ),
+				     o.date_created_gmt,
+				     COALESCE( CAST( qty.meta_value AS UNSIGNED ), 0 ),
+				     COALESCE( CAST( tot.meta_value AS DECIMAL(20,6) ), 0 ),
+				     COALESCE( CAST( tot.meta_value AS DECIMAL(20,6) ), 0 )
+				         + COALESCE( CAST( tax.meta_value AS DECIMAL(20,6) ), 0 ),
+				     0,
+				     COALESCE( CAST( tax.meta_value AS DECIMAL(20,6) ), 0 ),
+				     0,
+				     0
+				 FROM {$wpdb->prefix}woocommerce_order_items oi
+				 JOIN {$wpdb->prefix}wc_orders o ON o.id = oi.order_id
+				 LEFT JOIN {$wpdb->prefix}wc_customer_lookup cl ON cl.user_id = o.customer_id
+				 LEFT JOIN {$wpdb->prefix}woocommerce_order_itemmeta pid
+				        ON pid.order_item_id = oi.order_item_id AND pid.meta_key = '_product_id'
+				 LEFT JOIN {$wpdb->prefix}woocommerce_order_itemmeta vid
+				        ON vid.order_item_id = oi.order_item_id AND vid.meta_key = '_variation_id'
+				 LEFT JOIN {$wpdb->prefix}woocommerce_order_itemmeta qty
+				        ON qty.order_item_id = oi.order_item_id AND qty.meta_key = '_qty'
+				 LEFT JOIN {$wpdb->prefix}woocommerce_order_itemmeta tot
+				        ON tot.order_item_id = oi.order_item_id AND tot.meta_key = '_line_total'
+				 LEFT JOIN {$wpdb->prefix}woocommerce_order_itemmeta tax
+				        ON tax.order_item_id = oi.order_item_id AND tax.meta_key = '_line_tax'
+				 WHERE oi.order_item_type = 'line_item'
+				   AND oi.order_id IN ( $in )",
+				...$order_ids
+			)
+		);
 	}
 
 	// -------------------------------------------------------------------------

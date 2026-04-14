@@ -94,7 +94,7 @@ class CLI extends WP_CLI_Command {
 				return;
 			}
 			WP_CLI::log( 'Bulk-insert mode: writing directly into HPOS tables (no ORM, no tax calculation, no coupons/refunds).' );
-			WP_CLI::log( 'Run `wp wc analytics sync` after generation to rebuild Analytics report data.' );
+			WP_CLI::log( 'Analytics tables (wc_order_stats, wc_order_product_lookup) are populated inline.' );
 		}
 
 		$progress = \WP_CLI\Utils\make_progress_bar( 'Generating orders', $amount );
@@ -369,7 +369,7 @@ WP_CLI::add_command( 'wc generate orders', array( 'WC\SmoothGenerator\CLI', 'ord
 		array(
 			'name'        => 'bulk-insert',
 			'type'        => 'flag',
-			'description' => 'Write orders directly into HPOS tables via raw SQL, bypassing the WC_Order ORM. Requires HPOS to be enabled. Much faster for large volumes but skips tax calculation, coupons, and refunds. Run `wp wc analytics sync` after to rebuild report data.',
+			'description' => 'Write orders directly into HPOS tables via raw SQL, bypassing the WC_Order ORM. Requires HPOS to be enabled. Much faster for large volumes but skips tax calculation, coupons, and refunds. Analytics tables (wc_order_stats, wc_order_product_lookup) are populated inline.',
 			'optional'    => true,
 		),
 	),
