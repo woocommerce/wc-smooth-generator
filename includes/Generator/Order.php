@@ -604,8 +604,8 @@ class Order extends Generator {
 	 * @return void
 	 */
 	public static function invalidate_caches(): void {
-		self::$cached_user_ids       = null;
-		self::$cached_product_ids    = null;
+		self::$cached_user_ids        = null;
+		self::$cached_product_ids     = null;
 		self::$cached_product_objects = array();
 	}
 
