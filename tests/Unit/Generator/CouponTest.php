@@ -16,6 +16,14 @@ use WP_UnitTestCase;
 class CouponTest extends WP_UnitTestCase {
 
 	/**
+	 * Reset the coupon ID cache before each test so DB roll-backs don't leave stale IDs.
+	 */
+	public function setUp(): void {
+		parent::setUp();
+		Coupon::invalidate_cache();
+	}
+
+	/**
 	 * Test generating a coupon.
 	 */
 	public function test_generate_coupon() {

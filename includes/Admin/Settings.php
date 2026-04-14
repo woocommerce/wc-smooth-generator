@@ -12,8 +12,8 @@ namespace WC\SmoothGenerator\Admin;
  */
 class Settings {
 
-	const DEFAULT_NUM_PRODUCTS           = 10;
-	const DEFAULT_NUM_ORDERS             = 10;
+	const DEFAULT_NUM_PRODUCTS = 10;
+	const DEFAULT_NUM_ORDERS   = 10;
 
 	/**
 	 *  Set up hooks.
@@ -65,12 +65,12 @@ class Settings {
 					if ( 'analytics-sync' === $current_job->generator_slug ) {
 						printf(
 							'Syncing analytics for %s orders&hellip;',
-							number_format_i18n( $current_job->amount )
+							esc_html( number_format_i18n( $current_job->amount ) )
 						);
 					} else {
 						printf(
 							'Generating %s %s&hellip;',
-							number_format_i18n( $current_job->amount ),
+							esc_html( number_format_i18n( $current_job->amount ) ),
 							esc_html( $current_job->generator_slug )
 						);
 					}
@@ -86,7 +86,7 @@ class Settings {
 					printf(
 						'%d out of %d',
 						esc_html( $current_job->processed ),
-						esc_html( $current_job->amount ),
+						esc_html( $current_job->amount )
 					);
 					?>
 				</progress>
@@ -234,11 +234,11 @@ class Settings {
 			<?php else : ?>
 				<p>
 					<?php if ( $unsynced_count > 0 ) : ?>
-						<strong><?php echo number_format_i18n( $unsynced_count ); ?></strong> of
-						<strong><?php echo number_format_i18n( $total_count ); ?></strong> orders
+						<strong><?php echo esc_html( number_format_i18n( $unsynced_count ) ); ?></strong> of
+						<strong><?php echo esc_html( number_format_i18n( $total_count ) ); ?></strong> orders
 						are not yet reflected in Analytics reports.
 					<?php else : ?>
-						All <?php echo number_format_i18n( $total_count ); ?> orders are reflected in Analytics reports.
+						All <?php echo esc_html( number_format_i18n( $total_count ) ); ?> orders are reflected in Analytics reports.
 					<?php endif; ?>
 				</p>
 				<p>
@@ -250,7 +250,7 @@ class Settings {
 						false,
 						array_merge(
 							$generate_button_atts,
-							$unsynced_count === 0 ? array( 'disabled' => true ) : array()
+							0 === $unsynced_count ? array( 'disabled' => true ) : array()
 						)
 					);
 					?>
@@ -263,7 +263,7 @@ class Settings {
 							name="confirm_resync_all"
 							<?php disabled( $current_job instanceof AsyncJob ); ?>
 						/>
-						Re-sync all <?php echo number_format_i18n( $total_count ); ?> orders (replaces existing Analytics data)
+						Re-sync all <?php echo esc_html( number_format_i18n( $total_count ) ); ?> orders (replaces existing Analytics data)
 					</label>
 				</p>
 				<p>
@@ -275,7 +275,10 @@ class Settings {
 						false,
 						array_merge(
 							$generate_button_atts,
-							array( 'disabled' => true, 'id' => 'sync_analytics_all_btn' )
+							array(
+								'disabled' => true,
+								'id'       => 'sync_analytics_all_btn',
+							)
 						)
 					);
 					?>
@@ -374,7 +377,7 @@ class Settings {
 				} );
 			} )( jQuery );
 		</script>
-	<?php
+		<?php
 	}
 
 	/**
@@ -410,15 +413,15 @@ class Settings {
 		$args = array();
 
 		if ( ! empty( $_POST['use_date_range'] ) ) {
-			$args['date-start'] = sanitize_text_field( $_POST['start_date'] );
-			$args['date-end']   = sanitize_text_field( $_POST['end_date'] );
+			$args['date-start'] = sanitize_text_field( wp_unslash( $_POST['start_date'] ?? '' ) );
+			$args['date-end']   = sanitize_text_field( wp_unslash( $_POST['end_date'] ?? '' ) );
 		}
 
 		if ( ! empty( $_POST['generate_products'] ) && ! empty( $_POST['num_products_to_generate'] ) ) {
 			check_admin_referer( 'generate', 'smoothgenerator_nonce' );
 			$num_to_generate = absint( $_POST['num_products_to_generate'] );
 			BatchProcessor::create_new_job( 'products', $num_to_generate, $args );
-		} else if ( ! empty( $_POST['generate_orders'] ) && ! empty( $_POST['num_orders_to_generate'] ) ) {
+		} elseif ( ! empty( $_POST['generate_orders'] ) && ! empty( $_POST['num_orders_to_generate'] ) ) {
 			check_admin_referer( 'generate', 'smoothgenerator_nonce' );
 			$num_to_generate = absint( $_POST['num_orders_to_generate'] );
 			if ( ! empty( $_POST['use_bulk_insert'] ) && \WC\SmoothGenerator\Generator\OrderBulkInserter::is_hpos_enabled() ) {
@@ -434,7 +437,7 @@ class Settings {
 				}
 			}
 			BatchProcessor::create_new_job( 'orders', $num_to_generate, $args );
-		} else if ( ! empty( $_POST['sync_analytics_unsynced'] ) ) {
+		} elseif ( ! empty( $_POST['sync_analytics_unsynced'] ) ) {
 			check_admin_referer( 'generate', 'smoothgenerator_nonce' );
 			if ( \WC\SmoothGenerator\Generator\OrderAnalyticsSync::is_hpos_available() ) {
 				$unsynced = \WC\SmoothGenerator\Generator\OrderAnalyticsSync::get_unsynced_count();
@@ -442,7 +445,7 @@ class Settings {
 					BatchProcessor::create_new_job( 'analytics-sync', $unsynced, array() );
 				}
 			}
-		} else if ( ! empty( $_POST['sync_analytics_all'] ) && ! empty( $_POST['confirm_resync_all'] ) ) {
+		} elseif ( ! empty( $_POST['sync_analytics_all'] ) && ! empty( $_POST['confirm_resync_all'] ) ) {
 			check_admin_referer( 'generate', 'smoothgenerator_nonce' );
 			if ( \WC\SmoothGenerator\Generator\OrderAnalyticsSync::is_hpos_available() ) {
 				$total = \WC\SmoothGenerator\Generator\OrderAnalyticsSync::get_total_order_count();
@@ -451,7 +454,7 @@ class Settings {
 					BatchProcessor::create_new_job( 'analytics-sync', $total, array( 'all' => true ) );
 				}
 			}
-		} else if ( ! empty( $_POST['cancel_job'] ) ) {
+		} elseif ( ! empty( $_POST['cancel_job'] ) ) {
 			check_admin_referer( 'generate', 'smoothgenerator_nonce' );
 			BatchProcessor::delete_current_job();
 		}
@@ -490,7 +493,7 @@ class Settings {
 					$next_wait = 0;
 				}
 				$embed = $videos[ $next_wait ];
-				$next_wait ++;
+				++$next_wait;
 				setcookie(
 					'smoothgenerator_next_wait',
 					$next_wait,

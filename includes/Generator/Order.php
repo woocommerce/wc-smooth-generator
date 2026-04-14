@@ -595,6 +595,21 @@ class Order extends Generator {
 	}
 
 	/**
+	 * Invalidate the in-memory product and customer caches.
+	 *
+	 * Forces the next call to get_customer() and get_random_products() to
+	 * re-query the database. Primarily useful in test environments where the
+	 * DB is rolled back between tests, making cached IDs stale.
+	 *
+	 * @return void
+	 */
+	public static function invalidate_caches(): void {
+		self::$cached_user_ids       = null;
+		self::$cached_product_ids    = null;
+		self::$cached_product_objects = array();
+	}
+
+	/**
 	 * Get a random existing coupon or create coupons if none exist.
 	 * If no coupons exist, creates 6 coupons: 3 fixed value and 3 percentage.
 	 *

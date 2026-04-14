@@ -155,7 +155,7 @@ class ProductTest extends WP_UnitTestCase {
 	 * Test batch validation with amount too large.
 	 */
 	public function test_batch_validation_amount_too_large() {
-		$result = Product::batch( 150 );
+		$result = Product::batch( 1001 );
 
 		$this->assertWPError( $result );
 		$this->assertEquals( 'smoothgenerator_batch_invalid_amount', $result->get_error_code() );

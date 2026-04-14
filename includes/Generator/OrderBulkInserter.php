@@ -153,13 +153,22 @@ class OrderBulkInserter {
 				return $ids;
 			}
 
-			$all_ids   = array_merge( $all_ids, $ids );
+			$all_ids    = array_merge( $all_ids, $ids );
 			$remaining -= $batch_size;
 
 			// Fire the progress action once per inserted order.
 			// Note: the order parameter is null in bulk mode — the action is used
 			// solely for progress tracking (ticking the CLI progress bar).
 			foreach ( $ids as $unused ) {
+				/**
+				 * Action: Order generator returned a new order.
+				 * In bulk-insert mode the order parameter is always null;
+				 * the action is used solely for progress tracking.
+				 *
+				 * @since 1.2.0
+				 *
+				 * @param null $order Always null in bulk-insert mode.
+				 */
 				do_action( 'smoothgenerator_order_generated', null );
 			}
 		}
@@ -343,12 +352,25 @@ class OrderBulkInserter {
 				$rate       = self::$tax_rate_pool[ array_rand( self::$tax_rate_pool ) ];
 				$taxable    = $total - $discount_amount + $shipping_amount;
 				$tax_amount = round( $taxable * (float) $rate->tax_rate / 100, 2 );
-				$tax_line   = array(
-					'tax_rate_id'   => (int) $rate->tax_rate_id,
-					'tax_rate'      => (float) $rate->tax_rate,
-					'tax_rate_name' => $rate->tax_rate_name ?: 'Tax',
-					'tax_amount'    => $tax_amount,
-					'shipping_tax'  => 0.0,
+
+				// Build the rate code the same way WC_Tax::get_rate_code() does:
+				// COUNTRY-STATE-NAME-PRIORITY, uppercased, empty segments filtered out,
+				// 'TAX' substituted when tax_rate_name is empty.
+				$code_parts = array_filter( array(
+					$rate->tax_rate_country,
+					$rate->tax_rate_state,
+					! empty( $rate->tax_rate_name ) ? $rate->tax_rate_name : 'TAX',
+					absint( $rate->tax_rate_priority ),
+				) );
+				$rate_code  = strtoupper( implode( '-', $code_parts ) );
+
+				$tax_line = array(
+					'tax_rate_id'  => (int) $rate->tax_rate_id,
+					'rate_code'    => $rate_code,           // Stored as order_item_name.
+					'label'        => $rate->tax_rate_name, // Stored as 'label' meta (may be empty).
+					'rate_percent' => (float) $rate->tax_rate,
+					'tax_amount'   => $tax_amount,
+					'shipping_tax' => 0.0,
 				);
 			}
 
@@ -373,7 +395,7 @@ class OrderBulkInserter {
 	/**
 	 * Bulk-insert rows into wp_posts and return the assigned IDs.
 	 *
-	 * wp_posts provides the canonical IDs that all other HPOS tables reference.
+	 * The wp_posts table provides the canonical IDs that all other HPOS tables reference.
 	 * After the INSERT we read the IDs back to handle MySQL 8.0's non-consecutive
 	 * auto-increment behaviour (innodb_autoinc_lock_mode=2).
 	 *
@@ -393,27 +415,27 @@ class OrderBulkInserter {
 
 			$rows[] = $wpdb->prepare(
 				'(%d, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %d, %s, %d, %s, %s, %d)',
-				$row['customer_id'],   // post_author
-				$row['date_gmt'],      // post_date
-				$row['date_gmt'],      // post_date_gmt
-				'',                    // post_content
-				'',                    // post_title
-				'',                    // post_excerpt
-				$post_status,          // post_status
-				'open',                // comment_status
-				'closed',              // ping_status
-				'',                    // post_name
-				'',                    // to_ping
-				'',                    // pinged
-				$row['date_gmt'],      // post_modified
-				$row['date_gmt'],      // post_modified_gmt
-				'',                    // post_content_filtered
-				0,                     // post_parent
-				'',                    // guid
-				0,                     // menu_order
-				$post_type,            // post_type
-				'',                    // post_mime_type
-				0                      // comment_count
+				$row['customer_id'],   // post_author.
+				$row['date_gmt'],      // post_date.
+				$row['date_gmt'],      // post_date_gmt.
+				'',                    // post_content.
+				'',                    // post_title.
+				'',                    // post_excerpt.
+				$post_status,          // post_status.
+				'open',                // comment_status.
+				'closed',              // ping_status.
+				'',                    // post_name.
+				'',                    // to_ping.
+				'',                    // pinged.
+				$row['date_gmt'],      // post_modified.
+				$row['date_gmt'],      // post_modified_gmt.
+				'',                    // post_content_filtered.
+				0,                     // post_parent.
+				'',                    // guid.
+				0,                     // menu_order.
+				$post_type,            // post_type.
+				'',                    // post_mime_type.
+				0                      // comment_count.
 			);
 		}
 
@@ -423,7 +445,7 @@ class OrderBulkInserter {
 		          post_content_filtered, post_parent, guid, menu_order,
 		          post_type, post_mime_type, comment_count)';
 
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- rows are individually prepared above
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- rows are individually prepared above
 		$result = $wpdb->query( "INSERT INTO {$wpdb->posts} {$cols} VALUES " . implode( ',', $rows ) );
 
 		if ( false === $result ) {
@@ -563,17 +585,17 @@ class OrderBulkInserter {
 			$date_paid  = self::nullable_datetime( $row['date_paid_gmt'] );
 			$date_compl = self::nullable_datetime( $row['date_compl_gmt'] );
 
-			$base   = $wpdb->prepare(
+			$base     = $wpdb->prepare(
 				'(%d, %s, %s, %d, %d, %d, %d, %s, %d',
 				$order_ids[ $i ],
 				'smooth-generator',
 				$wc_version,
-				0,   // prices_include_tax
-				1,   // coupon_usages_are_counted
-				0,   // download_permission_granted
-				0,   // new_order_email_sent
+				0,   // prices_include_tax.
+				1,   // coupon_usages_are_counted.
+				0,   // download_permission_granted.
+				0,   // new_order_email_sent.
 				$row['order_key'],
-				0    // order_stock_reduced
+				0    // order_stock_reduced.
 			);
 			$discount = sprintf( '%.8F', $row['discount_amount'] ?? 0.0 );
 			$shipping = sprintf( '%.8F', $row['shipping_amount'] ?? 0.0 );
@@ -621,7 +643,7 @@ class OrderBulkInserter {
 	/**
 	 * Bulk-insert order line items and their meta.
 	 *
-	 * woocommerce_order_items has AUTO_INCREMENT, so we do the same
+	 * The woocommerce_order_items table has AUTO_INCREMENT, so we do the same
 	 * read-back trick as insert_posts to get the real item IDs.
 	 *
 	 * @param int[]   $order_ids Ordered list of order IDs.
@@ -648,11 +670,12 @@ class OrderBulkInserter {
 			return;
 		}
 
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		$wpdb->query(
 			"INSERT INTO {$items_table} (order_item_name, order_item_type, order_id) VALUES "
 			. implode( ',', $item_rows )
 		);
+		// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
 		$first_item_id = (int) $wpdb->insert_id;
 		$total_items   = count( $item_rows );
@@ -661,6 +684,7 @@ class OrderBulkInserter {
 			'intval',
 			$wpdb->get_col(
 				$wpdb->prepare(
+					// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 					"SELECT order_item_id FROM {$items_table}
 					 WHERE order_item_id >= %d
 					 ORDER BY order_item_id ASC LIMIT %d",
@@ -674,13 +698,17 @@ class OrderBulkInserter {
 		$meta_table = $wpdb->prefix . 'woocommerce_order_itemmeta';
 		$meta_idx   = 0;
 
-		$line_tax_data = serialize( array( 'total' => array(), 'subtotal' => array() ) );
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- WooCommerce stores _line_tax_data as serialized PHP.
+		$line_tax_data = serialize( array(
+			'total'    => array(),
+			'subtotal' => array(),
+		) );
 
 		foreach ( $data as $row ) {
 			foreach ( $row['items'] as $item ) {
 				$item_id = $item_ids[ $meta_idx ] ?? null;
 				if ( null === $item_id ) {
-					$meta_idx++;
+					++$meta_idx;
 					continue;
 				}
 
@@ -700,16 +728,17 @@ class OrderBulkInserter {
 					$meta_rows[] = $wpdb->prepare( '(%d, %s, %s)', $item_id, $meta_key, $meta_val );
 				}
 
-				$meta_idx++;
+				++$meta_idx;
 			}
 		}
 
 		if ( ! empty( $meta_rows ) ) {
-			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			$wpdb->query(
 				"INSERT INTO {$meta_table} (order_item_id, meta_key, meta_value) VALUES "
 				. implode( ',', $meta_rows )
 			);
+			// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		}
 	}
 
@@ -757,12 +786,13 @@ class OrderBulkInserter {
 			if ( isset( $row['tax_line'] ) ) {
 				$items[] = array(
 					'order_id' => $order_ids[ $i ],
-					'name'     => $row['tax_line']['tax_rate_name'],
+					'name'     => $row['tax_line']['rate_code'],  // e.g. NL-TAX-1.
 					'type'     => 'tax',
 					'meta'     => array(
 						'rate_id'             => $row['tax_line']['tax_rate_id'],
-						'label'               => $row['tax_line']['tax_rate_name'],
+						'label'               => $row['tax_line']['label'],
 						'compound'            => 0,
+						'rate_percent'        => $row['tax_line']['rate_percent'],
 						'tax_amount'          => $row['tax_line']['tax_amount'],
 						'shipping_tax_amount' => $row['tax_line']['shipping_tax'],
 					),
@@ -787,11 +817,12 @@ class OrderBulkInserter {
 			);
 		}
 
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		$wpdb->query(
 			"INSERT INTO {$items_table} (order_item_name, order_item_type, order_id) VALUES "
 			. implode( ',', $item_rows )
 		);
+		// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
 		$first_item_id = (int) $wpdb->insert_id;
 		$total_items   = count( $items );
@@ -800,6 +831,7 @@ class OrderBulkInserter {
 			'intval',
 			$wpdb->get_col(
 				$wpdb->prepare(
+					// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 					"SELECT order_item_id FROM {$items_table}
 					 WHERE order_item_id >= %d
 					 ORDER BY order_item_id ASC LIMIT %d",
@@ -821,11 +853,12 @@ class OrderBulkInserter {
 		}
 
 		if ( ! empty( $meta_rows ) ) {
-			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			$wpdb->query(
 				"INSERT INTO {$meta_table} (order_item_id, meta_key, meta_value) VALUES "
 				. implode( ',', $meta_rows )
 			);
+			// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		}
 	}
 
@@ -867,7 +900,7 @@ class OrderBulkInserter {
 			$pool = $fetch();
 		}
 
-		return $pool ?: array();
+		return ! empty( $pool ) ? $pool : array();
 	}
 
 	/**
@@ -916,10 +949,12 @@ class OrderBulkInserter {
 	private static function fetch_tax_rate_pool(): array {
 		global $wpdb;
 
-		return $wpdb->get_results(
-			"SELECT tax_rate_id, tax_rate, tax_rate_name, tax_rate_compound
+		$results = $wpdb->get_results(
+			"SELECT tax_rate_id, tax_rate, tax_rate_name, tax_rate_compound,
+			        tax_rate_country, tax_rate_state, tax_rate_priority
 			 FROM {$wpdb->prefix}woocommerce_tax_rates"
-		) ?: array();
+		);
+		return ! empty( $results ) ? $results : array();
 	}
 
 	// -------------------------------------------------------------------------

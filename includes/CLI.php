@@ -21,7 +21,7 @@ class CLI extends WP_CLI_Command {
 	 */
 	public static function products( $args, $assoc_args ) {
 		list( $amount ) = $args;
-		$amount = absint( $amount );
+		$amount         = absint( $amount );
 
 		$time_start = microtime( true );
 
@@ -72,7 +72,7 @@ class CLI extends WP_CLI_Command {
 	 */
 	public static function orders( $args, $assoc_args ) {
 		list( $amount ) = $args;
-		$amount = absint( $amount );
+		$amount         = absint( $amount );
 
 		$time_start  = microtime( true );
 		$bulk_insert = ! empty( $assoc_args['bulk-insert'] );
@@ -140,7 +140,7 @@ class CLI extends WP_CLI_Command {
 		$execution_time = round( ( $time_end - $time_start ), 2 );
 		$display_time   = $execution_time < 60 ? $execution_time . ' seconds' : human_time_diff( $time_start, $time_end );
 
-		if ( $generated === 0 && $amount > 0 ) {
+		if ( 0 === $generated && $amount > 0 ) {
 			WP_CLI::error( 'No orders were generated. Make sure there are published products in your store.' );
 		}
 
@@ -155,7 +155,7 @@ class CLI extends WP_CLI_Command {
 	 */
 	public static function customers( $args, $assoc_args ) {
 		list( $amount ) = $args;
-		$amount = absint( $amount );
+		$amount         = absint( $amount );
 
 		$time_start = microtime( true );
 
@@ -201,7 +201,7 @@ class CLI extends WP_CLI_Command {
 	 */
 	public static function coupons( $args, $assoc_args ) {
 		list( $amount ) = $args;
-		$amount = absint( $amount );
+		$amount         = absint( $amount );
 
 		$time_start = microtime( true );
 
@@ -247,7 +247,7 @@ class CLI extends WP_CLI_Command {
 	 */
 	public static function terms( $args, $assoc_args ) {
 		list( $taxonomy, $amount ) = $args;
-		$amount = absint( $amount );
+		$amount                    = absint( $amount );
 
 		$time_start = microtime( true );
 
@@ -309,7 +309,7 @@ class CLI extends WP_CLI_Command {
 			delete_option( Generator\OrderAnalyticsSync::CURSOR_OPTION );
 		} else {
 			$total = Generator\OrderAnalyticsSync::get_unsynced_count();
-			if ( $total === 0 ) {
+			if ( 0 === $total ) {
 				WP_CLI::success( 'All orders are already reflected in the Analytics tables.' );
 				return;
 			}
@@ -559,5 +559,5 @@ WP_CLI::add_command( 'wc generate terms', array( 'WC\SmoothGenerator\CLI', 'term
 			'default'     => 0,
 		),
 	),
-	'longdesc' => "## EXAMPLES\n\nwc generate terms product_tag 10\n\nwc generate terms product_cat 50 --max-depth=3",
+	'longdesc'  => "## EXAMPLES\n\nwc generate terms product_tag 10\n\nwc generate terms product_cat 50 --max-depth=3",
 ) );

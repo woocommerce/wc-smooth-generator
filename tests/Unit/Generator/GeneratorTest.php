@@ -19,7 +19,7 @@ class GeneratorTest extends WP_UnitTestCase {
 	 * Test MAX_BATCH_SIZE constant.
 	 */
 	public function test_max_batch_size_constant() {
-		$this->assertEquals( 100, Product::MAX_BATCH_SIZE );
+		$this->assertEquals( 1000, Product::MAX_BATCH_SIZE );
 	}
 
 	/**

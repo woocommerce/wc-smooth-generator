@@ -23,6 +23,10 @@ class OrderTest extends WP_UnitTestCase {
 	public function setUp(): void {
 		parent::setUp();
 
+		// Invalidate static caches so DB roll-backs between tests don't leave stale IDs.
+		Order::invalidate_caches();
+		\WC\SmoothGenerator\Generator\Coupon::invalidate_cache();
+
 		// Create some products for orders to use.
 		Product::batch( 5, array( 'type' => 'simple' ) );
 	}

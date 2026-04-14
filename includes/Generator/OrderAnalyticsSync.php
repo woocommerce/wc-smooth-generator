@@ -37,7 +37,7 @@ class OrderAnalyticsSync {
 	const MAX_BATCH_SIZE = 500;
 
 	/**
-	 * wp_options key used to persist the order-ID cursor for --all re-sync jobs.
+	 * Options key used to persist the order-ID cursor for --all re-sync jobs.
 	 *
 	 * @var string
 	 */
@@ -146,7 +146,7 @@ class OrderAnalyticsSync {
 		}
 
 		if ( ! empty( $order_ids ) ) {
-			self::sync_order_ids( $order_ids, $all ); // throws \RuntimeException on DB failure
+			self::sync_order_ids( $order_ids, $all ); // throws \RuntimeException on DB failure.
 			\Automattic\WooCommerce\Admin\API\Reports\Cache::invalidate();
 		}
 
@@ -188,20 +188,20 @@ class OrderAnalyticsSync {
 		$check = static function ( $result, string $table ) use ( $wpdb ): void {
 			if ( false === $result ) {
 				$msg = "SmoothGenerator analytics sync: failed to write to $table — " . $wpdb->last_error;
-				error_log( $msg );
-				throw new \RuntimeException( $msg );
+				error_log( $msg ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+				throw new \RuntimeException( $msg ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
 			}
 		};
 
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
 		// ------------------------------------------------------------------
 		// 1. wc_customer_lookup
-		//    Always INSERT IGNORE — replacing would generate a new customer_id
-		//    (AUTO_INCREMENT) and orphan any existing wc_order_stats rows.
+		// Always INSERT IGNORE — replacing would generate a new customer_id
+		// (AUTO_INCREMENT) and orphan any existing wc_order_stats rows.
 		// ------------------------------------------------------------------
 		$check(
 			$wpdb->query(
 				$wpdb->prepare(
-					// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 					"INSERT IGNORE INTO {$wpdb->prefix}wc_customer_lookup
 					     (user_id, username, first_name, last_name, email,
 					      date_last_active, date_registered, country, postcode, city, state)
@@ -231,15 +231,14 @@ class OrderAnalyticsSync {
 
 		// ------------------------------------------------------------------
 		// 2. wc_order_stats
-		//    shipping_total_amount is the actual column name in wc_order_operational_data
-		//    (NULL for bulk-inserted orders that have no shipping, treated as 0).
-		//    returning_customer is left NULL — computing it correctly requires
-		//    cross-order analysis that would negate bulk-sync throughput.
+		// shipping_total_amount is the actual column name in wc_order_operational_data
+		// (NULL for bulk-inserted orders that have no shipping, treated as 0).
+		// returning_customer is left NULL — computing it correctly requires
+		// cross-order analysis that would negate bulk-sync throughput.
 		// ------------------------------------------------------------------
 		$check(
 			$wpdb->query(
 				$wpdb->prepare(
-					// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 					"$insert {$wpdb->prefix}wc_order_stats
 					     (order_id, parent_id, date_created, date_created_gmt,
 					      date_paid, date_completed, num_items_sold,
@@ -258,7 +257,7 @@ class OrderAnalyticsSync {
 					     COALESCE( od.shipping_total_amount, 0 ),
 					     o.total_amount - o.tax_amount - COALESCE( od.shipping_total_amount, 0 ),
 					     NULL,
-					     IF( o.status LIKE 'wc-%%', SUBSTR( o.status, 4 ), o.status ),
+					     o.status,
 					     COALESCE( cl.customer_id, 0 )
 					 FROM {$wpdb->prefix}wc_orders o
 					 LEFT JOIN {$wpdb->prefix}wc_order_operational_data od ON od.order_id = o.id
@@ -287,7 +286,6 @@ class OrderAnalyticsSync {
 		$check(
 			$wpdb->query(
 				$wpdb->prepare(
-					// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 					"$insert {$wpdb->prefix}wc_order_product_lookup
 					     (order_item_id, order_id, product_id, variation_id, customer_id,
 					      date_created, product_qty, product_net_revenue,
@@ -331,12 +329,11 @@ class OrderAnalyticsSync {
 
 		// ------------------------------------------------------------------
 		// 4. wc_order_coupon_lookup — only produces rows for orders that have
-		//    coupon line items (bulk-inserted orders do not; ORM orders may).
+		// coupon line items (bulk-inserted orders do not; ORM orders may).
 		// ------------------------------------------------------------------
 		$check(
 			$wpdb->query(
 				$wpdb->prepare(
-					// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 					"$insert {$wpdb->prefix}wc_order_coupon_lookup
 					     (order_id, coupon_id, date_created, discount_amount)
 					 SELECT
@@ -360,12 +357,11 @@ class OrderAnalyticsSync {
 
 		// ------------------------------------------------------------------
 		// 5. wc_order_tax_lookup — only produces rows for orders that have
-		//    tax line items (bulk-inserted orders do not; ORM orders may).
+		// tax line items (bulk-inserted orders do not; ORM orders may).
 		// ------------------------------------------------------------------
 		$check(
 			$wpdb->query(
 				$wpdb->prepare(
-					// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 					"$insert {$wpdb->prefix}wc_order_tax_lookup
 					     (order_id, tax_rate_id, date_created, shipping_tax, order_tax, total_tax)
 					 SELECT
@@ -391,6 +387,7 @@ class OrderAnalyticsSync {
 			),
 			'wc_order_tax_lookup'
 		);
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
 	}
 
 	// -------------------------------------------------------------------------
