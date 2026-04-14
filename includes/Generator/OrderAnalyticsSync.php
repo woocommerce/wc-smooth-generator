@@ -147,6 +147,7 @@ class OrderAnalyticsSync {
 
 		if ( ! empty( $order_ids ) ) {
 			self::sync_order_ids( $order_ids, $all ); // throws \RuntimeException on DB failure
+			\Automattic\WooCommerce\Admin\API\Reports\Cache::invalidate();
 		}
 
 		return $order_ids;
