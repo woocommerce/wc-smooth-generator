@@ -42,7 +42,8 @@ class Settings {
 	 * Render the admin page.
 	 */
 	public static function render_admin_page() {
-		$current_job = self::get_current_job();
+		$current_job  = self::get_current_job();
+		$hpos_enabled = \WC\SmoothGenerator\Generator\OrderBulkInserter::is_hpos_enabled();
 
 		$generate_button_atts = $current_job instanceof AsyncJob ? array( 'disabled' => true ) : array();
 		$cancel_button_atts   = ! $current_job instanceof AsyncJob ? array( 'disabled' => true ) : array();
@@ -145,6 +146,20 @@ class Settings {
 					Specify date range for generation
 				</label>
 			</p>
+			<p>
+				<label>
+					<input
+						type="checkbox"
+						id="use_bulk_insert"
+						name="use_bulk_insert"
+						<?php disabled( $current_job instanceof AsyncJob || ! $hpos_enabled ); ?>
+					/>
+					Use bulk insert for orders (HPOS required)
+				</label>
+				<?php if ( ! $hpos_enabled ) : ?>
+					<span class="description"> &mdash; HPOS is not enabled. <a href="<?php echo esc_url( admin_url( 'admin.php?page=wc-settings&tab=advanced&section=features' ) ); ?>">Enable it here</a>.</span>
+				<?php endif; ?>
+			</p>
 			<div id="date_range_inputs" style="display: none;">
 				<p>
 					<label for="generate_start_date_input">Start date</label>
@@ -210,7 +225,7 @@ class Settings {
 			( function( $ ) {
 				const $document = $( document );
 				const $progress = $( '#smoothgenerator-progress-bar' );
-				const $controls = $( '[id^="generate_"], #use_date_range, #date_range_inputs input' );
+				const $controls = $( '[id^="generate_"], #use_date_range, #use_bulk_insert, #date_range_inputs input' );
 				const $cancel   = $( '#cancel_job' );
 
 				$document.on( 'ready', function () {
@@ -284,10 +299,10 @@ class Settings {
 	 */
 	public static function process_page_submit() {
 		$args = array();
-		
+
 		if ( ! empty( $_POST['use_date_range'] ) ) {
 			$args['date-start'] = sanitize_text_field( $_POST['start_date'] );
-			$args['date-end'] = sanitize_text_field( $_POST['end_date'] );
+			$args['date-end']   = sanitize_text_field( $_POST['end_date'] );
 		}
 
 		if ( ! empty( $_POST['generate_products'] ) && ! empty( $_POST['num_products_to_generate'] ) ) {
@@ -297,6 +312,9 @@ class Settings {
 		} else if ( ! empty( $_POST['generate_orders'] ) && ! empty( $_POST['num_orders_to_generate'] ) ) {
 			check_admin_referer( 'generate', 'smoothgenerator_nonce' );
 			$num_to_generate = absint( $_POST['num_orders_to_generate'] );
+			if ( ! empty( $_POST['use_bulk_insert'] ) && \WC\SmoothGenerator\Generator\OrderBulkInserter::is_hpos_enabled() ) {
+				$args['bulk-insert'] = true;
+			}
 			BatchProcessor::create_new_job( 'orders', $num_to_generate, $args );
 		} else if ( ! empty( $_POST['cancel_job'] ) ) {
 			check_admin_referer( 'generate', 'smoothgenerator_nonce' );

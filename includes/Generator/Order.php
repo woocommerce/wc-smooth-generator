@@ -303,12 +303,19 @@ class Order extends Generator {
 	/**
 	 * Create multiple orders.
 	 *
+	 * When $args['bulk-insert'] is set, delegates to OrderBulkInserter::run() which
+	 * writes directly into HPOS tables via raw SQL instead of using the WC_Order ORM.
+	 *
 	 * @param int    $amount   The number of orders to create.
 	 * @param array  $args     Additional args for order creation.
 	 *
 	 * @return int[]|\WP_Error
 	 */
 	public static function batch( $amount, array $args = array() ) {
+		if ( ! empty( $args['bulk-insert'] ) ) {
+			return OrderBulkInserter::run( (int) $amount, $args );
+		}
+
 		$amount = self::validate_batch_amount( $amount );
 		if ( is_wp_error( $amount ) ) {
 			error_log( 'Batch generation failed: ' . $amount->get_error_message() );
