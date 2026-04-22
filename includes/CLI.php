@@ -25,6 +25,14 @@ class CLI extends WP_CLI_Command {
 
 		$time_start = microtime( true );
 
+		$requested_type = $assoc_args['type'] ?? null;
+		if ( 'booking' === $requested_type && ! Generator\Booking::is_bookings_active() ) {
+			WP_CLI::error( 'Cannot generate booking products: the WooCommerce Bookings extension is not installed or active. Install and activate it, then try again.' );
+		}
+		if ( in_array( $requested_type, array( 'bookable-service', 'bookable-event' ), true ) && ! Generator\Booking::is_bookings_experimental_active() ) {
+			WP_CLI::error( "Cannot generate {$requested_type} products: WooCommerce Bookings experimental features are not active. Install/activate WooCommerce Bookings and define WC_BOOKINGS_EXPERIMENTAL_ENABLED, then try again." );
+		}
+
 		WP_CLI::line( 'Initializing...' );
 
 		// Pre-generate images. Min 20, max 100.

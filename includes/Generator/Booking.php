@@ -29,15 +29,6 @@ class Booking extends Generator {
 	private static $customer_ids = array();
 
 	/**
-	 * Product types to auto-create when no bookable products exist.
-	 *
-	 * Each entry generates one product via Product::generate() to provide variety.
-	 *
-	 * @var string[]
-	 */
-	private static $auto_create_types = array( 'booking', 'booking', 'bookable-service' );
-
-	/**
 	 * Check whether WooCommerce Bookings is active.
 	 *
 	 * This is the canonical check used across all generators and admin UI.
@@ -219,13 +210,12 @@ class Booking extends Generator {
 	}
 
 	/**
-	 * Get a random bookable product ID, creating products if none exist.
+	 * Get a random bookable product ID.
 	 *
-	 * @return int|\WP_Error Product ID on success.
+	 * @return int|\WP_Error Product ID on success, or WP_Error if no bookable products exist.
 	 */
 	private static function get_random_bookable_product_id() {
 		if ( empty( self::$bookable_product_ids ) ) {
-			// Query for existing bookable products.
 			$existing = wc_get_products(
 				array(
 					'type'   => 'booking',
@@ -235,40 +225,17 @@ class Booking extends Generator {
 				)
 			);
 
-			if ( ! empty( $existing ) ) {
-				self::$bookable_product_ids = $existing;
-			} else {
-				// Create a set of varied bookable products.
-				$created = self::create_bookable_products();
-				if ( is_wp_error( $created ) ) {
-					return $created;
-				}
-				self::$bookable_product_ids = $created;
+			if ( empty( $existing ) ) {
+				return new \WP_Error(
+					'smoothgenerator_no_bookable_products',
+					"No bookable products found. Create at least one bookable product before generating bookings. Example:\n\n    wp wc generate products 5 --type=booking"
+				);
 			}
+
+			self::$bookable_product_ids = $existing;
 		}
 
 		return self::$bookable_product_ids[ array_rand( self::$bookable_product_ids ) ];
-	}
-
-	/**
-	 * Create a set of varied bookable products using the Product generator.
-	 *
-	 * Delegates to Product::generate() so product creation logic is not duplicated.
-	 *
-	 * @return int[]|\WP_Error Array of product IDs on success.
-	 */
-	private static function create_bookable_products() {
-		$product_ids = array();
-
-		foreach ( self::$auto_create_types as $type ) {
-			$product = Product::generate( true, array( 'type' => $type ) );
-			if ( is_wp_error( $product ) ) {
-				return $product;
-			}
-			$product_ids[] = $product->get_id();
-		}
-
-		return $product_ids;
 	}
 
 	/**

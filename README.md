@@ -97,7 +97,7 @@ wp wc generate orders 50 --status=completed --refund-ratio=0.3
 Requires the [WooCommerce Bookings](https://woocommerce.com/products/woocommerce-bookings/) extension.
 
 ```bash
-# Generate 10 bookings (creates bookable products automatically if none exist)
+# Generate 10 bookings (requires at least one existing bookable product)
 wp wc generate bookings
 
 # Generate bookings with a specific date range
@@ -321,7 +321,7 @@ Creates orders with realistic data:
 Requires the [WooCommerce Bookings](https://woocommerce.com/products/woocommerce-bookings/) extension. Creates bookings with:
 
 - Checks for WooCommerce Bookings dependency before proceeding
-- Auto-creates varied bookable products (hourly services, daily rentals, group workshops) if none exist
+- Returns a clear error if no bookable products exist (create them first with `wp wc generate products --type=booking`)
 - Random booking dates within a configurable range
 - Weighted status distribution: paid (35%), confirmed (25%), complete (20%), unpaid (10%), pending-confirmation (5%), cancelled (5%)
 - Person counts based on product configuration
