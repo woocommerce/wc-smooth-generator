@@ -12,8 +12,9 @@ namespace WC\SmoothGenerator\Admin;
  */
 class Settings {
 
-	const DEFAULT_NUM_PRODUCTS           = 10;
-	const DEFAULT_NUM_ORDERS             = 10;
+	const DEFAULT_NUM_PRODUCTS = 10;
+	const DEFAULT_NUM_ORDERS   = 10;
+	const DEFAULT_NUM_BOOKINGS = 10;
 
 	/**
 	 *  Set up hooks.
@@ -132,6 +133,34 @@ class Settings {
 				);
 				?>
 			</p>
+
+			<h2>Generate bookings</h2>
+			<?php if ( \WC\SmoothGenerator\Generator\Booking::is_bookings_active() ) : ?>
+			<p>
+				<label for="generate_bookings_input" class="screen-reader-text">Number of bookings to generate</label>
+				<input
+					id="generate_bookings_input"
+					type="number"
+					name="num_bookings_to_generate"
+					value="<?php echo esc_attr( self::DEFAULT_NUM_BOOKINGS ); ?>"
+					min="1"
+					<?php disabled( $current_job instanceof AsyncJob ); ?>
+				/>
+				<?php
+				submit_button(
+					'Generate',
+					'primary',
+					'generate_bookings',
+					false,
+					$generate_button_atts
+				);
+				?>
+			</p>
+			<?php else : ?>
+			<p class="description" style="color: #d63638;">
+				WooCommerce Bookings extension is not active. Install and activate it to generate bookings.
+			</p>
+			<?php endif; ?>
 
 			<h2>Advanced Options</h2>
 			<p>
@@ -298,6 +327,10 @@ class Settings {
 			check_admin_referer( 'generate', 'smoothgenerator_nonce' );
 			$num_to_generate = absint( $_POST['num_orders_to_generate'] );
 			BatchProcessor::create_new_job( 'orders', $num_to_generate, $args );
+		} elseif ( ! empty( $_POST['generate_bookings'] ) && ! empty( $_POST['num_bookings_to_generate'] ) ) {
+			check_admin_referer( 'generate', 'smoothgenerator_nonce' );
+			$num_to_generate = absint( $_POST['num_bookings_to_generate'] );
+			BatchProcessor::create_new_job( 'bookings', $num_to_generate, $args );
 		} else if ( ! empty( $_POST['cancel_job'] ) ) {
 			check_admin_referer( 'generate', 'smoothgenerator_nonce' );
 			BatchProcessor::delete_current_job();

@@ -85,6 +85,15 @@ class Product extends Generator {
 			case 'variable':
 				$product = self::generate_variable_product();
 				break;
+			case 'booking':
+				$product = self::generate_booking_product();
+				break;
+			case 'bookable-service':
+				$product = self::generate_bookable_service_product();
+				break;
+			case 'bookable-event':
+				$product = self::generate_bookable_event_product();
+				break;
 		}
 
 		// Check if product generation failed.
@@ -289,6 +298,17 @@ class Product extends Generator {
 	}
 
 	/**
+	 * Check whether WooCommerce Bookings is active.
+	 *
+	 * Delegates to Booking::is_bookings_active() as the single source of truth.
+	 *
+	 * @return bool
+	 */
+	protected static function is_bookings_active() {
+		return Booking::is_bookings_active();
+	}
+
+	/**
 	 * Returns a product type to generate. If no type is specified, or an invalid type is specified,
 	 * a weighted random type is returned.
 	 *
@@ -302,14 +322,29 @@ class Product extends Generator {
 			'variable',
 		);
 
+		if ( self::is_bookings_active() ) {
+			$types[] = 'booking';
+		}
+
+		if ( Booking::is_bookings_experimental_active() ) {
+			$types[] = 'bookable-service';
+			$types[] = 'bookable-event';
+		}
+
 		if ( ! is_null( $type ) && in_array( $type, $types, true ) ) {
 			return $type;
-		} else {
-			return self::random_weighted_element( array(
-				'simple'   => 80,
-				'variable' => 20,
-			) );
 		}
+
+		// If the user explicitly requested a booking type but the dependency is inactive,
+		// pass it through so the downstream generator can surface a clear WP_Error.
+		if ( in_array( $type, array( 'booking', 'bookable-service', 'bookable-event' ), true ) ) {
+			return $type;
+		}
+
+		return self::random_weighted_element( array(
+			'simple'   => 80,
+			'variable' => 20,
+		) );
 	}
 
 	/**
@@ -467,6 +502,326 @@ class Product extends Generator {
 		}
 
 		return $product;
+	}
+
+	/**
+	 * Names for bookable product generation.
+	 *
+	 * @var array
+	 */
+	protected static $booking_product_names = array(
+		'hourly' => array(
+			'Private Consultation',
+			'Photography Session',
+			'Personal Training',
+			'Tutoring Session',
+			'Therapy Appointment',
+			'Music Lesson',
+			'Yoga Class',
+			'Massage Session',
+			'Career Coaching',
+			'Language Lesson',
+		),
+		'daily'  => array(
+			'Equipment Rental',
+			'Venue Booking',
+			'Car Rental',
+			'Vacation Cabin',
+			'Meeting Room',
+			'Studio Rental',
+			'Boat Rental',
+			'Campsite Reservation',
+		),
+	);
+
+	/**
+	 * Names for bookable service products.
+	 *
+	 * @var array
+	 */
+	protected static $bookable_service_names = array(
+		'Express Haircut',
+		'Oil Change Service',
+		'Pet Grooming',
+		'Phone Screen Repair',
+		'Dry Cleaning Pickup',
+		'Car Wash & Detail',
+		'Key Cutting Service',
+		'Passport Photo Service',
+		'Bike Tune-Up',
+		'Shoe Repair',
+	);
+
+	/**
+	 * Names for bookable event products.
+	 *
+	 * @var array
+	 */
+	protected static $bookable_event_names = array(
+		'Live Concert',
+		'Weekend Workshop',
+		'Wine Tasting Evening',
+		'Charity Gala',
+		'Tech Conference',
+		'Cooking Masterclass',
+		'Open Mic Night',
+		'Outdoor Movie Screening',
+		'Networking Mixer',
+		'Art Exhibition Opening',
+	);
+
+	/**
+	 * Generate a bookable product (WC_Product_Booking) and return it.
+	 *
+	 * Requires WooCommerce Bookings to be active.
+	 *
+	 * @return \WC_Product_Booking|\WP_Error Product object or WP_Error on failure.
+	 */
+	protected static function generate_booking_product() {
+		if ( ! self::is_bookings_active() ) {
+			return new \WP_Error(
+				'smoothgenerator_missing_bookings',
+				'WooCommerce Bookings extension is not active. Cannot generate booking products.'
+			);
+		}
+
+		$is_daily      = self::$faker->boolean( 40 );
+		$duration_unit = $is_daily ? 'day' : 'hour';
+		$duration      = $is_daily ? self::$faker->numberBetween( 1, 3 ) : self::$faker->numberBetween( 1, 4 );
+		$cost          = $is_daily
+			? self::$faker->numberBetween( 50, 500 )
+			: self::$faker->numberBetween( 25, 200 );
+
+		$name_pool = $is_daily ? self::$booking_product_names['daily'] : self::$booking_product_names['hourly'];
+		$name      = $name_pool[ array_rand( $name_pool ) ];
+
+		$has_persons   = self::$faker->boolean( 40 );
+		$has_resources = self::$faker->boolean( 30 );
+
+		$product = new \WC_Product_Booking();
+
+		$image_id = self::get_image();
+
+		$product->set_props( array(
+			'name'               => $name,
+			'featured'           => self::$faker->boolean( 10 ),
+			'catalog_visibility' => 'visible',
+			'description'        => self::$faker->paragraphs( self::$faker->numberBetween( 1, 3 ), true ),
+			'short_description'  => self::$faker->sentence(),
+			'sku'                => sanitize_title( $name ) . '-' . self::$faker->ean8,
+			'regular_price'      => $cost,
+			'image_id'           => $image_id,
+			'category_ids'       => self::get_term_ids( 'product_cat', self::$faker->numberBetween( 0, 2 ) ),
+			'tag_ids'            => self::get_term_ids( 'product_tag', self::$faker->numberBetween( 0, 3 ) ),
+		) );
+
+		// Booking-specific settings.
+		$product->set_duration_type( 'fixed' );
+		$product->set_duration_unit( $duration_unit );
+		$product->set_duration( $duration );
+		$product->set_cost( $cost );
+
+		// Availability window: bookable from now to 90 days in the future.
+		$product->set_min_date_value( 0 );
+		$product->set_min_date_unit( 'day' );
+		$product->set_max_date_value( self::$faker->numberBetween( 30, 180 ) );
+		$product->set_max_date_unit( 'day' );
+		$product->set_default_date_availability( 'available' );
+
+		// Cancellation.
+		$product->set_user_can_cancel( self::$faker->boolean( 60 ) );
+
+		// Person support.
+		if ( $has_persons ) {
+			$min_persons = self::$faker->numberBetween( 1, 2 );
+			$max_persons = self::$faker->numberBetween( $min_persons + 1, 20 );
+
+			$product->set_has_persons( true );
+			$product->set_min_persons( $min_persons );
+			$product->set_max_persons( $max_persons );
+			$product->set_has_person_cost_multiplier( self::$faker->boolean( 70 ) );
+		}
+
+		$product->set_status( 'publish' );
+		$product->save();
+
+		// Add resources after save (they need a product ID).
+		if ( $has_resources && method_exists( $product, 'set_has_resources' ) ) {
+			self::add_booking_resources( $product );
+		}
+
+		return $product;
+	}
+
+	/**
+	 * Generate a bookable service product using the real WC_Product_Bookable_Service class.
+	 *
+	 * Requires WooCommerce Bookings with experimental features enabled
+	 * (WC_BOOKINGS_EXPERIMENTAL_ENABLED). The class enforces: virtual, fixed duration
+	 * in minutes, default date availability = non-available, resources assignment = customer.
+	 *
+	 * @return \WC_Product_Bookable_Service|\WP_Error Product object or WP_Error on failure.
+	 */
+	protected static function generate_bookable_service_product() {
+		if ( ! Booking::is_bookings_experimental_active() ) {
+			return new \WP_Error(
+				'smoothgenerator_missing_bookings_experimental',
+				'WooCommerce Bookings experimental features are not active. The bookable-service type requires WC_BOOKINGS_EXPERIMENTAL_ENABLED.'
+			);
+		}
+
+		$name = self::$bookable_service_names[ array_rand( self::$bookable_service_names ) ];
+		$cost = self::$faker->numberBetween( 10, 100 );
+
+		$product = new \WC_Product_Bookable_Service();
+
+		$image_id = self::get_image();
+
+		$product->set_props( array(
+			'name'               => $name,
+			'featured'           => self::$faker->boolean( 10 ),
+			'catalog_visibility' => 'visible',
+			'description'        => self::$faker->paragraphs( self::$faker->numberBetween( 1, 2 ), true ),
+			'short_description'  => self::$faker->sentence(),
+			'sku'                => sanitize_title( $name ) . '-' . self::$faker->ean8,
+			'regular_price'      => $cost,
+			'image_id'           => $image_id,
+			'category_ids'       => self::get_term_ids( 'product_cat', self::$faker->numberBetween( 0, 2 ) ),
+			'tag_ids'            => self::get_term_ids( 'product_tag', self::$faker->numberBetween( 0, 3 ) ),
+		) );
+
+		// Duration is always in minutes for service products (enforced by the class).
+		$product->set_duration( self::$faker->randomElement( array( 15, 20, 30, 45, 60 ) ) );
+		$product->set_cost( $cost );
+
+		// Availability window.
+		$product->set_min_date_value( 0 );
+		$product->set_min_date_unit( 'day' );
+		$product->set_max_date_value( self::$faker->numberBetween( 14, 60 ) );
+		$product->set_max_date_unit( 'day' );
+
+		// Cancellation.
+		$product->set_user_can_cancel( self::$faker->boolean( 30 ) );
+
+		$product->set_status( 'publish' );
+		$product->save();
+
+		return $product;
+	}
+
+	/**
+	 * Generate a bookable event product using the real WC_Product_Bookable_Event class.
+	 *
+	 * Requires WooCommerce Bookings with experimental features enabled
+	 * (WC_BOOKINGS_EXPERIMENTAL_ENABLED).
+	 *
+	 * @return \WC_Product_Bookable_Event|\WP_Error Product object or WP_Error on failure.
+	 */
+	protected static function generate_bookable_event_product() {
+		if ( ! Booking::is_bookings_experimental_active() ) {
+			return new \WP_Error(
+				'smoothgenerator_missing_bookings_experimental',
+				'WooCommerce Bookings experimental features are not active. The bookable-event type requires WC_BOOKINGS_EXPERIMENTAL_ENABLED.'
+			);
+		}
+
+		$name = self::$bookable_event_names[ array_rand( self::$bookable_event_names ) ];
+		$cost = self::$faker->numberBetween( 15, 250 );
+
+		$product = new \WC_Product_Bookable_Event();
+
+		$image_id = self::get_image();
+
+		$product->set_props( array(
+			'name'               => $name,
+			'featured'           => self::$faker->boolean( 15 ),
+			'catalog_visibility' => 'visible',
+			'description'        => self::$faker->paragraphs( self::$faker->numberBetween( 1, 3 ), true ),
+			'short_description'  => self::$faker->sentence(),
+			'sku'                => sanitize_title( $name ) . '-' . self::$faker->ean8,
+			'regular_price'      => $cost,
+			'image_id'           => $image_id,
+			'category_ids'       => self::get_term_ids( 'product_cat', self::$faker->numberBetween( 0, 2 ) ),
+			'tag_ids'            => self::get_term_ids( 'product_tag', self::$faker->numberBetween( 0, 3 ) ),
+		) );
+
+		// Event-specific settings.
+		$product->set_duration_type( 'fixed' );
+		$product->set_duration_unit( 'hour' );
+		$product->set_duration( self::$faker->numberBetween( 1, 4 ) );
+		$product->set_cost( $cost );
+
+		// Availability window.
+		$product->set_min_date_value( 0 );
+		$product->set_min_date_unit( 'day' );
+		$product->set_max_date_value( self::$faker->numberBetween( 30, 120 ) );
+		$product->set_max_date_unit( 'day' );
+		$product->set_default_date_availability( 'available' );
+
+		// Events typically support persons (attendees).
+		$min_persons = 1;
+		$max_persons = self::$faker->numberBetween( 20, 200 );
+
+		$product->set_has_persons( true );
+		$product->set_min_persons( $min_persons );
+		$product->set_max_persons( $max_persons );
+		$product->set_has_person_cost_multiplier( true );
+
+		// Cancellation.
+		$product->set_user_can_cancel( self::$faker->boolean( 40 ) );
+
+		$product->set_status( 'publish' );
+		$product->save();
+
+		return $product;
+	}
+
+	/**
+	 * Add random resources to a bookable product.
+	 *
+	 * @param \WC_Product_Booking $product The bookable product.
+	 */
+	protected static function add_booking_resources( $product ) {
+		$resource_names = array(
+			'Room A',
+			'Room B',
+			'Room C',
+			'Court 1',
+			'Court 2',
+			'Court 3',
+			'Station Alpha',
+			'Station Beta',
+			'Bay 1',
+			'Bay 2',
+			'Bay 3',
+			'Bay 4',
+		);
+
+		$num_resources = self::$faker->numberBetween( 2, 4 );
+		shuffle( $resource_names );
+		$selected = array_slice( $resource_names, 0, $num_resources );
+
+		$product->set_has_resources( true );
+
+		$base_costs  = array();
+		$block_costs = array();
+
+		foreach ( $selected as $resource_name ) {
+			$resource = new \WC_Product_Booking_Resource();
+			$resource->set_name( $resource_name );
+			$resource->set_qty( self::$faker->numberBetween( 1, 5 ) );
+			$resource->save();
+
+			$product->add_resource( $resource );
+
+			// Resource costs are stored at the product level, not on the resource object.
+			$base_costs[ $resource->get_id() ]  = 0;
+			$block_costs[ $resource->get_id() ] = 0;
+		}
+
+		$product->set_resource_base_costs( $base_costs );
+		$product->set_resource_block_costs( $block_costs );
+		$product->save();
 	}
 
 	/**
