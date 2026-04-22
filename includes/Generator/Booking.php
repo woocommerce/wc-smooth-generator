@@ -81,7 +81,7 @@ class Booking extends Generator {
 	 * @param bool  $save       Save the object before returning or not.
 	 * @param array $assoc_args Arguments passed via the CLI for additional customization.
 	 *
-	 * @return int|\WP_Error Booking ID on success.
+	 * @return int|array|\WP_Error Booking ID when $save is true, unsaved booking data array when $save is false, or WP_Error on failure.
 	 */
 	public static function generate( $save = true, array $assoc_args = array() ) {
 		$check = self::check_dependencies();
@@ -168,7 +168,10 @@ class Booking extends Generator {
 
 		// Create an associated order if requested.
 		if ( ! empty( $args['with-orders'] ) && 'cancelled' !== $status ) {
-			self::create_associated_order( $booking, $product, $customer_id, $status );
+			$booking_object = is_object( $booking ) ? $booking : get_wc_booking( $booking_id );
+			if ( is_object( $booking_object ) ) {
+				self::create_associated_order( $booking_object, $product, $customer_id, $status );
+			}
 		}
 
 		/**
@@ -322,6 +325,9 @@ class Booking extends Generator {
 			$start_bound = strtotime( '-14 days' );
 			$end_bound   = strtotime( '+42 days' );
 		}
+
+		// Treat date-end as inclusive of the full day so random day selection can land on that date.
+		$end_bound += DAY_IN_SECONDS - 1;
 
 		$duration_unit = $product->get_duration_unit();
 		$duration      = max( 1, $product->get_duration() );

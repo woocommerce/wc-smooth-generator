@@ -333,12 +333,18 @@ class Product extends Generator {
 
 		if ( ! is_null( $type ) && in_array( $type, $types, true ) ) {
 			return $type;
-		} else {
-			return self::random_weighted_element( array(
-				'simple'   => 80,
-				'variable' => 20,
-			) );
 		}
+
+		// If the user explicitly requested a booking type but the dependency is inactive,
+		// pass it through so the downstream generator can surface a clear WP_Error.
+		if ( in_array( $type, array( 'booking', 'bookable-service', 'bookable-event' ), true ) ) {
+			return $type;
+		}
+
+		return self::random_weighted_element( array(
+			'simple'   => 80,
+			'variable' => 20,
+		) );
 	}
 
 	/**
