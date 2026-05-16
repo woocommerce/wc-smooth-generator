@@ -107,7 +107,7 @@ class Order extends Generator {
 		$order->set_shipping_company( $customer->get_shipping_company() );
 
 		// 20% chance
-		if ( rand( 0, 100 ) <= 20 ) {
+		if ( wp_rand( 0, 100 ) <= 20 ) {
 			$country_code = $order->get_shipping_country();
 
 			$calculate_tax_for = array(
@@ -194,11 +194,11 @@ class Order extends Generator {
 		// Set paid and completed dates based on order status.
 		if ( 'completed' === $status || 'processing' === $status ) {
 			// Add random 0 to 36 hours to creation date.
-			$date_paid = date( 'Y-m-d H:i:s', strtotime( $date ) + ( wp_rand( 0, 36 ) * HOUR_IN_SECONDS ) );
+			$date_paid = gmdate( 'Y-m-d H:i:s', strtotime( $date ) + ( wp_rand( 0, 36 ) * HOUR_IN_SECONDS ) );
 			$order->set_date_paid( $date_paid );
 			if ( 'completed' === $status ) {
 				// Add random 0 to 36 hours to paid date.
-				$date_completed = date( 'Y-m-d H:i:s', strtotime( $date_paid ) + ( wp_rand( 0, 36 ) * HOUR_IN_SECONDS ) );
+				$date_completed = gmdate( 'Y-m-d H:i:s', strtotime( $date_paid ) + ( wp_rand( 0, 36 ) * HOUR_IN_SECONDS ) );
 				$order->set_date_completed( $date_completed );
 			}
 		}
@@ -419,7 +419,7 @@ class Order extends Generator {
 	 * @return string Date string (Y-m-d)
 	 */
 	protected static function get_date_created( $assoc_args ) {
-		$current = date( 'Y-m-d', time() );
+		$current = gmdate( 'Y-m-d', time() );
 		if ( ! empty( $assoc_args['date-start'] ) && empty( $assoc_args['date-end'] ) ) {
 			$start = $assoc_args['date-start'];
 			$end   = $current;
@@ -437,12 +437,12 @@ class Order extends Generator {
 
 		// If start and end are the same day, return that date (time will be randomized in generate())
 		if ( 0 === $days_between ) {
-			return date( 'Y-m-d', $start_timestamp );
+			return gmdate( 'Y-m-d', $start_timestamp );
 		}
 
 		// Generate random offset in days and add to start timestamp
 		$random_days = wp_rand( 0, $days_between );
-		return date( 'Y-m-d', $start_timestamp + ( $random_days * DAY_IN_SECONDS ) );
+		return gmdate( 'Y-m-d', $start_timestamp + ( $random_days * DAY_IN_SECONDS ) );
 	}
 
 	/**
@@ -955,7 +955,7 @@ class Order extends Generator {
 			}
 		}
 
-		return date( 'Y-m-d H:i:s', $refund_timestamp );
+		return gmdate( 'Y-m-d H:i:s', $refund_timestamp );
 	}
 
 	/**
@@ -967,7 +967,7 @@ class Order extends Generator {
 	 * @return array Sorted array of date strings (Y-m-d).
 	 */
 	protected static function generate_batch_dates( $count, $args ) {
-		$current = date( 'Y-m-d', time() );
+		$current = gmdate( 'Y-m-d', time() );
 
 		if ( ! empty( $args['date-start'] ) && empty( $args['date-end'] ) ) {
 			$start = $args['date-start'];
@@ -986,13 +986,13 @@ class Order extends Generator {
 
 		// If start and end dates are the same, return array of that date
 		if ( 0 === $days_between ) {
-			return array_fill( 0, $count, date( 'Y-m-d', $start_timestamp ) );
+			return array_fill( 0, $count, gmdate( 'Y-m-d', $start_timestamp ) );
 		}
 
 		$dates = array();
 		for ( $i = 0; $i < $count; $i++ ) {
 			$random_days = wp_rand( 0, $days_between );
-			$dates[] = date( 'Y-m-d', $start_timestamp + ( $random_days * DAY_IN_SECONDS ) );
+			$dates[]     = gmdate( 'Y-m-d', $start_timestamp + ( $random_days * DAY_IN_SECONDS ) );
 		}
 
 		// Sort chronologically so lower order IDs get earlier dates
