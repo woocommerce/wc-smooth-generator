@@ -992,7 +992,7 @@ class Order extends Generator {
 		$dates = array();
 		for ( $i = 0; $i < $count; $i++ ) {
 			$random_days = wp_rand( 0, $days_between );
-			$dates[] = gmdate( 'Y-m-d', $start_timestamp + ( $random_days * DAY_IN_SECONDS ) );
+			$dates[]     = gmdate( 'Y-m-d', $start_timestamp + ( $random_days * DAY_IN_SECONDS ) );
 		}
 
 		// Sort chronologically so lower order IDs get earlier dates
