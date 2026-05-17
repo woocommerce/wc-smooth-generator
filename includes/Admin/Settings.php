@@ -48,7 +48,13 @@ class Settings {
 		$generate_button_atts = $current_job instanceof AsyncJob ? array( 'disabled' => true ) : array();
 		$cancel_button_atts   = ! $current_job instanceof AsyncJob ? array( 'disabled' => true ) : array();
 
-		$has_products               = (bool) wc_get_products( array( 'limit' => 1, 'return' => 'ids', 'status' => 'publish' ) );
+		$has_products               = (bool) wc_get_products(
+			array(
+				'limit'  => 1,
+				'return' => 'ids',
+				'status' => 'publish',
+			)
+		);
 		$orders_button_atts         = $generate_button_atts;
 		$orders_disabled_by_missing = false;
 		if ( ! $has_products ) {
