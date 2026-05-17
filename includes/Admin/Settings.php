@@ -12,11 +12,11 @@ namespace WC\SmoothGenerator\Admin;
  */
 class Settings {
 
-	const DEFAULT_NUM_PRODUCTS   = 10;
-	const DEFAULT_NUM_ORDERS     = 10;
-	const DEFAULT_NUM_BOOKINGS   = 10;
-	const DEFAULT_NUM_CUSTOMERS  = 10;
-	const DEFAULT_NUM_COUPONS    = 10;
+	const DEFAULT_NUM_PRODUCTS  = 10;
+	const DEFAULT_NUM_ORDERS    = 10;
+	const DEFAULT_NUM_BOOKINGS  = 10;
+	const DEFAULT_NUM_CUSTOMERS = 10;
+	const DEFAULT_NUM_COUPONS   = 10;
 
 	/**
 	 *  Set up hooks.
