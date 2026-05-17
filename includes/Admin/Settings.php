@@ -12,9 +12,11 @@ namespace WC\SmoothGenerator\Admin;
  */
 class Settings {
 
-	const DEFAULT_NUM_PRODUCTS = 10;
-	const DEFAULT_NUM_ORDERS   = 10;
-	const DEFAULT_NUM_BOOKINGS = 10;
+	const DEFAULT_NUM_PRODUCTS  = 10;
+	const DEFAULT_NUM_ORDERS    = 10;
+	const DEFAULT_NUM_BOOKINGS  = 10;
+	const DEFAULT_NUM_CUSTOMERS = 10;
+	const DEFAULT_NUM_COUPONS   = 10;
 
 	/**
 	 *  Set up hooks.
@@ -161,6 +163,50 @@ class Settings {
 				WooCommerce Bookings extension is not active. Install and activate it to generate bookings.
 			</p>
 			<?php endif; ?>
+
+			<h2>Generate customers</h2>
+			<p>
+				<label for="generate_customers_input" class="screen-reader-text">Number of customers to generate</label>
+				<input
+					id="generate_customers_input"
+					type="number"
+					name="num_customers_to_generate"
+					value="<?php echo esc_attr( self::DEFAULT_NUM_CUSTOMERS ); ?>"
+					min="1"
+					<?php disabled( $current_job instanceof AsyncJob ); ?>
+				/>
+				<?php
+				submit_button(
+					'Generate',
+					'primary',
+					'generate_customers',
+					false,
+					$generate_button_atts
+				);
+				?>
+			</p>
+
+			<h2>Generate coupons</h2>
+			<p>
+				<label for="generate_coupons_input" class="screen-reader-text">Number of coupons to generate</label>
+				<input
+					id="generate_coupons_input"
+					type="number"
+					name="num_coupons_to_generate"
+					value="<?php echo esc_attr( self::DEFAULT_NUM_COUPONS ); ?>"
+					min="1"
+					<?php disabled( $current_job instanceof AsyncJob ); ?>
+				/>
+				<?php
+				submit_button(
+					'Generate',
+					'primary',
+					'generate_coupons',
+					false,
+					$generate_button_atts
+				);
+				?>
+			</p>
 
 			<h2>Advanced Options</h2>
 			<p>
@@ -331,6 +377,14 @@ class Settings {
 			check_admin_referer( 'generate', 'smoothgenerator_nonce' );
 			$num_to_generate = absint( $_POST['num_bookings_to_generate'] );
 			BatchProcessor::create_new_job( 'bookings', $num_to_generate, $args );
+		} elseif ( ! empty( $_POST['generate_customers'] ) && ! empty( $_POST['num_customers_to_generate'] ) ) {
+			check_admin_referer( 'generate', 'smoothgenerator_nonce' );
+			$num_to_generate = absint( $_POST['num_customers_to_generate'] );
+			BatchProcessor::create_new_job( 'customers', $num_to_generate );
+		} elseif ( ! empty( $_POST['generate_coupons'] ) && ! empty( $_POST['num_coupons_to_generate'] ) ) {
+			check_admin_referer( 'generate', 'smoothgenerator_nonce' );
+			$num_to_generate = absint( $_POST['num_coupons_to_generate'] );
+			BatchProcessor::create_new_job( 'coupons', $num_to_generate );
 		} else if ( ! empty( $_POST['cancel_job'] ) ) {
 			check_admin_referer( 'generate', 'smoothgenerator_nonce' );
 			BatchProcessor::delete_current_job();
