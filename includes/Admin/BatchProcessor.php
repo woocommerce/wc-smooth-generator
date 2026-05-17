@@ -202,7 +202,7 @@ class BatchProcessor implements BatchProcessorInterface {
 
 		if ( $amount > 0 && count( $result ) === 0 ) {
 			throw new \Exception(
-				sprintf( 'Batch of %d item(s) could not be generated. Check error logs for details.', $amount )
+				sprintf( 'Batch of %d item(s) could not be generated. Check error logs for details.', absint( $amount ) )
 			);
 		}
 
