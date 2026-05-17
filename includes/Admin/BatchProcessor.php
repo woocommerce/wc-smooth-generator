@@ -200,12 +200,6 @@ class BatchProcessor implements BatchProcessorInterface {
 			throw new \Exception( $result->get_error_message() );
 		}
 
-		if ( $amount > 0 && count( $result ) === 0 ) {
-			throw new \Exception(
-				sprintf( 'Batch of %d item(s) could not be generated. Check error logs for details.', $amount )
-			);
-		}
-
 		self::update_current_job( count( $result ) );
 	}
 
