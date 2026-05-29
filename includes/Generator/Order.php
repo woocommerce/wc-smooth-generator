@@ -52,6 +52,27 @@ class Order extends Generator {
 	const REFUND_DISTRIBUTION_PARTIAL_RATIO = 0.25;
 
 	/**
+	 * Resolve --days, --weeks, --months into date-start so existing date logic can handle them.
+	 * Has no effect if date-start is already set.
+	 *
+	 * @param array $assoc_args CLI arguments.
+	 * @return array Modified arguments with date-start populated.
+	 */
+	protected static function resolve_date_period_args( array $assoc_args ) {
+		if ( ! empty( $assoc_args['date-start'] ) ) {
+			return $assoc_args;
+		}
+		if ( ! empty( $assoc_args['days'] ) ) {
+			$assoc_args['date-start'] = date( 'Y-m-d', strtotime( '-' . absint( $assoc_args['days'] ) . ' days' ) );
+		} elseif ( ! empty( $assoc_args['weeks'] ) ) {
+			$assoc_args['date-start'] = date( 'Y-m-d', strtotime( '-' . absint( $assoc_args['weeks'] ) . ' weeks' ) );
+		} elseif ( ! empty( $assoc_args['months'] ) ) {
+			$assoc_args['date-start'] = date( 'Y-m-d', strtotime( '-' . absint( $assoc_args['months'] ) . ' months' ) );
+		}
+		return $assoc_args;
+	}
+
+	/**
 	 * Return a new order.
 	 *
 	 * @param bool        $save Save the object before returning or not.
@@ -63,6 +84,7 @@ class Order extends Generator {
 	 */
 	public static function generate( $save = true, $assoc_args = array(), $date = null, $include_coupon = null, $refund_type = null ) {
 		parent::maybe_initialize_generators();
+		$assoc_args = self::resolve_date_period_args( $assoc_args );
 
 		$order    = new \WC_Order();
 		$customer = self::get_customer();
@@ -272,6 +294,7 @@ class Order extends Generator {
 	 * @return int[]|\WP_Error
 	 */
 	public static function batch( $amount, array $args = array() ) {
+		$args   = self::resolve_date_period_args( $args );
 		$amount = self::validate_batch_amount( $amount );
 		if ( is_wp_error( $amount ) ) {
 			error_log( 'Batch generation failed: ' . $amount->get_error_message() );
