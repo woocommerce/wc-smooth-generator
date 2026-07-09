@@ -26,6 +26,10 @@ composer install --no-dev
 - WooCommerce 5.0+
 - [WooCommerce Bookings](https://woocommerce.com/products/woocommerce-bookings/) (optional, required for booking generation)
 
+## Using Smooth Generator in PHPUnit tests
+
+The generators can be called directly from PHP, not just from WP-CLI. See [docs/using-in-phpunit.md](docs/using-in-phpunit.md) for seeding products, orders, customers, coupons, terms, and bookings inside your own test suite, including code examples and gotchas.
+
 ## WP-CLI commands
 
 All commands use the `wp wc generate` prefix. Run `wp help wc generate` for a summary, or `wp help wc generate <command>` for detailed usage.
