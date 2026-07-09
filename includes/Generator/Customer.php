@@ -67,9 +67,15 @@ class Customer extends Generator {
 				break;
 
 			case 'company':
-				$customer_data       = array_merge( $customer_data, CustomerInfo::generate_company( $country ) );
-				$other_customer_data = CustomerInfo::generate_company( $country );
-				$keys_for_address[]  = 'company';
+				$company_data                = CustomerInfo::generate_company( $country );
+				$contact                     = CustomerInfo::generate_person( $country );
+				$customer_data               = array_merge( $customer_data, $company_data );
+				$customer_data['first_name'] = $contact['first_name'];
+				$customer_data['last_name']  = $contact['last_name'];
+				$other_customer_data         = $contact;
+				$keys_for_address[]          = 'first_name';
+				$keys_for_address[]          = 'last_name';
+				$keys_for_address[]          = 'company';
 				break;
 		}
 
@@ -144,7 +150,7 @@ class Customer extends Generator {
 		$customer_ids = array();
 
 		for ( $i = 1; $i <= $amount; $i++ ) {
-			$customer       = self::generate( true, $args );
+			$customer = self::generate( true, $args );
 			if ( is_wp_error( $customer ) ) {
 				return $customer;
 			}
