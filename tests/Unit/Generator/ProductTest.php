@@ -30,6 +30,47 @@ class ProductTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Test generating a product with a custom SKU.
+	 */
+	public function test_generate_simple_product_with_custom_sku() {
+		$product = Product::generate(
+			true,
+			array(
+				'type' => 'simple',
+				'sku'  => 'CUSTOM-SKU',
+			)
+		);
+
+		$this->assertInstanceOf( \WC_Product::class, $product );
+		$this->assertEquals( 'CUSTOM-SKU-1', $product->get_sku() );
+	}
+
+	/**
+	 * Test that batch generation with a custom SKU produces unique SKUs.
+	 */
+	public function test_batch_with_custom_sku() {
+		$product_ids = Product::batch(
+			5,
+			array(
+				'type' => 'simple',
+				'sku'  => 'BATCH-SKU',
+			)
+		);
+
+		$this->assertIsArray( $product_ids );
+		$this->assertCount( 5, $product_ids );
+
+		$skus = array();
+		foreach ( $product_ids as $product_id ) {
+			$skus[] = wc_get_product( $product_id )->get_sku();
+		}
+
+		$this->assertContains( 'BATCH-SKU-1', $skus );
+		$this->assertContains( 'BATCH-SKU-5', $skus );
+		$this->assertEquals( $skus, array_unique( $skus ), 'Custom SKUs should be unique within a batch' );
+	}
+
+	/**
 	 * Test generating a variable product.
 	 */
 	public function test_generate_variable_product() {
