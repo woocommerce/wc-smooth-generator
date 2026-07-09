@@ -36,7 +36,8 @@ class CLI extends WP_CLI_Command {
 		WP_CLI::line( 'Initializing...' );
 
 		// Pre-generate images. Min 20, max 100.
-		Generator\Product::seed_images( min( $amount + 19, 100 ) );
+		$image_mode = $assoc_args['images'] ?? 'existing';
+		Generator\Product::seed_images( min( $amount + 19, 100 ), $image_mode );
 
 		$progress = \WP_CLI\Utils\make_progress_bar( 'Generating products', $amount );
 
@@ -318,6 +319,37 @@ class CLI extends WP_CLI_Command {
 
 		WP_CLI::success( $generated . ' terms generated in ' . $display_time );
 	}
+
+	/**
+	 * Generate product images.
+	 *
+	 * @param array $args Arguments specified.
+	 * @param array $assoc_args Associative arguments specified.
+	 */
+	public static function images( $args, $assoc_args ) {
+		list( $amount ) = $args;
+		$amount = absint( $amount );
+
+		$mode = $assoc_args['type'] ?? 'abstract';
+
+		$time_start = microtime( true );
+
+		WP_CLI::line( "Generating {$amount} {$mode} images..." );
+
+		$progress = \WP_CLI\Utils\make_progress_bar( 'Generating images', $amount );
+
+		Generator\Product::seed_images( $amount, $mode );
+
+		$progress->finish();
+
+		$count = Generator\Product::get_image_count();
+
+		$time_end       = microtime( true );
+		$execution_time = round( ( $time_end - $time_start ), 2 );
+		$display_time   = $execution_time < 60 ? $execution_time . ' seconds' : human_time_diff( $time_start, $time_end );
+
+		WP_CLI::success( $count . ' images generated in ' . $display_time );
+	}
 }
 
 WP_CLI::add_command( 'wc generate products', array( 'WC\SmoothGenerator\CLI', 'products' ), array(
@@ -343,8 +375,16 @@ WP_CLI::add_command( 'wc generate products', array( 'WC\SmoothGenerator\CLI', 'p
 			'description' => 'Only apply existing categories and tags to products, rather than generating new ones.',
 			'optional'    => true,
 		),
+		array(
+			'name'        => 'images',
+			'type'        => 'assoc',
+			'description' => 'Image generation mode. "abstract" generates Jdenticon images. "realistic" downloads from Lorem Picsum. "existing" uses media library images. "none" skips images.',
+			'optional'    => true,
+			'options'     => array( 'abstract', 'realistic', 'existing', 'none' ),
+			'default'     => 'existing',
+		),
 	),
-	'longdesc'  => "## EXAMPLES\n\nwc generate products 10\n\nwc generate products 20 --type=variable --use-existing-terms\n\nwc generate products 5 --type=booking\n\nwc generate products 5 --type=bookable-service\n\nwc generate products 5 --type=bookable-event",
+	'longdesc'  => "## EXAMPLES\n\nwc generate products 10\n\nwc generate products 20 --type=variable --use-existing-terms\n\nwc generate products 5 --type=booking\n\nwc generate products 5 --type=bookable-service\n\nwc generate products 5 --type=bookable-event\n\nwc generate products 10 --images=none",
 ) );
 
 WP_CLI::add_command( 'wc generate orders', array( 'WC\SmoothGenerator\CLI', 'orders' ), array(
@@ -551,4 +591,26 @@ WP_CLI::add_command( 'wc generate terms', array( 'WC\SmoothGenerator\CLI', 'term
 		),
 	),
 	'longdesc' => "## EXAMPLES\n\nwc generate terms product_tag 10\n\nwc generate terms product_cat 50 --max-depth=3",
+) );
+
+WP_CLI::add_command( 'wc generate images', array( 'WC\SmoothGenerator\CLI', 'images' ), array(
+	'shortdesc' => 'Generate product images.',
+	'synopsis'  => array(
+		array(
+			'name'        => 'amount',
+			'type'        => 'positional',
+			'description' => 'The number of images to generate.',
+			'optional'    => true,
+			'default'     => 10,
+		),
+		array(
+			'name'        => 'type',
+			'type'        => 'assoc',
+			'description' => 'Image type. "abstract" generates Jdenticon images. "realistic" downloads from Lorem Picsum. "existing" uses media library images.',
+			'optional'    => true,
+			'options'     => array( 'abstract', 'realistic', 'existing' ),
+			'default'     => 'abstract',
+		),
+	),
+	'longdesc'  => "## EXAMPLES\n\nwc generate images 20\n\nwc generate images 50 --type=realistic\n\nwc generate images 100 --type=existing",
 ) );
