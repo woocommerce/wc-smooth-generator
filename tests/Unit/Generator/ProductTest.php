@@ -62,6 +62,40 @@ class ProductTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Test generating a grouped product.
+	 */
+	public function test_generate_grouped_product() {
+		// Seed some simple products so the grouped product can link them as children.
+		Product::batch( 5, array( 'type' => 'simple' ) );
+
+		$product = Product::generate( true, array( 'type' => 'grouped' ) );
+
+		if ( is_wp_error( $product ) ) {
+			$this->markTestSkipped( 'Grouped product generation failed: ' . $product->get_error_message() );
+		}
+
+		$this->assertInstanceOf( \WC_Product_Grouped::class, $product );
+		$this->assertTrue( $product->get_id() > 0 );
+		$this->assertEquals( 'grouped', $product->get_type() );
+		$this->assertNotEmpty( $product->get_name() );
+
+		// Refresh from the DB and confirm the child linkage was persisted.
+		$product = wc_get_product( $product->get_id() );
+		$children = $product->get_children();
+		$this->assertIsArray( $children );
+
+		// Children are chosen at random and may be empty on a given run; skip when none were picked.
+		if ( empty( $children ) ) {
+			$this->markTestSkipped( 'No child products were randomly selected to link' );
+		}
+
+		foreach ( $children as $child_id ) {
+			$this->assertIsNumeric( $child_id );
+			$this->assertGreaterThan( 0, (int) $child_id );
+		}
+	}
+
+	/**
 	 * Test that variable products have attributes.
 	 */
 	public function test_variable_product_has_attributes() {

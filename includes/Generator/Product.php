@@ -94,6 +94,9 @@ class Product extends Generator {
 			case 'bookable-event':
 				$product = self::generate_bookable_event_product();
 				break;
+			case 'grouped':
+				$product = self::generate_grouped_product();
+				break;
 		}
 
 		// Check if product generation failed.
@@ -320,6 +323,7 @@ class Product extends Generator {
 		$types = array(
 			'simple',
 			'variable',
+			'grouped',
 		);
 
 		if ( self::is_bookings_active() ) {
@@ -500,6 +504,50 @@ class Product extends Generator {
 		if ( wc_get_container()->get( 'Automattic\WooCommerce\Internal\CostOfGoodsSold\CostOfGoodsSoldController' )->feature_is_enabled() ) {
 			$product->set_props( array( 'cogs_value' => round( $price * ( 1 - self::$faker->numberBetween( 15, 60 ) / 100 ), 2 ) ) );
 		}
+
+		return $product;
+	}
+
+	/**
+	 * Generate a grouped product and return it.
+	 *
+	 * A grouped product links a set of existing products as children.
+	 *
+	 * @return \WC_Product_Grouped|\WP_Error Product object or WP_Error on failure.
+	 */
+	protected static function generate_grouped_product() {
+		$name    = ucwords( self::$faker->productName );
+		$product = new \WC_Product_Grouped();
+
+		$image_id = self::get_image();
+		$gallery  = self::maybe_get_gallery_image_ids();
+
+		// A grouped product is meaningless without children, so guarantee at least one
+		// when products exist, rather than relying on the random count in get_existing_product_ids().
+		$children = self::get_existing_product_ids( self::$faker->numberBetween( 2, 5 ) );
+		if ( empty( $children ) && ! empty( self::$product_ids ) ) {
+			$children = array( self::$product_ids[ array_rand( self::$product_ids ) ] );
+		}
+
+		$product->set_props( array(
+			'name'               => $name,
+			'featured'           => self::$faker->boolean(),
+			'catalog_visibility' => 'visible',
+			'description'        => self::$faker->paragraphs( self::$faker->numberBetween( 1, 5 ), true ),
+			'short_description'  => self::$faker->text(),
+			'sku'                => sanitize_title( $name ) . '-' . self::$faker->ean8,
+			'global_unique_id'   => self::$faker->randomElement( array( self::$faker->ean13, self::$faker->isbn10 ) ),
+			'reviews_allowed'    => self::$faker->boolean(),
+			'purchase_note'      => self::$faker->boolean() ? self::$faker->text() : '',
+			'menu_order'         => self::$faker->numberBetween( 0, 10000 ),
+			'parent_id'          => 0,
+			'category_ids'       => self::get_term_ids( 'product_cat', self::$faker->numberBetween( 0, 3 ) ),
+			'tag_ids'            => self::get_term_ids( 'product_tag', self::$faker->numberBetween( 0, 5 ) ),
+			'shipping_class_id'  => 0,
+			'image_id'           => $image_id,
+			'gallery_image_ids'  => $gallery,
+			'children'           => $children,
+		) );
 
 		return $product;
 	}

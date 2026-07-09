@@ -335,7 +335,7 @@ WP_CLI::add_command( 'wc generate products', array( 'WC\SmoothGenerator\CLI', 'p
 			'type'        => 'assoc',
 			'description' => 'Specify one type of product to generate. Otherwise defaults to a mix. "booking" requires WooCommerce Bookings. "bookable-service" and "bookable-event" also require WC_BOOKINGS_EXPERIMENTAL_ENABLED.',
 			'optional'    => true,
-			'options'     => array( 'simple', 'variable', 'booking', 'bookable-service', 'bookable-event' ),
+			'options'     => array( 'simple', 'variable', 'booking', 'bookable-service', 'bookable-event', 'grouped' ),
 		),
 		array(
 			'name'        => 'use-existing-terms',
@@ -344,7 +344,9 @@ WP_CLI::add_command( 'wc generate products', array( 'WC\SmoothGenerator\CLI', 'p
 			'optional'    => true,
 		),
 	),
-	'longdesc'  => "## EXAMPLES\n\nwc generate products 10\n\nwc generate products 20 --type=variable --use-existing-terms\n\nwc generate products 5 --type=booking\n\nwc generate products 5 --type=bookable-service\n\nwc generate products 5 --type=bookable-event",
+	'longdesc'  => "## EXAMPLES\n\nwc generate products 10\n\nwc generate products 20 --type=variable --use-existing-terms\n\nwc generate products 5 --type=booking\n\nwc generate products 5 --type=bookable-service\n\nwc generate products 5 --type=bookable-event
+
+wc generate products 5 --type=grouped",
 ) );
 
 WP_CLI::add_command( 'wc generate orders', array( 'WC\SmoothGenerator\CLI', 'orders' ), array(
