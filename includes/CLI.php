@@ -343,8 +343,14 @@ WP_CLI::add_command( 'wc generate products', array( 'WC\SmoothGenerator\CLI', 'p
 			'description' => 'Only apply existing categories and tags to products, rather than generating new ones.',
 			'optional'    => true,
 		),
+		array(
+			'name'        => 'sku',
+			'type'        => 'assoc',
+			'description' => 'Base SKU for generated products. A counter is appended in batch mode to keep SKUs unique.',
+			'optional'    => true,
+		),
 	),
-	'longdesc'  => "## EXAMPLES\n\nwc generate products 10\n\nwc generate products 20 --type=variable --use-existing-terms\n\nwc generate products 5 --type=booking\n\nwc generate products 5 --type=bookable-service\n\nwc generate products 5 --type=bookable-event",
+	'longdesc'  => "## EXAMPLES\n\nwc generate products 10\n\nwc generate products 20 --type=variable --use-existing-terms\n\nwc generate products 5 --type=booking\n\nwc generate products 5 --type=bookable-service\n\nwc generate products 5 --type=bookable-event\n\nwc generate products 5 --sku=PROD",
 ) );
 
 WP_CLI::add_command( 'wc generate orders', array( 'WC\SmoothGenerator\CLI', 'orders' ), array(
