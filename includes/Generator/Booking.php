@@ -15,6 +15,13 @@ namespace WC\SmoothGenerator\Generator;
 class Booking extends Generator {
 
 	/**
+	 * All booking statuses this generator can assign (see get_random_status()). Queried
+	 * explicitly instead of post_status => 'any', since 'any' silently excludes any status
+	 * registered with 'exclude_from_search' => true.
+	 */
+	const BOOKING_STATUSES = array( 'paid', 'confirmed', 'complete', 'unpaid', 'pending-confirmation', 'cancelled' );
+
+	/**
 	 * Cache of bookable product IDs to avoid repeated queries.
 	 *
 	 * @var array
@@ -157,6 +164,8 @@ class Booking extends Generator {
 
 		$booking_id = is_object( $booking ) ? $booking->get_id() : $booking;
 
+		update_post_meta( $booking_id, self::GENERATED_META_KEY, '1' );
+
 		// Create an associated order if requested.
 		if ( ! empty( $args['with-orders'] ) && 'cancelled' !== $status ) {
 			$booking_object = is_object( $booking ) ? $booking : get_wc_booking( $booking_id );
@@ -207,6 +216,82 @@ class Booking extends Generator {
 		}
 
 		return $booking_ids;
+	}
+
+	/**
+	 * Count how many generated bookings currently exist.
+	 *
+	 * @return int
+	 */
+	public static function count_generated() {
+		$query = new \WP_Query( array(
+			'post_type'      => 'wc_booking',
+			'post_status'    => self::BOOKING_STATUSES,
+			'meta_query'     => self::generated_meta_query(), // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+			'posts_per_page' => 1,
+			'fields'         => 'ids',
+		) );
+
+		return (int) $query->found_posts;
+	}
+
+	/**
+	 * Delete a batch of generated bookings, along with any order created for them.
+	 *
+	 * @param int   $amount Maximum number of bookings to delete in this batch.
+	 * @param array $args   Unused, present for a consistent Router::delete_batch() signature.
+	 *
+	 * @return int|\WP_Error Number of bookings deleted.
+	 */
+	public static function delete_batch( $amount, array $args = array() ) {
+		$amount = self::validate_batch_amount( $amount );
+		if ( is_wp_error( $amount ) ) {
+			return $amount;
+		}
+
+		$booking_ids = get_posts( array(
+			'post_type'      => 'wc_booking',
+			'post_status'    => self::BOOKING_STATUSES,
+			'meta_query'     => self::generated_meta_query(), // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+			'posts_per_page' => $amount,
+			'fields'         => 'ids',
+		) );
+
+		$deleted = 0;
+
+		foreach ( $booking_ids as $booking_id ) {
+			$order_id = get_post_meta( $booking_id, '_smoothgenerator_booking_order_id', true );
+			if ( $order_id ) {
+				$order = wc_get_order( $order_id );
+				if ( $order && $order->delete( true ) ) {
+					/**
+					 * Action: A generated order was deleted.
+					 *
+					 * @since 1.4.0
+					 *
+					 * @param int $order_id
+					 */
+					do_action( 'smoothgenerator_order_deleted', $order_id );
+				}
+			}
+
+			if ( ! wp_delete_post( $booking_id, true ) ) {
+				continue;
+			}
+
+			/**
+			 * Action: A generated booking was deleted.
+			 *
+			 * @since 1.4.0
+			 *
+			 * @param int $booking_id
+			 */
+			do_action( 'smoothgenerator_booking_deleted', $booking_id );
+
+			++$deleted;
+		}
+
+		return $deleted;
 	}
 
 	/**
@@ -388,12 +473,17 @@ class Booking extends Generator {
 		$item->set_total( $cost );
 		$order->add_item( $item );
 
+		$order->add_meta_data( self::GENERATED_META_KEY, '1' );
 		$order->calculate_totals( false );
 		$order->save();
 
 		// Link the booking to the order.
 		$booking->set_order_id( $order->get_id() );
 		$booking->save();
+
+		// Store our own booking-to-order link so delete_batch() can cascade without
+		// depending on WooCommerce Bookings' internal storage.
+		update_post_meta( $booking->get_id(), '_smoothgenerator_booking_order_id', $order->get_id() );
 
 		return $order->get_id();
 	}

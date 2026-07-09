@@ -318,6 +318,165 @@ class CLI extends WP_CLI_Command {
 
 		WP_CLI::success( $generated . ' terms generated in ' . $display_time );
 	}
+
+	/**
+	 * Delete generated products.
+	 *
+	 * @param array $args Arguments specified.
+	 * @param array $assoc_args Associative arguments specified.
+	 */
+	public static function delete_products( $args, $assoc_args ) {
+		self::run_delete_command(
+			'products',
+			array( Generator\Product::class, 'count_generated' ),
+			array( Generator\Product::class, 'delete_batch' ),
+			$assoc_args
+		);
+	}
+
+	/**
+	 * Delete generated orders.
+	 *
+	 * @param array $args Arguments specified.
+	 * @param array $assoc_args Associative arguments specified.
+	 */
+	public static function delete_orders( $args, $assoc_args ) {
+		self::run_delete_command(
+			'orders',
+			array( Generator\Order::class, 'count_generated' ),
+			array( Generator\Order::class, 'delete_batch' ),
+			$assoc_args
+		);
+	}
+
+	/**
+	 * Delete generated customers.
+	 *
+	 * @param array $args Arguments specified.
+	 * @param array $assoc_args Associative arguments specified.
+	 */
+	public static function delete_customers( $args, $assoc_args ) {
+		self::run_delete_command(
+			'customers',
+			array( Generator\Customer::class, 'count_generated' ),
+			array( Generator\Customer::class, 'delete_batch' ),
+			$assoc_args
+		);
+	}
+
+	/**
+	 * Delete generated coupons.
+	 *
+	 * @param array $args Arguments specified.
+	 * @param array $assoc_args Associative arguments specified.
+	 */
+	public static function delete_coupons( $args, $assoc_args ) {
+		self::run_delete_command(
+			'coupons',
+			array( Generator\Coupon::class, 'count_generated' ),
+			array( Generator\Coupon::class, 'delete_batch' ),
+			$assoc_args
+		);
+	}
+
+	/**
+	 * Delete generated bookings. Also deletes any WooCommerce order created for them.
+	 *
+	 * @param array $args Arguments specified.
+	 * @param array $assoc_args Associative arguments specified.
+	 */
+	public static function delete_bookings( $args, $assoc_args ) {
+		self::run_delete_command(
+			'bookings',
+			array( Generator\Booking::class, 'count_generated' ),
+			array( Generator\Booking::class, 'delete_batch' ),
+			$assoc_args
+		);
+	}
+
+	/**
+	 * Delete generated terms for a taxonomy.
+	 *
+	 * @param array $args Arguments specified.
+	 * @param array $assoc_args Associative arguments specified.
+	 */
+	public static function delete_terms( $args, $assoc_args ) {
+		list( $taxonomy ) = $args;
+
+		self::run_delete_command(
+			'terms',
+			function () use ( $taxonomy ) {
+				return Generator\Term::count_generated( $taxonomy );
+			},
+			function ( $batch ) use ( $taxonomy ) {
+				return Generator\Term::delete_batch( $batch, $taxonomy );
+			},
+			$assoc_args
+		);
+	}
+
+	/**
+	 * Shared logic for `wp wc delete <type>` commands: count, optionally confirm or preview,
+	 * then delete in chunks of Generator::MAX_BATCH_SIZE while ticking a progress bar.
+	 *
+	 * @param string   $label           Human-readable label for the object type, e.g. "products".
+	 * @param callable $count_callback  Returns the total number of generated objects, or WP_Error.
+	 * @param callable $delete_callback Accepts a batch size, returns the number deleted, or WP_Error.
+	 * @param array    $assoc_args      Associative arguments specified (checked for `yes` and `dry-run`).
+	 */
+	private static function run_delete_command( $label, callable $count_callback, callable $delete_callback, $assoc_args ) {
+		$count = $count_callback();
+
+		if ( is_wp_error( $count ) ) {
+			WP_CLI::error( $count );
+		}
+
+		if ( 0 === $count ) {
+			WP_CLI::success( "No generated {$label} found to delete." );
+			return;
+		}
+
+		if ( ! empty( $assoc_args['dry-run'] ) ) {
+			WP_CLI::line( "{$count} generated {$label} would be deleted." );
+			return;
+		}
+
+		if ( empty( $assoc_args['yes'] ) ) {
+			WP_CLI::confirm( "This will permanently delete {$count} generated {$label}. Continue?" );
+		}
+
+		$time_start = microtime( true );
+		$progress   = \WP_CLI\Utils\make_progress_bar( "Deleting {$label}", $count );
+
+		$deleted   = 0;
+		$remaining = $count;
+
+		while ( $remaining > 0 ) {
+			$batch  = min( $remaining, Generator\Generator::MAX_BATCH_SIZE );
+			$result = $delete_callback( $batch );
+
+			if ( is_wp_error( $result ) ) {
+				WP_CLI::error( $result );
+			}
+
+			if ( 0 === $result ) {
+				break;
+			}
+
+			$progress->tick( $result );
+
+			$deleted   += $result;
+			$remaining -= $result;
+		}
+
+		$progress->finish();
+
+		$time_end       = microtime( true );
+		$execution_time = round( ( $time_end - $time_start ), 2 );
+		$display_time   = $execution_time < 60 ? $execution_time . ' seconds' : human_time_diff( $time_start, $time_end );
+
+		WP_CLI::success( "{$deleted} {$label} deleted in {$display_time}" );
+	}
 }
 
 WP_CLI::add_command( 'wc generate products', array( 'WC\SmoothGenerator\CLI', 'products' ), array(
@@ -551,4 +710,124 @@ WP_CLI::add_command( 'wc generate terms', array( 'WC\SmoothGenerator\CLI', 'term
 		),
 	),
 	'longdesc' => "## EXAMPLES\n\nwc generate terms product_tag 10\n\nwc generate terms product_cat 50 --max-depth=3",
+) );
+
+WP_CLI::add_command( 'wc delete products', array( 'WC\SmoothGenerator\CLI', 'delete_products' ), array(
+	'shortdesc' => 'Delete all products generated by this plugin. Only affects products generated after this feature was added; earlier generated products cannot be identified and are left untouched.',
+	'synopsis'  => array(
+		array(
+			'name'        => 'yes',
+			'type'        => 'flag',
+			'description' => 'Skip the confirmation prompt.',
+			'optional'    => true,
+		),
+		array(
+			'name'        => 'dry-run',
+			'type'        => 'flag',
+			'description' => 'Show how many products would be deleted, without deleting them.',
+			'optional'    => true,
+		),
+	),
+	'longdesc'  => "## EXAMPLES\n\nwc delete products --dry-run\n\nwc delete products --yes",
+) );
+
+WP_CLI::add_command( 'wc delete orders', array( 'WC\SmoothGenerator\CLI', 'delete_orders' ), array(
+	'shortdesc' => 'Delete all orders generated by this plugin. Only affects orders generated after this feature was added; earlier generated orders cannot be identified and are left untouched.',
+	'synopsis'  => array(
+		array(
+			'name'        => 'yes',
+			'type'        => 'flag',
+			'description' => 'Skip the confirmation prompt.',
+			'optional'    => true,
+		),
+		array(
+			'name'        => 'dry-run',
+			'type'        => 'flag',
+			'description' => 'Show how many orders would be deleted, without deleting them.',
+			'optional'    => true,
+		),
+	),
+	'longdesc'  => "## EXAMPLES\n\nwc delete orders --dry-run\n\nwc delete orders --yes",
+) );
+
+WP_CLI::add_command( 'wc delete customers', array( 'WC\SmoothGenerator\CLI', 'delete_customers' ), array(
+	'shortdesc' => 'Delete all customers generated by this plugin. Only affects customers generated after this feature was added; earlier generated customers cannot be identified and are left untouched.',
+	'synopsis'  => array(
+		array(
+			'name'        => 'yes',
+			'type'        => 'flag',
+			'description' => 'Skip the confirmation prompt.',
+			'optional'    => true,
+		),
+		array(
+			'name'        => 'dry-run',
+			'type'        => 'flag',
+			'description' => 'Show how many customers would be deleted, without deleting them.',
+			'optional'    => true,
+		),
+	),
+	'longdesc'  => "## EXAMPLES\n\nwc delete customers --dry-run\n\nwc delete customers --yes",
+) );
+
+WP_CLI::add_command( 'wc delete coupons', array( 'WC\SmoothGenerator\CLI', 'delete_coupons' ), array(
+	'shortdesc' => 'Delete all coupons generated by this plugin. Only affects coupons generated after this feature was added; earlier generated coupons cannot be identified and are left untouched.',
+	'synopsis'  => array(
+		array(
+			'name'        => 'yes',
+			'type'        => 'flag',
+			'description' => 'Skip the confirmation prompt.',
+			'optional'    => true,
+		),
+		array(
+			'name'        => 'dry-run',
+			'type'        => 'flag',
+			'description' => 'Show how many coupons would be deleted, without deleting them.',
+			'optional'    => true,
+		),
+	),
+	'longdesc'  => "## EXAMPLES\n\nwc delete coupons --dry-run\n\nwc delete coupons --yes",
+) );
+
+WP_CLI::add_command( 'wc delete bookings', array( 'WC\SmoothGenerator\CLI', 'delete_bookings' ), array(
+	'shortdesc' => 'Delete all bookings generated by this plugin, along with any order created for them. Only affects bookings generated after this feature was added; earlier generated bookings cannot be identified and are left untouched.',
+	'synopsis'  => array(
+		array(
+			'name'        => 'yes',
+			'type'        => 'flag',
+			'description' => 'Skip the confirmation prompt.',
+			'optional'    => true,
+		),
+		array(
+			'name'        => 'dry-run',
+			'type'        => 'flag',
+			'description' => 'Show how many bookings would be deleted, without deleting them.',
+			'optional'    => true,
+		),
+	),
+	'longdesc'  => "## EXAMPLES\n\nwc delete bookings --dry-run\n\nwc delete bookings --yes",
+) );
+
+WP_CLI::add_command( 'wc delete terms', array( 'WC\SmoothGenerator\CLI', 'delete_terms' ), array(
+	'shortdesc' => 'Delete all terms generated by this plugin for a taxonomy. Only affects terms generated after this feature was added; earlier generated terms cannot be identified and are left untouched.',
+	'synopsis'  => array(
+		array(
+			'name'        => 'taxonomy',
+			'type'        => 'positional',
+			'description' => 'The taxonomy to delete generated terms from.',
+			'options'     => array( 'product_cat', 'product_tag' ),
+		),
+		array(
+			'name'        => 'yes',
+			'type'        => 'flag',
+			'description' => 'Skip the confirmation prompt.',
+			'optional'    => true,
+		),
+		array(
+			'name'        => 'dry-run',
+			'type'        => 'flag',
+			'description' => 'Show how many terms would be deleted, without deleting them.',
+			'optional'    => true,
+		),
+	),
+	'longdesc'  => "## EXAMPLES\n\nwc delete terms product_tag --dry-run\n\nwc delete terms product_cat --yes",
 ) );

@@ -204,6 +204,7 @@ class Order extends Generator {
 		}
 
 		if ( $save ) {
+			$order->add_meta_data( self::GENERATED_META_KEY, '1' );
 			$save_result = $order->save();
 			if ( is_wp_error( $save_result ) ) {
 				error_log( 'Order save failed: ' . $save_result->get_error_message() );
@@ -380,6 +381,103 @@ class Order extends Generator {
 		}
 
 		return $order_ids;
+	}
+
+	/**
+	 * Count how many generated orders currently exist.
+	 *
+	 * @return int
+	 */
+	public static function count_generated() {
+		if ( \Automattic\WooCommerce\Utilities\OrderUtil::custom_orders_table_usage_is_enabled() ) {
+			$results = wc_get_orders( array(
+				'meta_query' => self::generated_meta_query(), // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'limit'      => 1,
+				'paginate'   => true,
+			) );
+
+			return (int) $results->total;
+		}
+
+		$query = new \WP_Query( array(
+			'post_type'      => 'shop_order',
+			'post_status'    => 'any',
+			'meta_query'     => self::generated_meta_query(), // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+			'posts_per_page' => 1,
+			'fields'         => 'ids',
+		) );
+
+		return (int) $query->found_posts;
+	}
+
+	/**
+	 * Query IDs of a batch of generated orders.
+	 *
+	 * The wc_get_orders() function only honors an arbitrary 'meta_query' arg when
+	 * High-Performance Order Storage is active (OrdersTableQuery supports it); the legacy CPT
+	 * order data store drops it entirely (WC_Data_Store_WP::get_wp_query_args() explicitly
+	 * skips the 'meta_query' key). So when HPOS is off, query the 'shop_order' post type
+	 * directly instead.
+	 *
+	 * @param int $amount Maximum number of order IDs to return.
+	 *
+	 * @return int[]
+	 */
+	protected static function query_generated_order_ids( $amount ) {
+		if ( \Automattic\WooCommerce\Utilities\OrderUtil::custom_orders_table_usage_is_enabled() ) {
+			return wc_get_orders( array(
+				'meta_query' => self::generated_meta_query(), // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'limit'      => $amount,
+				'return'     => 'ids',
+			) );
+		}
+
+		return get_posts( array(
+			'post_type'      => 'shop_order',
+			'post_status'    => 'any',
+			'meta_query'     => self::generated_meta_query(), // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+			'posts_per_page' => $amount,
+			'fields'         => 'ids',
+		) );
+	}
+
+	/**
+	 * Delete a batch of generated orders.
+	 *
+	 * @param int   $amount Maximum number of orders to delete in this batch.
+	 * @param array $args   Unused, present for a consistent Router::delete_batch() signature.
+	 *
+	 * @return int|\WP_Error Number of orders deleted.
+	 */
+	public static function delete_batch( $amount, array $args = array() ) {
+		$amount = self::validate_batch_amount( $amount );
+		if ( is_wp_error( $amount ) ) {
+			return $amount;
+		}
+
+		$order_ids = self::query_generated_order_ids( $amount );
+
+		$deleted = 0;
+
+		foreach ( $order_ids as $order_id ) {
+			$order = wc_get_order( $order_id );
+			if ( ! $order || ! $order->delete( true ) ) {
+				continue;
+			}
+
+			/**
+			 * Action: A generated order was deleted.
+			 *
+			 * @since 1.4.0
+			 *
+			 * @param int $order_id
+			 */
+			do_action( 'smoothgenerator_order_deleted', $order_id );
+
+			++$deleted;
+		}
+
+		return $deleted;
 	}
 
 	/**

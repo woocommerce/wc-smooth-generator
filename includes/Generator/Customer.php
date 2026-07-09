@@ -112,6 +112,7 @@ class Customer extends Generator {
 		$customer->set_props( $customer_data );
 
 		if ( $save ) {
+			$customer->add_meta_data( self::GENERATED_META_KEY, '1' );
 			$customer->save();
 		}
 
@@ -152,5 +153,64 @@ class Customer extends Generator {
 		}
 
 		return $customer_ids;
+	}
+
+	/**
+	 * Count how many generated customers currently exist.
+	 *
+	 * @return int
+	 */
+	public static function count_generated() {
+		$query = new \WP_User_Query( array(
+			'meta_query' => self::generated_meta_query(), // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+			'number'     => 1,
+			'fields'     => 'ID',
+		) );
+
+		return (int) $query->get_total();
+	}
+
+	/**
+	 * Delete a batch of generated customers.
+	 *
+	 * @param int   $amount Maximum number of customers to delete in this batch.
+	 * @param array $args   Unused, present for a consistent Router::delete_batch() signature.
+	 *
+	 * @return int|\WP_Error Number of customers deleted.
+	 */
+	public static function delete_batch( $amount, array $args = array() ) {
+		$amount = self::validate_batch_amount( $amount );
+		if ( is_wp_error( $amount ) ) {
+			return $amount;
+		}
+
+		if ( ! function_exists( 'wp_delete_user' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/user.php';
+		}
+
+		$query = new \WP_User_Query( array(
+			'meta_query' => self::generated_meta_query(), // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+			'number'     => $amount,
+			'fields'     => 'ID',
+		) );
+
+		$deleted = 0;
+
+		foreach ( $query->get_results() as $user_id ) {
+			if ( wp_delete_user( (int) $user_id ) ) {
+				/**
+				 * Action: A generated customer was deleted.
+				 *
+				 * @since 1.4.0
+				 *
+				 * @param int $user_id
+				 */
+				do_action( 'smoothgenerator_customer_deleted', $user_id );
+
+				++$deleted;
+			}
+		}
+
+		return $deleted;
 	}
 }
