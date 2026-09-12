@@ -52,6 +52,13 @@ abstract class Generator {
 	protected static $images = array();
 
 	/**
+	 * Current image generation mode.
+	 *
+	 * @var string Image mode: abstract, realistic, existing, or none.
+	 */
+	protected static $image_mode = 'existing';
+
+	/**
 	 * Return a new object of this object type.
 	 *
 	 * @param bool $save Save the object before returning or not.
@@ -251,8 +258,49 @@ abstract class Generator {
 	 * Create/retrieve a set of random images to assign to products.
 	 *
 	 * @param integer $amount Number of images required.
+	 * @param string  $mode   Image generation mode: abstract, realistic, existing, or none.
 	 */
-	public static function seed_images( $amount = 10 ) {
+	public static function seed_images( $amount = 10, $mode = 'existing' ) {
+		self::$image_mode = $mode;
+
+		switch ( $mode ) {
+			case 'none':
+				self::$images = array();
+				break;
+			case 'abstract':
+				self::seed_images_abstract( $amount );
+				break;
+			case 'realistic':
+				self::seed_images_realistic( $amount );
+				break;
+			case 'existing':
+			default:
+				self::seed_images_existing( $amount );
+				break;
+		}
+	}
+
+	/**
+	 * Generate abstract Jdenticon images.
+	 *
+	 * @param int $amount Number of images to generate.
+	 */
+	protected static function seed_images_abstract( $amount ) {
+		self::$images = array();
+		for ( $i = 0; $i < $amount; $i++ ) {
+			$id = self::generate_image();
+			if ( $id ) {
+				self::$images[] = $id;
+			}
+		}
+	}
+
+	/**
+	 * Query existing media library images, fill gaps with generated images.
+	 *
+	 * @param int $amount Number of images required.
+	 */
+	protected static function seed_images_existing( $amount ) {
 		self::$images = get_posts(
 			array(
 				'post_type'      => 'attachment',
@@ -266,20 +314,91 @@ abstract class Generator {
 		$found_count = count( self::$images );
 
 		for ( $i = 1; $i <= ( $amount - $found_count ); $i++ ) {
-			self::$images[] = self::generate_image();
+			$id = self::generate_image();
+			if ( $id ) {
+				self::$images[] = $id;
+			}
 		}
+	}
+
+	/**
+	 * Download realistic placeholder images from Lorem Picsum.
+	 *
+	 * @param int $amount Number of images to download.
+	 */
+	protected static function seed_images_realistic( $amount ) {
+		self::init_faker();
+		self::$images = array();
+
+		$amount = min( $amount, 100 );
+
+		for ( $i = 0; $i < $amount; $i++ ) {
+			$seed = self::$faker->word();
+			$url  = 'https://picsum.photos/seed/' . rawurlencode( $seed ) . '/' . self::IMAGE_SIZE . '/' . self::IMAGE_SIZE . '.jpg';
+
+			$id = self::sideload_image( $url, $seed );
+			if ( $id ) {
+				self::$images[] = $id;
+			}
+		}
+	}
+
+	/**
+	 * Download an image from a URL and add to media library.
+	 *
+	 * @param string $url      Image URL.
+	 * @param string $filename Filename without extension.
+	 * @return int Attachment ID on success, 0 on failure.
+	 */
+	protected static function sideload_image( $url, $filename ) {
+		if ( ! function_exists( 'media_handle_sideload' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/media.php';
+			require_once ABSPATH . 'wp-admin/includes/file.php';
+			require_once ABSPATH . 'wp-admin/includes/image.php';
+		}
+
+		$temp_file = download_url( $url );
+
+		if ( is_wp_error( $temp_file ) ) {
+			return 0;
+		}
+
+		$file_array = array(
+			'name'     => sanitize_title( $filename ) . '.jpg',
+			'tmp_name' => $temp_file,
+		);
+
+		$attachment_id = media_handle_sideload( $file_array, 0 );
+
+		if ( is_wp_error( $attachment_id ) ) {
+			if ( file_exists( $temp_file ) ) {
+				wp_delete_file( $temp_file );
+			}
+			return 0;
+		}
+
+		return $attachment_id;
 	}
 
 	/**
 	 * Get an image at random from our seeded data.
 	 *
-	 * @return int
+	 * @return int Attachment ID, or 0 if no images available.
 	 */
 	protected static function get_image() {
-		if ( ! self::$images ) {
-			self::seed_images();
+		if ( empty( self::$images ) ) {
+			return 0;
 		}
 		return self::$images[ array_rand( self::$images ) ];
+	}
+
+	/**
+	 * Get count of seeded images.
+	 *
+	 * @return int Number of images in the pool.
+	 */
+	public static function get_image_count() {
+		return count( self::$images );
 	}
 
 	/**

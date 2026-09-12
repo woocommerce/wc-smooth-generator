@@ -927,7 +927,10 @@ class Product extends Generator {
 		$image_count = wp_rand( 0, 3 );
 
 		for ( $i = 0; $i < $image_count; $i++ ) {
-			$gallery[] = self::get_image();
+			$image_id = self::get_image();
+			if ( $image_id ) {
+				$gallery[] = $image_id;
+			}
 		}
 
 		return $gallery;
