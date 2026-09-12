@@ -102,6 +102,7 @@ class Coupon extends Generator {
 		$coupon->set_props( $props );
 
 		if ( $save ) {
+			$coupon->add_meta_data( self::GENERATED_META_KEY, '1' );
 			$data_store = WC_Data_Store::load( 'coupon' );
 			$data_store->create( $coupon );
 		}
@@ -171,5 +172,66 @@ class Coupon extends Generator {
 
 		return new \WC_Coupon( $random_coupon_id );
 	}
-}
 
+	/**
+	 * Count how many generated coupons currently exist.
+	 *
+	 * @return int
+	 */
+	public static function count_generated() {
+		$query = new \WP_Query( array(
+			'post_type'      => 'shop_coupon',
+			'post_status'    => 'any',
+			'meta_query'     => self::generated_meta_query(), // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+			'posts_per_page' => 1,
+			'fields'         => 'ids',
+		) );
+
+		return (int) $query->found_posts;
+	}
+
+	/**
+	 * Delete a batch of generated coupons.
+	 *
+	 * @param int   $amount Maximum number of coupons to delete in this batch.
+	 * @param array $args   Unused, present for a consistent Router::delete_batch() signature.
+	 *
+	 * @return int|\WP_Error Number of coupons deleted.
+	 */
+	public static function delete_batch( $amount, array $args = array() ) {
+		$amount = self::validate_batch_amount( $amount );
+		if ( is_wp_error( $amount ) ) {
+			return $amount;
+		}
+
+		$coupon_ids = get_posts( array(
+			'post_type'      => 'shop_coupon',
+			'post_status'    => 'any',
+			'meta_query'     => self::generated_meta_query(), // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+			'posts_per_page' => $amount,
+			'fields'         => 'ids',
+		) );
+
+		$deleted = 0;
+
+		foreach ( $coupon_ids as $coupon_id ) {
+			$coupon = new \WC_Coupon( $coupon_id );
+			if ( ! $coupon->delete( true ) ) {
+				continue;
+			}
+
+			/**
+			 * Action: A generated coupon was deleted.
+			 *
+			 * @since 1.4.0
+			 *
+			 * @param int $coupon_id
+			 */
+			do_action( 'smoothgenerator_coupon_deleted', $coupon_id );
+
+			++$deleted;
+		}
+
+		return $deleted;
+	}
+}

@@ -66,6 +66,8 @@ class Term extends Generator {
 			return $result;
 		}
 
+		add_term_meta( $result['term_id'], self::GENERATED_META_KEY, '1', true );
+
 		$term = get_term( $result['term_id'] );
 
 		/**
@@ -241,5 +243,92 @@ class Term extends Generator {
 		}
 
 		return $term_ids;
+	}
+
+	/**
+	 * Count how many generated terms currently exist for a taxonomy.
+	 *
+	 * @param string $taxonomy The taxonomy to count terms for.
+	 *
+	 * @return int|\WP_Error
+	 */
+	public static function count_generated( string $taxonomy ) {
+		$taxonomy_obj = get_taxonomy( $taxonomy );
+		if ( ! $taxonomy_obj ) {
+			return new \WP_Error(
+				'smoothgenerator_term_delete_invalid_taxonomy',
+				'The specified taxonomy is invalid.'
+			);
+		}
+
+		$count = get_terms( array(
+			'taxonomy'   => $taxonomy,
+			'meta_query' => self::generated_meta_query(), // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+			'hide_empty' => false,
+			'fields'     => 'count',
+		) );
+
+		if ( is_wp_error( $count ) ) {
+			return $count;
+		}
+
+		return (int) $count;
+	}
+
+	/**
+	 * Delete a batch of generated terms for a taxonomy.
+	 *
+	 * @param int    $amount   Maximum number of terms to delete in this batch.
+	 * @param string $taxonomy The taxonomy to delete terms from.
+	 * @param array  $args     Unused, present for a consistent Router::delete_batch() signature.
+	 *
+	 * @return int|\WP_Error Number of terms deleted.
+	 */
+	public static function delete_batch( $amount, string $taxonomy, array $args = array() ) {
+		$amount = self::validate_batch_amount( $amount );
+		if ( is_wp_error( $amount ) ) {
+			return $amount;
+		}
+
+		$taxonomy_obj = get_taxonomy( $taxonomy );
+		if ( ! $taxonomy_obj ) {
+			return new \WP_Error(
+				'smoothgenerator_term_delete_invalid_taxonomy',
+				'The specified taxonomy is invalid.'
+			);
+		}
+
+		$term_ids = get_terms( array(
+			'taxonomy'   => $taxonomy,
+			'meta_query' => self::generated_meta_query(), // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+			'hide_empty' => false,
+			'number'     => $amount,
+			'fields'     => 'ids',
+		) );
+
+		if ( is_wp_error( $term_ids ) ) {
+			return $term_ids;
+		}
+
+		$deleted = 0;
+
+		foreach ( $term_ids as $term_id ) {
+			$result = wp_delete_term( $term_id, $taxonomy );
+			if ( $result && ! is_wp_error( $result ) ) {
+				/**
+				 * Action: A generated term was deleted.
+				 *
+				 * @since 1.4.0
+				 *
+				 * @param int    $term_id
+				 * @param string $taxonomy
+				 */
+				do_action( 'smoothgenerator_term_deleted', $term_id, $taxonomy );
+
+				++$deleted;
+			}
+		}
+
+		return $deleted;
 	}
 }

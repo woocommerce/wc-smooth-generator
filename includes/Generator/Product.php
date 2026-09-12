@@ -102,6 +102,7 @@ class Product extends Generator {
 		}
 
 		if ( $product ) {
+			$product->add_meta_data( self::GENERATED_META_KEY, '1' );
 			$product->save();
 
 			// Assign brand terms using wp_set_object_terms, but only if the taxonomy exists.
@@ -174,6 +175,72 @@ class Product extends Generator {
 		RandomRuntimeCache::clear( 'product_brand' );
 
 		return $product_ids;
+	}
+
+	/**
+	 * Count how many generated products currently exist.
+	 *
+	 * @return int
+	 */
+	public static function count_generated() {
+		// wc_get_products() drops an arbitrary 'meta_query' arg (WC_Data_Store_WP::get_wp_query_args()
+		// explicitly skips it), so query the 'product' post type directly instead.
+		$query = new \WP_Query( array(
+			'post_type'      => 'product',
+			'post_status'    => 'any',
+			'meta_query'     => self::generated_meta_query(), // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+			'posts_per_page' => 1,
+			'fields'         => 'ids',
+		) );
+
+		return (int) $query->found_posts;
+	}
+
+	/**
+	 * Delete a batch of generated products.
+	 *
+	 * @param int   $amount Maximum number of products to delete in this batch.
+	 * @param array $args   Unused, present for a consistent Router::delete_batch() signature.
+	 *
+	 * @return int|\WP_Error Number of products deleted.
+	 */
+	public static function delete_batch( $amount, array $args = array() ) {
+		$amount = self::validate_batch_amount( $amount );
+		if ( is_wp_error( $amount ) ) {
+			return $amount;
+		}
+
+		// wc_get_products() drops an arbitrary 'meta_query' arg (WC_Data_Store_WP::get_wp_query_args()
+		// explicitly skips it), so query the 'product' post type directly instead.
+		$product_ids = get_posts( array(
+			'post_type'      => 'product',
+			'post_status'    => 'any',
+			'meta_query'     => self::generated_meta_query(), // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+			'posts_per_page' => $amount,
+			'fields'         => 'ids',
+		) );
+
+		$deleted = 0;
+
+		foreach ( $product_ids as $product_id ) {
+			$product = wc_get_product( $product_id );
+			if ( ! $product || ! $product->delete( true ) ) {
+				continue;
+			}
+
+			/**
+			 * Action: A generated product was deleted.
+			 *
+			 * @since 1.4.0
+			 *
+			 * @param int $product_id
+			 */
+			do_action( 'smoothgenerator_product_deleted', $product_id );
+
+			++$deleted;
+		}
+
+		return $deleted;
 	}
 
 	/**

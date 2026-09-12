@@ -57,4 +57,23 @@ class Router {
 
 		return $generator::batch( $amount, $args );
 	}
+
+	/**
+	 * Delete a batch of generated objects using the specified generator.
+	 *
+	 * @param string $generator_slug The slug identifier of the generator to use.
+	 * @param int    $amount         The number of objects to delete.
+	 * @param array  $args           Additional args for object deletion.
+	 *
+	 * @return int|\WP_Error
+	 */
+	public static function delete_batch( string $generator_slug, int $amount, array $args = array() ) {
+		$generator = self::get_generator_class( $generator_slug );
+
+		if ( is_wp_error( $generator ) ) {
+			return $generator;
+		}
+
+		return $generator::delete_batch( $amount, $args );
+	}
 }
