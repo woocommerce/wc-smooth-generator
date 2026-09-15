@@ -278,6 +278,18 @@ class Order extends Generator {
 			return $amount;
 		}
 
+		$existing_products = wc_get_products( array(
+			'limit'  => 1,
+			'return' => 'ids',
+			'status' => 'publish',
+		) );
+		if ( empty( $existing_products ) ) {
+			return new \WP_Error(
+				'smoothgenerator_no_products',
+				'Order generation requires at least one published product. Please generate products first.'
+			);
+		}
+
 		// Initialize dynamic counters for exact ratio distribution (O(1) memory)
 		// Using "selection without replacement" algorithm for exact counts
 		$coupons_remaining = 0;

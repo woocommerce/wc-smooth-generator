@@ -48,6 +48,20 @@ class Settings {
 		$generate_button_atts = $current_job instanceof AsyncJob ? array( 'disabled' => true ) : array();
 		$cancel_button_atts   = ! $current_job instanceof AsyncJob ? array( 'disabled' => true ) : array();
 
+		$has_products               = (bool) wc_get_products(
+			array(
+				'limit'  => 1,
+				'return' => 'ids',
+				'status' => 'publish',
+			)
+		);
+		$orders_button_atts         = $generate_button_atts;
+		$orders_disabled_by_missing = false;
+		if ( ! $has_products ) {
+			$orders_button_atts['disabled'] = true;
+			$orders_disabled_by_missing     = true;
+		}
+
 		?>
 		<h1>WooCommerce Smooth Generator</h1>
 		<p class="description">
@@ -113,6 +127,11 @@ class Settings {
 			</p>
 
 			<h2>Generate orders</h2>
+			<?php if ( $orders_disabled_by_missing ) : ?>
+				<p class="description" style="color: #d63638;">
+					<?php esc_html_e( 'No published products found. Please generate products before generating orders.', 'wc-smooth-generator' ); ?>
+				</p>
+			<?php endif; ?>
 			<p>
 				<label for="generate_orders_input" class="screen-reader-text">Number of orders to generate</label>
 				<input
@@ -121,7 +140,8 @@ class Settings {
 					name="num_orders_to_generate"
 					value="<?php echo esc_attr( self::DEFAULT_NUM_ORDERS ); ?>"
 					min="1"
-					<?php disabled( $current_job instanceof AsyncJob ); ?>
+					<?php disabled( $current_job instanceof AsyncJob || $orders_disabled_by_missing ); ?>
+
 				/>
 				<?php
 				submit_button(
@@ -129,7 +149,7 @@ class Settings {
 					'primary',
 					'generate_orders',
 					false,
-					$generate_button_atts
+					$orders_button_atts
 				);
 				?>
 			</p>
