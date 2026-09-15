@@ -181,7 +181,7 @@ class Settings {
 						id="generate_start_date_input"
 						type="date"
 						name="start_date"
-						value="<?php echo esc_attr( date( 'Y-m-d' ) ); ?>"
+						value="<?php echo esc_attr( gmdate( 'Y-m-d' ) ); ?>"
 						<?php disabled( $current_job instanceof AsyncJob ); ?>
 					/>
 					<label for="generate_end_date_input">End date</label>
@@ -189,7 +189,7 @@ class Settings {
 						id="generate_end_date_input"
 						type="date"
 						name="end_date"
-						value="<?php echo esc_attr( date( 'Y-m-d' ) ); ?>"
+						value="<?php echo esc_attr( gmdate( 'Y-m-d' ) ); ?>"
 						<?php disabled( $current_job instanceof AsyncJob ); ?>
 					/>
 				</p>
