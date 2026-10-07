@@ -77,6 +77,8 @@ class CustomerTest extends WP_UnitTestCase {
 		$customer = Customer::generate( true, array( 'type' => 'company' ) );
 
 		$this->assertNotEmpty( $customer->get_billing_company() );
+		$this->assertNotEmpty( $customer->get_billing_first_name() );
+		$this->assertNotEmpty( $customer->get_billing_last_name() );
 	}
 
 	/**
