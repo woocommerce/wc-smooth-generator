@@ -92,6 +92,22 @@ class CLI extends WP_CLI_Command {
 			}
 		}
 
+		$period_keys = array_filter(
+			array( 'days', 'weeks', 'months' ),
+			fn( $k ) => ! empty( $assoc_args[ $k ] )
+		);
+		if ( count( $period_keys ) > 1 ) {
+			WP_CLI::error( 'Use only one of --days, --weeks, or --months.' );
+		}
+		if ( ! empty( $period_keys ) && ( ! empty( $assoc_args['date-start'] ) || ! empty( $assoc_args['date-end'] ) ) ) {
+			WP_CLI::error( '--days, --weeks, and --months cannot be combined with --date-start or --date-end.' );
+		}
+		foreach ( $period_keys as $key ) {
+			if ( ! ctype_digit( (string) $assoc_args[ $key ] ) || (int) $assoc_args[ $key ] <= 0 ) {
+				WP_CLI::error( "--{$key} must be a positive integer." );
+			}
+		}
+
 		$progress = \WP_CLI\Utils\make_progress_bar( 'Generating orders', $amount );
 
 		add_action(
@@ -370,6 +386,24 @@ WP_CLI::add_command( 'wc generate orders', array( 'WC\SmoothGenerator\CLI', 'ord
 			'optional'    => true,
 		),
 		array(
+			'name'        => 'days',
+			'type'        => 'assoc',
+			'description' => 'Generate orders within the past N days (from today going back). Cannot be combined with --date-start or --date-end.',
+			'optional'    => true,
+		),
+		array(
+			'name'        => 'weeks',
+			'type'        => 'assoc',
+			'description' => 'Generate orders within the past N weeks (from today going back). Cannot be combined with --date-start or --date-end.',
+			'optional'    => true,
+		),
+		array(
+			'name'        => 'months',
+			'type'        => 'assoc',
+			'description' => 'Generate orders within the past N months (from today going back). Cannot be combined with --date-start or --date-end.',
+			'optional'    => true,
+		),
+		array(
 			'name'        => 'status',
 			'type'        => 'assoc',
 			'description' => 'Specify one status for all the generated orders. Otherwise defaults to a mix.',
@@ -401,7 +435,7 @@ WP_CLI::add_command( 'wc generate orders', array( 'WC\SmoothGenerator\CLI', 'ord
 			'optional'    => true,
 		)
 	),
-	'longdesc'  => "## EXAMPLES\n\nwc generate orders 10\n\nwc generate orders 50 --date-start=2020-01-01 --date-end=2022-12-31 --status=completed --coupons",
+	'longdesc'  => "## EXAMPLES\n\nwc generate orders 10\n\nwc generate orders 50 --days=21\n\nwc generate orders 100 --weeks=4 --status=completed --refund-ratio=0.2\n\nwc generate orders 200 --months=6 --status=completed\n\nwc generate orders 50 --date-start=2020-01-01 --date-end=2022-12-31 --status=completed --coupons",
 ) );
 
 WP_CLI::add_command( 'wc generate bookings', array( 'WC\SmoothGenerator\CLI', 'bookings' ), array(

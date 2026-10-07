@@ -487,6 +487,84 @@ class OrderTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Test order date falls within the past N days when --days is used.
+	 */
+	public function test_order_with_days_period() {
+		$order = Order::generate( true, array( 'days' => 14 ) );
+
+		$created_date = $order->get_date_created()->format( 'Y-m-d' );
+		$start        = date( 'Y-m-d', strtotime( '-14 days' ) );
+		$today        = date( 'Y-m-d' );
+
+		$this->assertGreaterThanOrEqual( $start, $created_date, 'Order date should be on or after 14 days ago' );
+		$this->assertLessThanOrEqual( $today, $created_date, 'Order date should be on or before today' );
+	}
+
+	/**
+	 * Test order date falls within the past N weeks when --weeks is used.
+	 */
+	public function test_order_with_weeks_period() {
+		$order = Order::generate( true, array( 'weeks' => 2 ) );
+
+		$created_date = $order->get_date_created()->format( 'Y-m-d' );
+		$start        = date( 'Y-m-d', strtotime( '-2 weeks' ) );
+		$today        = date( 'Y-m-d' );
+
+		$this->assertGreaterThanOrEqual( $start, $created_date, 'Order date should be on or after 2 weeks ago' );
+		$this->assertLessThanOrEqual( $today, $created_date, 'Order date should be on or before today' );
+	}
+
+	/**
+	 * Test order date falls within the past N months when --months is used.
+	 */
+	public function test_order_with_months_period() {
+		$order = Order::generate( true, array( 'months' => 1 ) );
+
+		$created_date = $order->get_date_created()->format( 'Y-m-d' );
+		$start        = date( 'Y-m-d', strtotime( '-1 month' ) );
+		$today        = date( 'Y-m-d' );
+
+		$this->assertGreaterThanOrEqual( $start, $created_date, 'Order date should be on or after 1 month ago' );
+		$this->assertLessThanOrEqual( $today, $created_date, 'Order date should be on or before today' );
+	}
+
+	/**
+	 * Test all batch orders fall within the past N days when --days is used.
+	 */
+	public function test_batch_with_days_period() {
+		$order_ids = Order::batch( 5, array( 'days' => 30 ) );
+
+		$this->assertCount( 5, $order_ids, 'Should generate 5 orders' );
+
+		// Upper bound includes a one-day buffer to account for the hour offset added in generate().
+		$lower = strtotime( '-30 days' );
+		$upper = time() + DAY_IN_SECONDS;
+
+		foreach ( $order_ids as $order_id ) {
+			$timestamp = wc_get_order( $order_id )->get_date_created()->getTimestamp();
+			$this->assertGreaterThanOrEqual( $lower, $timestamp, 'Order date should be on or after 30 days ago' );
+			$this->assertLessThanOrEqual( $upper, $timestamp, 'Order date should not exceed today' );
+		}
+	}
+
+	/**
+	 * Test that an explicit --date-start takes precedence over --days.
+	 */
+	public function test_days_does_not_override_explicit_date_start() {
+		$order = Order::generate(
+			true,
+			array(
+				'date-start' => '2024-03-01',
+				'date-end'   => '2024-03-01',
+				'days'       => 7,
+			)
+		);
+
+		$created_date = $order->get_date_created()->format( 'Y-m-d' );
+		$this->assertEquals( '2024-03-01', $created_date, 'Explicit date-start should take precedence over --days' );
+	}
+
+	/**
 	 * Test refund dates are after order completion.
 	 */
 	public function test_refund_dates_after_completion() {
