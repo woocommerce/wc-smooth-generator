@@ -67,6 +67,20 @@ class Product extends Generator {
 	);
 
 	/**
+	 * Counter used to append a suffix to a custom SKU so each generated product stays unique.
+	 *
+	 * @var int
+	 */
+	protected static $custom_sku_counter = 0;
+
+	/**
+	 * Base SKU passed via CLI, used when a custom SKU is requested.
+	 *
+	 * @var string|null
+	 */
+	protected static $custom_sku_base = null;
+
+	/**
 	 * Return a new product.
 	 *
 	 * @param bool  $save Save the object before returning or not.
@@ -75,6 +89,8 @@ class Product extends Generator {
 	 */
 	public static function generate( $save = true, $assoc_args = array() ) {
 		parent::maybe_initialize_generators();
+
+		self::$custom_sku_base = ! empty( $assoc_args['sku'] ) ? sanitize_text_field( $assoc_args['sku'] ) : null;
 
 		$type = self::get_product_type( $assoc_args );
 		switch ( $type ) {
@@ -149,6 +165,8 @@ class Product extends Generator {
 		if ( is_wp_error( $amount ) ) {
 			return $amount;
 		}
+
+		self::$custom_sku_counter = 0;
 
 		$use_existing_terms = ! empty( $args['use-existing-terms'] );
 		if ( ! $use_existing_terms ) {
@@ -348,6 +366,24 @@ class Product extends Generator {
 	}
 
 	/**
+	 * Get the SKU to assign to a generated product.
+	 *
+	 * When a custom base SKU is set via CLI, a counter suffix is appended so each
+	 * product in a batch gets a unique SKU. Otherwise a random SKU is returned.
+	 *
+	 * @param string $name Product name, used to build the random SKU fallback.
+	 * @return string
+	 */
+	protected static function get_custom_sku( $name ) {
+		if ( null === self::$custom_sku_base ) {
+			return sanitize_title( $name ) . '-' . self::$faker->ean8;
+		}
+
+		++self::$custom_sku_counter;
+		return self::$custom_sku_base . '-' . self::$custom_sku_counter;
+	}
+
+	/**
 	 * Generate a variable product and return it.
 	 *
 	 * @return \WC_Product_Variable|\WP_Error Product object or WP_Error on failure.
@@ -368,7 +404,7 @@ class Product extends Generator {
 		$product->set_props( array(
 			'name'              => $name,
 			'featured'          => self::$faker->boolean( 10 ),
-			'sku'               => sanitize_title( $name ) . '-' . self::$faker->ean8,
+			'sku'               => self::get_custom_sku( $name ),
 			'global_unique_id'  => self::$faker->randomElement( array( self::$faker->ean13, self::$faker->isbn10 ) ),
 			'attributes'        => $attributes,
 			'tax_status'        => self::$faker->randomElement( array( 'taxable', 'shipping', 'none' ) ),
@@ -406,6 +442,7 @@ class Product extends Generator {
 			$variation->set_props( array(
 				'parent_id'         => $product->get_id(),
 				'attributes'        => $possible_attribute,
+				'sku'               => self::get_custom_sku( $name ),
 				'regular_price'     => $price,
 				'sale_price'        => $sale_price,
 				'date_on_sale_from' => $date_on_sale_from,
@@ -463,7 +500,7 @@ class Product extends Generator {
 			'catalog_visibility' => 'visible',
 			'description'        => self::$faker->paragraphs( self::$faker->numberBetween( 1, 5 ), true ),
 			'short_description'  => self::$faker->text(),
-			'sku'                => sanitize_title( $name ) . '-' . self::$faker->ean8,
+			'sku'                => self::get_custom_sku( $name ),
 			'global_unique_id'   => self::$faker->randomElement( array( self::$faker->ean13, self::$faker->isbn10 ) ),
 			'regular_price'      => $price,
 			'sale_price'         => $sale_price,
@@ -608,7 +645,7 @@ class Product extends Generator {
 			'catalog_visibility' => 'visible',
 			'description'        => self::$faker->paragraphs( self::$faker->numberBetween( 1, 3 ), true ),
 			'short_description'  => self::$faker->sentence(),
-			'sku'                => sanitize_title( $name ) . '-' . self::$faker->ean8,
+			'sku'                => self::get_custom_sku( $name ),
 			'regular_price'      => $cost,
 			'image_id'           => $image_id,
 			'category_ids'       => self::get_term_ids( 'product_cat', self::$faker->numberBetween( 0, 2 ) ),
@@ -683,7 +720,7 @@ class Product extends Generator {
 			'catalog_visibility' => 'visible',
 			'description'        => self::$faker->paragraphs( self::$faker->numberBetween( 1, 2 ), true ),
 			'short_description'  => self::$faker->sentence(),
-			'sku'                => sanitize_title( $name ) . '-' . self::$faker->ean8,
+			'sku'                => self::get_custom_sku( $name ),
 			'regular_price'      => $cost,
 			'image_id'           => $image_id,
 			'category_ids'       => self::get_term_ids( 'product_cat', self::$faker->numberBetween( 0, 2 ) ),
@@ -738,7 +775,7 @@ class Product extends Generator {
 			'catalog_visibility' => 'visible',
 			'description'        => self::$faker->paragraphs( self::$faker->numberBetween( 1, 3 ), true ),
 			'short_description'  => self::$faker->sentence(),
-			'sku'                => sanitize_title( $name ) . '-' . self::$faker->ean8,
+			'sku'                => self::get_custom_sku( $name ),
 			'regular_price'      => $cost,
 			'image_id'           => $image_id,
 			'category_ids'       => self::get_term_ids( 'product_cat', self::$faker->numberBetween( 0, 2 ) ),
