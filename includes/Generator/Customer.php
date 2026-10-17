@@ -110,6 +110,7 @@ class Customer extends Generator {
 
 		$customer = new \WC_Customer();
 		$customer->set_props( $customer_data );
+		$customer->update_meta_data( '_smooth_generator_created', 'yes' );
 
 		if ( $save ) {
 			$customer->save();

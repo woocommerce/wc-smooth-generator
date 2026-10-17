@@ -23,6 +23,7 @@ class CustomerTest extends WP_UnitTestCase {
 
 		$this->assertInstanceOf( \WC_Customer::class, $customer );
 		$this->assertTrue( $customer->get_id() > 0 );
+		$this->assertSame( 'yes', ( new \WC_Customer( $customer->get_id() ) )->get_meta( '_smooth_generator_created' ) );
 	}
 
 	/**
