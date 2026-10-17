@@ -14,6 +14,36 @@ use WP_CLI, WP_CLI_Command;
  */
 class CLI extends WP_CLI_Command {
 	/**
+	 * Preview, apply, audit or recover one owned order transition.
+	 *
+	 * @param array $args Action and order ID.
+	 * @param array $assoc_args Status, effective UTC timestamp and recovery arguments.
+	 */
+	public static function lifecycle( $args, $assoc_args ) {
+		if ( 2 !== count( $args ) ) {
+			WP_CLI::error( 'Supply an action and one positive order ID.' );
+			return;
+		}
+		list( $action, $order ) = $args;
+		$order                  = filter_var( $order, FILTER_VALIDATE_INT );
+		if ( 'audit' === $action ) {
+			$result = Generator\OrderLifecycle::audit( $order );
+		} elseif ( 'recover' === $action ) {
+			$result = Generator\OrderLifecycle::recover( $order, $assoc_args['token'] ?? '', $assoc_args['decision'] ?? '' );
+		} elseif ( in_array( $action, array( 'preview', 'apply' ), true ) ) {
+			$at     = isset( $assoc_args['at'] ) ? filter_var( $assoc_args['at'], FILTER_VALIDATE_INT ) : false;
+			$result = Generator\OrderLifecycle::$action( $order, $assoc_args['status'] ?? '', $at );
+		} else {
+			WP_CLI::error( 'Expected preview, apply, audit or recover.' );
+			return;
+		}
+		if ( is_wp_error( $result ) ) {
+			WP_CLI::error( $result );
+		}
+		WP_CLI::line( wp_json_encode( $result, JSON_PRETTY_PRINT ) );
+	}
+
+	/**
 	 * Generate products.
 	 *
 	 * @param array $args Arguments specified.
@@ -551,4 +581,46 @@ WP_CLI::add_command( 'wc generate terms', array( 'WC\SmoothGenerator\CLI', 'term
 		),
 	),
 	'longdesc' => "## EXAMPLES\n\nwc generate terms product_tag 10\n\nwc generate terms product_cat 50 --max-depth=3",
+) );
+
+WP_CLI::add_command( 'wc generate lifecycle', array( 'WC\\SmoothGenerator\\CLI', 'lifecycle' ), array(
+	'shortdesc' => 'Preview, apply, audit or recover one owned synthetic order transition.',
+	'synopsis'  => array(
+		array(
+			'name'    => 'action',
+			'type'    => 'positional',
+			'options' => array( 'preview', 'apply', 'audit', 'recover' ),
+		),
+		array(
+			'name'        => 'order',
+			'type'        => 'positional',
+			'description' => 'Generator-owned order ID.',
+		),
+		array(
+			'name'        => 'status',
+			'type'        => 'assoc',
+			'optional'    => true,
+			'options'     => array( 'completed', 'cancelled' ),
+			'description' => 'Required for preview/apply.',
+		),
+		array(
+			'name'        => 'at',
+			'type'        => 'assoc',
+			'optional'    => true,
+			'description' => 'Explicit past UTC Unix timestamp required for preview/apply.',
+		),
+		array(
+			'name'        => 'token',
+			'type'        => 'assoc',
+			'optional'    => true,
+			'description' => 'Exact unfinished attempt token required for recovery.',
+		),
+		array(
+			'name'        => 'decision',
+			'type'        => 'assoc',
+			'optional'    => true,
+			'options'     => array( 'retry', 'adopt', 'abandon' ),
+			'description' => 'Explicit recovery decision.',
+		),
+	),
 ) );
